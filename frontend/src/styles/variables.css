@@ -6,6 +6,7 @@
   --bg-secondary: rgba(255, 252, 247, 0.9);
   --bg-tertiary: #f4e7d7;
   --bg-glass: rgba(255, 250, 242, 0.78);
+  --page-bg: linear-gradient(135deg, #fcf7ef 0%, #f8ebd6 100%);
 
   --text-primary: #3a312b;
   --text-secondary: #6e6358;
@@ -56,6 +57,7 @@
   --bg-secondary: rgba(29, 24, 40, 0.92);
   --bg-tertiary: #2d2437;
   --bg-glass: rgba(35, 27, 46, 0.78);
+  --page-bg: linear-gradient(135deg, #0f1222 0%, #181c34 100%);
 
   --text-primary: #f8efe7;
   --text-secondary: #d8ccb9;
@@ -99,7 +101,7 @@
 }
 
 body {
-  background: linear-gradient(135deg, var(--bg-primary) 0%, var(--cream) 100%);
+  background: var(--page-bg);
   color: var(--text-primary);
   min-height: 100vh;
   overflow-x: hidden;
@@ -112,6 +114,7 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
+  background: var(--page-bg);
 }
 
 ::-webkit-scrollbar {

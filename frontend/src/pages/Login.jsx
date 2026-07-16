@@ -1,4 +1,4 @@
-import React, { useState, useContext } from 'react';
+import React, { useState, useContext, useEffect, useRef } from 'react';
 import { AuthContext } from '../contexts/AuthContext';
 import { ThemeContext } from '../contexts/ThemeContext';
 import { Sun, Moon, Lock, Mail, Loader, BrainCircuit, Sparkles, ShieldCheck, HeartHandshake, ArrowRight } from 'lucide-react';
@@ -11,6 +11,21 @@ const Login = ({ onNavigate }) => {
   const [password, setPassword] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
   const [loading, setLoading] = useState(false);
+  const [pointer, setPointer] = useState({ x: 0, y: 0 });
+  const shellRef = useRef(null);
+
+  useEffect(() => {
+    const handleMove = (event) => {
+      if (!shellRef.current) return;
+      const rect = shellRef.current.getBoundingClientRect();
+      const x = ((event.clientX - rect.left) / rect.width) * 100;
+      const y = ((event.clientY - rect.top) / rect.height) * 100;
+      setPointer({ x, y });
+    };
+
+    window.addEventListener('mousemove', handleMove);
+    return () => window.removeEventListener('mousemove', handleMove);
+  }, []);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -28,8 +43,51 @@ const Login = ({ onNavigate }) => {
   };
 
   return (
-    <div className="auth-shell animate-fade">
-      <div className="auth-hero">
+    <div
+      ref={shellRef}
+      className="auth-shell animate-fade"
+      style={{
+        perspective: '1400px',
+        transformStyle: 'preserve-3d',
+        position: 'relative',
+        overflow: 'hidden',
+        background: theme === 'light'
+          ? `radial-gradient(circle at ${pointer.x}% ${pointer.y}%, rgba(109, 99, 255, 0.16), transparent 34%), linear-gradient(135deg, #f8f5ff 0%, #eef4ff 100%)`
+          : `radial-gradient(circle at ${pointer.x}% ${pointer.y}%, rgba(143, 135, 255, 0.2), transparent 34%), linear-gradient(135deg, #0f1222 0%, #181c34 100%)`
+      }}
+    >
+      <div
+        style={{
+          position: 'absolute',
+          inset: '-20%',
+          background: `radial-gradient(circle at ${pointer.x}% ${pointer.y}%, ${theme === 'light' ? 'rgba(255,122,92,0.16)' : 'rgba(255,158,122,0.16)'}, transparent 36%)`,
+          pointerEvents: 'none',
+          zIndex: 0,
+          filter: 'blur(32px)',
+          opacity: 0.9
+        }}
+      />
+      <div
+        style={{
+          position: 'absolute',
+          inset: '0',
+          background: `linear-gradient(125deg, transparent 0%, ${theme === 'light' ? 'rgba(255,255,255,0.18)' : 'rgba(255,255,255,0.08)'} 45%, transparent 100%)`,
+          transform: `translate3d(${(pointer.x - 50) / 70}px, ${(pointer.y - 50) / 70}px, 0)`,
+          pointerEvents: 'none',
+          zIndex: 0,
+          mixBlendMode: theme === 'light' ? 'screen' : 'soft-light'
+        }}
+      />
+      <div className="auth-content">
+      <div
+        className="auth-hero"
+        style={{
+          transform: `rotateY(${(pointer.x - 50) / 85}deg) rotateX(${(50 - pointer.y) / 85}deg) scale(1.01)`,
+          transition: 'transform 0.25s ease-out',
+          boxShadow: `0 28px 80px rgba(18, 27, 54, 0.25), 0 0 0 1px rgba(255,255,255,0.08)`,
+          overflow: 'hidden'
+        }}
+      >
         <div style={{ position: 'absolute', top: '24px', right: '24px', zIndex: 2 }}>
           <button onClick={toggleTheme} className="theme-toggle" aria-label="Cambiar tema">
             {theme === 'light' ? <Moon size={18} /> : <Sun size={18} />}
@@ -61,7 +119,14 @@ const Login = ({ onNavigate }) => {
         </div>
       </div>
 
-      <div className="auth-card">
+      <div
+        className="auth-card"
+        style={{
+          transform: `translate3d(${(pointer.x - 50) / 45}px, ${(pointer.y - 50) / 45}px, 0) scale(1.01)`,
+          transition: 'transform 0.25s ease-out',
+          boxShadow: `0 24px 70px rgba(12, 18, 38, 0.18), 0 0 0 1px rgba(255,255,255,0.06)`
+        }}
+      >
         <div className="auth-card__header">
           <div className="auth-card__eyebrow animate-float">
             <BrainCircuit size={26} />
@@ -152,6 +217,7 @@ const Login = ({ onNavigate }) => {
             Regístrate aquí
           </button>
         </div>
+      </div>
       </div>
     </div>
   );

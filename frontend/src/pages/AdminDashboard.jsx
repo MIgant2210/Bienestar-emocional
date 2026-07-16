@@ -177,43 +177,46 @@ const AdminDashboard = () => {
       <main style={{ flex: 1, padding: '36px 40px', maxWidth: '1300px', width: '100%', margin: '0 auto' }}>
         
         {/* Banner de Confidencialidad */}
-        {showPrivacyNotice && (
-          <div style={{
-            backgroundColor: 'var(--primary-light)',
-            color: 'var(--primary)',
-            padding: '14px 20px',
-            borderRadius: 'var(--radius-md)',
-            marginBottom: '28px',
-            border: '1px solid var(--border)',
-            display: 'flex',
-            alignItems: 'flex-start',
-            justifyContent: 'space-between',
-            gap: '12px',
-            fontSize: '12px',
-            fontWeight: '600'
-          }}>
-            <div style={{ display: 'flex', alignItems: 'flex-start', gap: '10px' }}>
-              <ShieldAlert size={18} style={{ marginTop: '2px' }} />
-              <span>
-                <strong>Políticas de privacidad</strong>: los contenidos personales de los miembros no se exponen en este panel. La información que se visualiza se presenta de forma agregada y anónima.
-              </span>
-            </div>
-            <button
-              onClick={() => setShowPrivacyNotice(false)}
-              aria-label="Cerrar aviso"
-              style={{
-                border: 'none',
-                background: 'transparent',
-                color: 'var(--primary)',
-                cursor: 'pointer',
-                fontSize: '16px',
-                lineHeight: 1
-              }}
-            >
-              ×
-            </button>
+        <div style={{
+          backgroundColor: 'var(--primary-light)',
+          color: 'var(--primary)',
+          padding: showPrivacyNotice ? '14px 20px' : '0 20px',
+          borderRadius: 'var(--radius-md)',
+          marginBottom: '28px',
+          border: '1px solid var(--border)',
+          display: 'flex',
+          alignItems: 'flex-start',
+          justifyContent: 'space-between',
+          gap: '12px',
+          fontSize: '12px',
+          fontWeight: '600',
+          overflow: 'hidden',
+          maxHeight: showPrivacyNotice ? '160px' : '0px',
+          opacity: showPrivacyNotice ? 1 : 0,
+          transition: 'all 0.2s ease',
+          visibility: showPrivacyNotice ? 'visible' : 'hidden'
+        }}>
+          <div style={{ display: 'flex', alignItems: 'flex-start', gap: '10px' }}>
+            <ShieldAlert size={18} style={{ marginTop: '2px' }} />
+            <span>
+              <strong>Políticas de privacidad</strong>: los contenidos personales de los miembros no se exponen en este panel. La información que se visualiza se presenta de forma agregada y anónima.
+            </span>
           </div>
-        )}
+          <button
+            onClick={() => setShowPrivacyNotice(false)}
+            aria-label="Cerrar aviso"
+            style={{
+              border: 'none',
+              background: 'transparent',
+              color: 'var(--primary)',
+              cursor: 'pointer',
+              fontSize: '16px',
+              lineHeight: 1
+            }}
+          >
+            ×
+          </button>
+        </div>
 
         {/* Pestañas de Navegación del Administrador */}
         <div className="tab-container" style={{ maxWidth: '600px', margin: '0 auto 36px auto' }}>

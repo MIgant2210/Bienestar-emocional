@@ -8,10 +8,10 @@ import AdminDashboard from './pages/AdminDashboard';
 import './styles/global.css';
 
 const NavigationHandler = () => {
-  const { user, loading } = useContext(AuthContext);
+  const { user, loading, token } = useContext(AuthContext);
   const [currentPage, setCurrentPage] = useState('login'); // 'login' o 'register'
 
-  if (loading) {
+  if (loading && !user && !token) {
     return (
       <div style={{
         display: 'flex',

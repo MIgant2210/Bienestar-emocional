@@ -20,7 +20,6 @@ export const AuthProvider = ({ children }) => {
   }, []);
 
   const login = async (email, password) => {
-    setLoading(true);
     try {
       const response = await api.post('/auth/login', { email, password });
       const { token, user } = response.data;
@@ -30,23 +29,18 @@ export const AuthProvider = ({ children }) => {
       
       setToken(token);
       setUser(user);
-      setLoading(false);
       return { success: true };
     } catch (error) {
-      setLoading(false);
       const message = error.response?.data?.message || 'Error en las credenciales.';
       return { success: false, message };
     }
   };
 
   const register = async (userData) => {
-    setLoading(true);
     try {
       await api.post('/auth/register', userData);
-      setLoading(false);
       return { success: true };
     } catch (error) {
-      setLoading(false);
       const message = error.response?.data?.message || 'Error al registrar el usuario.';
       return { success: false, message };
     }
