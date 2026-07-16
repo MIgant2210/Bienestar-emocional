@@ -59,3 +59,37 @@ def get_my_history(current_user):
     """
     reflections = Reflection.query.filter_by(user_id=current_user.id).order_by(Reflection.created_at.desc()).all()
     return jsonify([ref.to_dict() for ref in reflections]), 200
+
+@analysis_bp.route('/chat', methods=['POST'])
+@token_required
+@roles_accepted('miembro')
+def chat_with_advisor(current_user):
+    """
+    Ruta para conversar con el asistente emocional Gemini.
+    Integra el historial del usuario para contextualizar la charla.
+    """
+    data = request.get_json() or {}
+    message = data.get('message')
+    
+    if not message or len(message.strip()) == 0:
+        return jsonify({'message': 'El mensaje del chat no puede estar vacío.'}), 400
+        
+    # Obtener últimas 5 reflexiones del usuario para darle contexto a la IA
+    recent_refs = Reflection.query.filter_by(user_id=current_user.id).order_by(Reflection.created_at.desc()).limit(5).all()
+    
+    history_summary = ""
+    if recent_refs:
+        summary_parts = []
+        for ref in recent_refs:
+            date_str = ref.created_at.strftime('%Y-%m-%d')
+            summary_parts.append(
+                f"[Fecha: {date_str}, Sentimiento: {ref.dominant_sentiment}, "
+                f"Estrés: {ref.stress_score}%, Motivación: {ref.motivation_score}%, Agotamiento: {ref.burnout_score}%. "
+                f"Texto escrito: '{ref.original_text}']"
+            )
+        history_summary = " | ".join(summary_parts)
+    else:
+        history_summary = "Usuario nuevo, sin reflexiones previas registradas."
+        
+    response_text = GeminiService.get_chat_response(history_summary, message)
+    return jsonify({'reply': response_text}), 200

@@ -114,3 +114,77 @@ class GeminiService:
             'dominant_sentiment': sentiment,
             'institution_suggestion': suggestion
         }
+
+    @staticmethod
+    def get_chat_response(history_text, user_message):
+        """
+        Genera una respuesta conversacional de apoyo emocional basándose en el historial de reflexiones del usuario.
+        """
+        api_key = os.environ.get("GEMINI_API_KEY")
+        if not api_key or api_key == "YOUR_GEMINI_API_KEY_HERE":
+            print("WARNING: Usando chat simulado (Mock) porque GEMINI_API_KEY no está configurada.")
+            return GeminiService._mock_chat_response(history_text, user_message)
+            
+        try:
+            # Inicializar cliente de Gemini
+            client = genai.Client(api_key=api_key)
+            
+            prompt = (
+                "Actúas como un Asistente Emocional Virtual enfocado en el bienestar y el autocuidado. "
+                "Tu objetivo es entablar una conversación constructiva, empática y de apoyo. "
+                "\n"
+                "CONTEXTO DEL USUARIO:\n"
+                f"Historial de estados de ánimo o reflexiones recientes: {history_text}\n"
+                "\n"
+                "MENSAJE ACTUAL DEL USUARIO:\n"
+                f"\"{user_message}\"\n"
+                "\n"
+                "INSTRUCCIONES CLAVE:\n"
+                "1. Sé empático, cálido y ofrece consejos prácticos de manejo del estrés, organización o inteligencia emocional.\n"
+                "2. NO realices diagnósticos clínicos, no recetes medicamentos, ni uses terminología psiquiátrica formal.\n"
+                "3. Mantén tus respuestas en un tono amigable, en español, y con una longitud máxima de 3 párrafos cortos.\n"
+                "4. Si el usuario te hace preguntas no relacionadas con su bienestar o tareas, guíalo amablemente de vuelta al tema."
+            )
+            
+            response = client.models.generate_content(
+                model='gemini-2.5-flash',
+                contents=prompt,
+            )
+            
+            return response.text
+            
+        except Exception as e:
+            print(f"Error llamando a Gemini Chat: {str(e)}")
+            return GeminiService._mock_chat_response(history_text, user_message)
+
+    @staticmethod
+    def _mock_chat_response(history_text, user_message):
+        msg_lower = user_message.lower()
+        
+        reply = (
+            "¡Hola! Gracias por compartir esto conmigo. Es fundamental tener un espacio para expresar lo que sentimos. "
+            "Revisando tus reflexiones, veo que estás enfrentando retos diarios de estudio o trabajo. "
+            "Te sugiero planificar tu jornada dividiendo tus metas en pequeños pasos de 25 minutos (técnica Pomodoro) "
+            "y no dudar en tomar descansos cortos para estirarte y tomar agua. Estoy aquí para acompañarte."
+        )
+        
+        if any(w in msg_lower for w in ["triste", "mal", "siento solo", "sola", "deprimido", "deprimida"]):
+            reply = (
+                "Lamento mucho escuchar que te sientes así hoy. Sentirse de esta manera es completamente válido, "
+                "y a veces el primer paso es simplemente reconocerlo. Recuerda que no tienes que pasar por esto a solas; "
+                "siempre puedes acudir a los canales de apoyo de tu institución o conversar con alguien de confianza. "
+                "Intenta hacer algo pequeño que disfrutes hoy, como escuchar tu canción favorita o dar una caminata breve."
+            )
+        elif any(w in msg_lower for w in ["estres", "estrés", "examen", "parcial", "tarea", "presion", "presión", "trabajo", "cansado", "cansada"]):
+            reply = (
+                "Entiendo perfectamente esa sensación de presión y cansancio. Las temporadas de entregas o exámenes suelen ser agotadoras. "
+                "Intenta hacer una lista de tus tres tareas prioritarias para hoy y enfócate únicamente en ellas. "
+                "Recuerda también programar descansos conscientes: alejarte de las pantallas por 10 minutos puede devolverte claridad mental."
+            )
+        elif any(w in msg_lower for w in ["gracias", "adios", "hola"]):
+            reply = (
+                "¡Hola! De nada, es un gusto poder acompañarte. Recuerda que este espacio es para ti. "
+                "¿Hay algún tema específico sobre tu bienestar, organización o manejo de tareas que te gustaría conversar hoy?"
+            )
+            
+        return reply
