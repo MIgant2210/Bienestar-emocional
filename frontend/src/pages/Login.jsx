@@ -1,7 +1,7 @@
 import React, { useState, useContext, useEffect, useRef } from 'react';
 import { AuthContext } from '../contexts/AuthContext';
 import { ThemeContext } from '../contexts/ThemeContext';
-import { Sun, Moon, Lock, Mail, Loader, BrainCircuit, Sparkles, ShieldCheck, HeartHandshake, ArrowRight } from 'lucide-react';
+import { Sun, Moon, Lock, Mail, Loader, BrainCircuit, Sparkles, ShieldCheck, HeartHandshake, ArrowRight, Eye, EyeOff } from 'lucide-react';
 
 const Login = ({ onNavigate }) => {
   const { login } = useContext(AuthContext);
@@ -9,23 +9,38 @@ const Login = ({ onNavigate }) => {
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
   const [loading, setLoading] = useState(false);
-  const [pointer, setPointer] = useState({ x: 0, y: 0 });
-  const shellRef = useRef(null);
 
-  useEffect(() => {
-    const handleMove = (event) => {
-      if (!shellRef.current) return;
-      const rect = shellRef.current.getBoundingClientRect();
-      const x = ((event.clientX - rect.left) / rect.width) * 100;
-      const y = ((event.clientY - rect.top) / rect.height) * 100;
-      setPointer({ x, y });
-    };
+  // Referencias y estados para el efecto de movimiento del mouse (Antigravity Style)
+  const containerRef = useRef(null);
+  const cardRef = useRef(null);
+  const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
+  const [tilt, setTilt] = useState({ x: 0, y: 0 });
 
-    window.addEventListener('mousemove', handleMove);
-    return () => window.removeEventListener('mousemove', handleMove);
-  }, []);
+  const handleMouseMove = (e) => {
+    if (!containerRef.current || !cardRef.current) return;
+    
+    // Obtener dimensiones del viewport
+    const { clientWidth, clientHeight } = containerRef.current;
+    
+    // Posición del mouse normalizada de -0.5 a 0.5
+    const x = (e.clientX / clientWidth) - 0.5;
+    const y = (e.clientY / clientHeight) - 0.5;
+    
+    setMousePos({ x: e.clientX, y: e.clientY });
+    
+    // Calcular inclinación 3D para la tarjeta (máximo 8 grados)
+    const tiltX = -y * 12;
+    const tiltY = x * 12;
+    setTilt({ x: tiltX, y: tiltY });
+  };
+
+  const handleMouseLeave = () => {
+    // Restablecer inclinación cuando el cursor sale
+    setTilt({ x: 0, y: 0 });
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -43,181 +58,189 @@ const Login = ({ onNavigate }) => {
   };
 
   return (
-    <div
-      ref={shellRef}
+    <div 
+      ref={containerRef}
+      onMouseMove={handleMouseMove}
+      onMouseLeave={handleMouseLeave}
       className="auth-shell animate-fade"
       style={{
-        perspective: '1400px',
-        transformStyle: 'preserve-3d',
         position: 'relative',
         overflow: 'hidden',
-        background: theme === 'light'
-          ? `radial-gradient(circle at ${pointer.x}% ${pointer.y}%, rgba(109, 99, 255, 0.16), transparent 34%), linear-gradient(135deg, #f8f5ff 0%, #eef4ff 100%)`
-          : `radial-gradient(circle at ${pointer.x}% ${pointer.y}%, rgba(143, 135, 255, 0.2), transparent 34%), linear-gradient(135deg, #0f1222 0%, #181c34 100%)`
+        perspective: '1200px',
+        backgroundColor: 'var(--bg-primary)', // Usar el color beige cálido de variables.css
+        background: 'var(--page-bg)' // El gradiente warm beige establecido
       }}
     >
-      <div
+      {/* Orbe luminoso dinámico que sigue al mouse */}
+      <div 
         style={{
           position: 'absolute',
-          inset: '-20%',
-          background: `radial-gradient(circle at ${pointer.x}% ${pointer.y}%, ${theme === 'light' ? 'rgba(255,122,92,0.16)' : 'rgba(255,158,122,0.16)'}, transparent 36%)`,
+          top: mousePos.y - 150,
+          left: mousePos.x - 150,
+          width: '300px',
+          height: '300px',
+          borderRadius: '50%',
+          background: 'radial-gradient(circle, rgba(var(--primary-rgb), 0.12) 0%, rgba(var(--accent-rgb), 0.04) 50%, transparent 100%)',
           pointerEvents: 'none',
-          zIndex: 0,
-          filter: 'blur(32px)',
-          opacity: 0.9
+          filter: 'blur(30px)',
+          zIndex: 1,
+          transition: 'transform 0.1s ease-out'
         }}
       />
-      <div
-        style={{
-          position: 'absolute',
-          inset: '0',
-          background: `linear-gradient(125deg, transparent 0%, ${theme === 'light' ? 'rgba(255,255,255,0.18)' : 'rgba(255,255,255,0.08)'} 45%, transparent 100%)`,
-          transform: `translate3d(${(pointer.x - 50) / 70}px, ${(pointer.y - 50) / 70}px, 0)`,
-          pointerEvents: 'none',
-          zIndex: 0,
-          mixBlendMode: theme === 'light' ? 'screen' : 'soft-light'
-        }}
-      />
-      <div className="auth-content">
-      <div
-        className="auth-hero"
-        style={{
-          transform: `rotateY(${(pointer.x - 50) / 85}deg) rotateX(${(50 - pointer.y) / 85}deg) scale(1.01)`,
-          transition: 'transform 0.25s ease-out',
-          boxShadow: `0 28px 80px rgba(18, 27, 54, 0.25), 0 0 0 1px rgba(255,255,255,0.08)`,
-          overflow: 'hidden'
-        }}
-      >
-        <div style={{ position: 'absolute', top: '24px', right: '24px', zIndex: 2 }}>
-          <button onClick={toggleTheme} className="theme-toggle" aria-label="Cambiar tema">
-            {theme === 'light' ? <Moon size={18} /> : <Sun size={18} />}
-          </button>
-        </div>
+      <div className="auth-orb auth-orb-1" />
+      <div className="auth-orb auth-orb-2" />
 
-        <div>
-          <div className="brand-pill">
-            <BrainCircuit size={16} />
-            <span>EquilibrIA</span>
+      {/* MODIFICADO: Envoltorio en 'auth-content' para establecer el tamaño de pantalla y evitar que se vea muy grande */}
+      <div className="auth-content" style={{ zIndex: 2, position: 'relative' }}>
+        
+        <div className="auth-hero">
+          <div style={{ position: 'absolute', top: '24px', right: '24px', zIndex: 3 }}>
+            <button onClick={toggleTheme} className="theme-toggle" aria-label="Cambiar tema">
+              {theme === 'light' ? <Moon size={18} /> : <Sun size={18} />}
+            </button>
           </div>
-          <h1>EquilibrIA: Sistema Inteligente de Análisis del Bienestar Emocional</h1>
-          <p>Organiza tareas, prioridades y acompañamiento emocional en una experiencia más clara, serena y útil.</p>
-        </div>
 
-        <div className="auth-highlights">
-          <div className="highlight-item">
-            <ShieldCheck size={18} />
-            <span>Seguimiento inteligente</span>
+          <div>
+            <div className="brand-pill animate-float">
+              <BrainCircuit size={16} />
+              <span>EquilibrIA</span>
+            </div>
+            <h1>EquilibrIA: Sistema Inteligente de Análisis del Bienestar Emocional</h1>
+            <p style={{ fontSize: '14.5px', lineHeight: '1.6' }}>
+              Organiza tareas, prioridades y acompañamiento emocional en una experiencia más clara, serena y útil.
+            </p>
           </div>
-          <div className="highlight-item">
-            <HeartHandshake size={18} />
-            <span>Ambiente más humano</span>
-          </div>
-          <div className="highlight-item">
-            <Sparkles size={18} />
-            <span>Diseño calmante y elegante</span>
-          </div>
-        </div>
-      </div>
 
-      <div
-        className="auth-card"
-        style={{
-          transform: `translate3d(${(pointer.x - 50) / 45}px, ${(pointer.y - 50) / 45}px, 0) scale(1.01)`,
-          transition: 'transform 0.25s ease-out',
-          boxShadow: `0 24px 70px rgba(12, 18, 38, 0.18), 0 0 0 1px rgba(255,255,255,0.06)`
-        }}
-      >
-        <div className="auth-card__header">
-          <div className="auth-card__eyebrow animate-float">
-            <BrainCircuit size={26} />
-          </div>
-          <h2 className="auth-card__title">Inicia sesión</h2>
-          <p className="auth-card__subtitle">Accede a tu espacio de bienestar y organización.</p>
-        </div>
-
-        {errorMsg && (
-          <div style={{
-            backgroundColor: 'var(--danger-light)',
-            border: '1px solid var(--danger)',
-            color: 'var(--danger)',
-            padding: '14px',
-            borderRadius: 'var(--radius-sm)',
-            fontSize: '13px',
-            fontWeight: '600',
-            marginBottom: '24px',
-            textAlign: 'center',
-            animation: 'fadeIn 0.3s'
-          }}>
-            {errorMsg}
-          </div>
-        )}
-
-        <form onSubmit={handleSubmit}>
-          <div className="form-group">
-            <label style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-              <Mail size={12} />
-              <span>Correo Institucional</span>
-            </label>
-            <div style={{ position: 'relative' }}>
-              <input
-                type="email"
-                placeholder="nombre@universidad.edu"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-                style={{ paddingLeft: '44px' }}
-              />
-              <Mail size={16} style={{
-                position: 'absolute',
-                left: '16px',
-                top: '50%',
-                transform: 'translateY(-50%)',
-                color: 'var(--text-muted)'
-              }} />
+          <div className="auth-highlights">
+            <div className="highlight-item">
+              <ShieldCheck size={18} />
+              <span>Seguimiento inteligente</span>
+            </div>
+            <div className="highlight-item">
+              <HeartHandshake size={18} />
+              <span>Ambiente más humano</span>
+            </div>
+            <div className="highlight-item">
+              <Sparkles size={18} />
+              <span>Diseño calmante y elegante</span>
             </div>
           </div>
+        </div>
 
-          <div className="form-group">
-            <label style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-              <Lock size={12} />
-              <span>Contraseña</span>
-            </label>
-            <div style={{ position: 'relative' }}>
-              <input
-                type="password"
-                placeholder="••••••••"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-                style={{ paddingLeft: '44px' }}
-              />
-              <Lock size={16} style={{
-                position: 'absolute',
-                left: '16px',
-                top: '50%',
-                transform: 'translateY(-50%)',
-                color: 'var(--text-muted)'
-              }} />
+        <div 
+          ref={cardRef}
+          className="auth-card glow-card"
+          style={{
+            transform: `rotateX(${tilt.x}deg) rotateY(${tilt.y}deg)`,
+            transition: tilt.x === 0 && tilt.y === 0 ? 'transform 0.5s ease' : 'transform 0.1s ease-out',
+            transformStyle: 'preserve-3d',
+            maxWidth: '430px', // Evitar que la tarjeta de login sea gigante
+            margin: '0 auto',
+            padding: '36px'
+          }}
+        >
+          <div className="auth-card__header" style={{ transform: 'translateZ(20px)' }}>
+            <div className="auth-card__eyebrow animate-float">
+              <BrainCircuit size={26} />
             </div>
+            <h2 className="auth-card__title">Inicia sesión</h2>
+            <p className="auth-card__subtitle">Accede a tu espacio de bienestar y organización.</p>
           </div>
 
-          <button
-            type="submit"
-            className="btn btn-primary"
-            disabled={loading}
-            style={{ width: '100%', marginTop: '12px', fontSize: '15px' }}
-          >
-            {loading ? <Loader className="animate-spin" size={20} /> : <><span>Acceder al Sistema</span><ArrowRight size={18} /></>}
-          </button>
-        </form>
+          {errorMsg && (
+            <div style={{
+              backgroundColor: 'var(--danger-light)',
+              border: '1px solid var(--danger)',
+              color: 'var(--danger)',
+              padding: '14px',
+              borderRadius: 'var(--radius-sm)',
+              fontSize: '13px',
+              fontWeight: '600',
+              marginBottom: '24px',
+              textAlign: 'center',
+              animation: 'fadeIn 0.3s',
+              transform: 'translateZ(15px)'
+            }}>
+              {errorMsg}
+            </div>
+          )}
 
-        <div className="auth-link-row">
-          ¿No tienes una cuenta aún?{' '}
-          <button onClick={() => onNavigate('register')}>
-            Regístrate aquí
-          </button>
+          <form onSubmit={handleSubmit} style={{ transform: 'translateZ(10px)' }}>
+            <div className="form-group" style={{ marginBottom: '18px' }}>
+              <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11px' }}>
+                <Mail size={11} />
+                <span>Correo Institucional</span>
+              </label>
+              <div className="field-shell" style={{ position: 'relative' }}>
+                <input
+                  type="email"
+                  placeholder="nombre@universidad.edu"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  required
+                  autoComplete="email"
+                  style={{ paddingLeft: '44px', height: '48px', fontSize: '13.5px' }}
+                />
+                <Mail size={15} style={{
+                  position: 'absolute',
+                  left: '16px',
+                  top: '50%',
+                  transform: 'translateY(-50%)',
+                  color: 'var(--text-muted)'
+                }} />
+              </div>
+            </div>
+
+            <div className="form-group" style={{ marginBottom: '22px' }}>
+              <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11px' }}>
+                <Lock size={11} />
+                <span>Contraseña</span>
+              </label>
+              <div className="field-shell" style={{ position: 'relative' }}>
+                <input
+                  type={showPassword ? 'text' : 'password'}
+                  placeholder="••••••••"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                  autoComplete="current-password"
+                  style={{ paddingLeft: '44px', paddingRight: '44px', height: '48px', fontSize: '13.5px' }}
+                />
+                <Lock size={15} style={{
+                  position: 'absolute',
+                  left: '16px',
+                  top: '50%',
+                  transform: 'translateY(-50%)',
+                  color: 'var(--text-muted)'
+                }} />
+                <button
+                  type="button"
+                  className="password-toggle"
+                  onClick={() => setShowPassword(prev => !prev)}
+                  aria-label={showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
+                >
+                  {showPassword ? <EyeOff size={15} /> : <Eye size={15} />}
+                </button>
+              </div>
+            </div>
+
+            <button
+              type="submit"
+              className="btn btn-primary auth-submit-btn"
+              disabled={loading}
+              style={{ width: '100%', height: '48px', fontSize: '14px', borderRadius: 'var(--radius-sm)' }}
+            >
+              {loading ? <Loader className="animate-spin" size={18} /> : <><span>Acceder al Sistema</span><ArrowRight size={16} /></>}
+            </button>
+          </form>
+
+          <div className="auth-link-row" style={{ transform: 'translateZ(5px)', fontSize: '13px', marginTop: '20px', paddingTop: '16px' }}>
+            ¿No tienes una cuenta aún?{' '}
+            <button onClick={() => onNavigate('register')} style={{ color: 'var(--primary)', fontWeight: '800' }}>
+              Regístrate aquí
+            </button>
+          </div>
         </div>
-      </div>
       </div>
     </div>
   );

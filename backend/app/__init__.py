@@ -36,4 +36,8 @@ def create_app(config_class=Config):
     app.register_blueprint(evaluations_bp, url_prefix='/api/evaluations')
     app.register_blueprint(reports_bp, url_prefix='/api/reports')
     
+    @app.teardown_appcontext
+    def shutdown_session(exception=None):
+        db.session.remove()
+        
     return app

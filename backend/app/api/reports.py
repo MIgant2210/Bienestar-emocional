@@ -5,6 +5,7 @@ from app.models.reflection import Reflection
 from app.models.alert import Alert
 from app.models.user import User
 from app.utils.decorators import token_required, roles_accepted
+from datetime import datetime
 
 reports_bp = Blueprint('reports', __name__)
 
@@ -48,7 +49,7 @@ def export_aggregate_data(current_user):
     
     export_payload = {
         'institucion': current_user.institution.name if current_user.institution else "Demo",
-        'fecha_generacion': func.now(), # SQLAlchemy helper or standard ISO string
+        'fecha_generacion': datetime.utcnow().isoformat(), # Standard ISO string
         'metricas_clave': {
             'estres_promedio_percent': round(float(averages.avg_stress), 1) if averages.avg_stress else 0,
             'motivacion_promedio_percent': round(float(averages.avg_motivation), 1) if averages.avg_motivation else 0,

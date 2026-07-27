@@ -132,3 +132,23 @@ def get_suggestions(current_user):
     } for ref in reflections]
     
     return jsonify(suggestions), 200
+
+@institutions_bp.route('/members', methods=['GET'])
+@token_required
+@roles_accepted('admin_institucion', 'superadmin')
+def get_institution_members(current_user):
+    """
+    Retorna el directorio de miembros/usuarios de la institución.
+    """
+    institution_id = current_user.institution_id
+    if current_user.role == 'superadmin':
+        inst_param = request.args.get('institution_id')
+        if inst_param:
+            institution_id = inst_param
+
+    query = User.query.filter_by(role='miembro')
+    if institution_id:
+        query = query.filter_by(institution_id=institution_id)
+        
+    members = query.order_by(User.created_at.desc()).all()
+    return jsonify([m.to_dict() for m in members]), 200

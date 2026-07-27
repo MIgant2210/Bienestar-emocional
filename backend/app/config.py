@@ -16,5 +16,13 @@ class Config:
         
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     
+    # Configuración de pool de conexiones para reducir latencia con Clever Cloud
+    SQLALCHEMY_ENGINE_OPTIONS = {
+        'pool_size': 3,
+        'max_overflow': 2,
+        'pool_recycle': 280,
+        'pool_pre_ping': True
+    }
+    
     # Gemini API Config
     GEMINI_API_KEY = os.environ.get('GEMINI_API_KEY')

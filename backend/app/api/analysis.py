@@ -8,7 +8,7 @@ analysis_bp = Blueprint('analysis', __name__)
 
 @analysis_bp.route('/submit', methods=['POST'])
 @token_required
-@roles_accepted('miembro')
+@roles_accepted('miembro', 'admin_institucion', 'superadmin')
 def submit_reflection(current_user):
     """
     Recibe el texto de un miembro, lo analiza mediante Gemini
@@ -16,6 +16,7 @@ def submit_reflection(current_user):
     """
     data = request.get_json() or {}
     text = data.get('text')
+    evaluation_id = data.get('evaluation_id')
     
     if not text or len(text.strip()) < 10:
         return jsonify({'message': 'El texto redactado debe tener al menos 10 caracteres.'}), 400
@@ -30,6 +31,7 @@ def submit_reflection(current_user):
     new_reflection = Reflection(
         user_id=current_user.id,
         institution_id=current_user.institution_id,
+        evaluation_id=evaluation_id,
         original_text=text,
         stress_score=analysis_results['stress_score'],
         motivation_score=analysis_results['motivation_score'],
@@ -41,6 +43,21 @@ def submit_reflection(current_user):
     try:
         db.session.add(new_reflection)
         db.session.commit()
+        
+        # Alerta de Riesgo Automática (Módulo 7)
+        if new_reflection.stress_score >= 75 or new_reflection.burnout_score >= 75:
+            from app.models.alert import Alert
+            priority = 'Alta' if (new_reflection.stress_score >= 85 or new_reflection.burnout_score >= 85) else 'Media'
+            new_alert = Alert(
+                user_id=current_user.id,
+                reflection_id=new_reflection.id,
+                institution_id=current_user.institution_id,
+                priority=priority,
+                status='pendiente'
+            )
+            db.session.add(new_alert)
+            db.session.commit()
+            
         return jsonify({
             'message': 'Reflexión analizada y registrada exitosamente.',
             'analysis': new_reflection.to_dict()
