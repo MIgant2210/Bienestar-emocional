@@ -16,11 +16,13 @@
   --primary-hover: #5849e3;
   --primary-light: rgba(109, 99, 255, 0.14);
   --primary-glow: rgba(109, 99, 255, 0.24);
+  --primary-rgb: 109, 99, 255;
 
   --accent: #ff7a5c;
   --accent-hover: #ef6344;
   --accent-light: rgba(255, 122, 92, 0.14);
   --accent-glow: rgba(255, 122, 92, 0.24);
+  --accent-rgb: 255, 122, 92;
 
   --accent-2: #4fb6a3;
   --accent-2-light: rgba(79, 182, 163, 0.14);
@@ -67,11 +69,13 @@
   --primary-hover: #a9a0ff;
   --primary-light: rgba(143, 135, 255, 0.16);
   --primary-glow: rgba(143, 135, 255, 0.28);
+  --primary-rgb: 143, 135, 255;
 
   --accent: #ff9e7a;
   --accent-hover: #ffb48d;
   --accent-light: rgba(255, 158, 122, 0.16);
   --accent-glow: rgba(255, 158, 122, 0.24);
+  --accent-rgb: 255, 158, 122;
 
   --accent-2: #5acbb5;
   --accent-2-light: rgba(90, 203, 181, 0.16);

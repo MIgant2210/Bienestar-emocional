@@ -32,7 +32,7 @@ def get_alerts(current_user):
 
 @alerts_bp.route('/<uuid:alert_id>/attend', methods=['PUT'])
 @token_required
-@roles_accepted('profesional_apoyo')
+@roles_accepted('profesional_apoyo', 'admin_institucion', 'superadmin')
 def attend_alert(current_user, alert_id):
     """
     Registra el seguimiento y notas de atención de una alerta emocional por parte del profesional.
