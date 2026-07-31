@@ -19,6 +19,10 @@ class Task(db.Model):
     
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     
+    # Segmentación por tipo de destinatario (Módulo 5)
+    assigned_type = db.Column(db.String(30), nullable=False, default='all') # 'all', 'department', 'individual'
+    assigned_target = db.Column(db.String(150), nullable=True)             # Email o Nombre del departamento
+
     # Relaciones adicionales para facilidad en consultas
     assigned_user = db.relationship('User', foreign_keys=[user_id], backref=db.backref('assigned_tasks', lazy=True))
     creator = db.relationship('User', foreign_keys=[created_by], backref=db.backref('created_tasks', lazy=True))
@@ -32,7 +36,9 @@ class Task(db.Model):
             'status': self.status,
             'due_date': self.due_date.isoformat() if self.due_date else None,
             'user_id': str(self.user_id) if self.user_id else None,
-            'assigned_user_name': f"{self.assigned_user.first_name} {self.assigned_user.last_name}" if self.assigned_user else "Todos",
+            'assigned_type': self.assigned_type or 'all',
+            'assigned_target': self.assigned_target,
+            'assigned_user_name': f"{self.assigned_user.first_name} {self.assigned_user.last_name}" if self.assigned_user else ("Todos" if self.assigned_type == 'all' else f"{self.assigned_type}: {self.assigned_target}"),
             'institution_id': str(self.institution_id),
             'created_by': str(self.created_by) if self.created_by else None,
             'creator_name': f"{self.creator.first_name} {self.creator.last_name}" if self.creator else "Sistema",

@@ -1,4 +1,5 @@
 from flask import Blueprint, request, jsonify
+from sqlalchemy import or_
 from app import db
 from app.models.task_model import Task
 from app.models.user import User
@@ -12,20 +13,25 @@ tasks_bp = Blueprint('tasks', __name__)
 def get_tasks(current_user):
     """
     Retorna las tareas correspondientes según el rol e institución del usuario.
-    - Miembros ven tareas colectivas de su institución y las asignadas a ellos individualmente.
+    - Miembros ven tareas dirigidas a todos, a su departamento o a su correo individual.
     - Administradores ven todas las tareas de su institución.
     """
     if not current_user.institution_id:
         return jsonify({'message': 'El usuario no tiene una institución asociada.'}), 400
         
     if current_user.role == 'miembro':
-        # Tareas colectivas (user_id es NULL) o específicas para este usuario
+        user_dept = current_user.department or 'General'
         tasks = Task.query.filter(
             Task.institution_id == current_user.institution_id,
-            (Task.user_id.is_(None)) | (Task.user_id == current_user.id)
+            or_(
+                Task.assigned_type == 'all',
+                Task.assigned_type.is_(None),
+                (Task.assigned_type == 'department') & (Task.assigned_target == user_dept),
+                (Task.assigned_type == 'individual') & (Task.assigned_target == current_user.email),
+                Task.user_id == current_user.id
+            )
         ).order_by(Task.created_at.desc()).all()
     else:
-        # Administradores e instituciones ven todas las tareas de la institución
         tasks = Task.query.filter_by(
             institution_id=current_user.institution_id
         ).order_by(Task.created_at.desc()).all()
@@ -37,15 +43,16 @@ def get_tasks(current_user):
 @roles_accepted('admin_institucion', 'superadmin')
 def create_task(current_user):
     """
-    Crea una nueva tarea para la institución.
-    Puede asignarse a todos (user_id = null) o a un usuario específico mediante su email.
+    Crea una nueva tarea para la institución con segmentación de destinatarios.
     """
     data = request.get_json() or {}
     title = data.get('title')
     description = data.get('description')
     category = data.get('category', 'Bienestar')  # 'Bienestar', 'Académica', 'Laboral'
-    due_date_str = data.get('due_date')           # Formato ISO (ej: '2026-07-15T23:59:59')
-    assigned_email = data.get('assigned_email')    # Opcional, para asignar a un usuario específico
+    due_date_str = data.get('due_date')           # Formato ISO (ej: '2026-07-15')
+    assigned_type = data.get('assigned_type', 'all') # 'all', 'department', 'individual'
+    assigned_target = data.get('assigned_target')    # Nombre de depto o correo
+    assigned_email = data.get('assigned_email') or (assigned_target if assigned_type == 'individual' else None)
     
     if not title:
         return jsonify({'message': 'El título de la tarea es obligatorio.'}), 400
@@ -58,7 +65,7 @@ def create_task(current_user):
         return jsonify({'message': 'El administrador no tiene una institución vinculada.'}), 400
         
     assigned_user_id = None
-    if assigned_email:
+    if assigned_type == 'individual' and assigned_email:
         user_to_assign = User.query.filter_by(
             email=assigned_email, 
             institution_id=institution_id
@@ -70,10 +77,9 @@ def create_task(current_user):
     due_date = None
     if due_date_str:
         try:
-            # Intentar parsear ISO format o fecha simple
             due_date = datetime.fromisoformat(due_date_str.replace('Z', ''))
         except ValueError:
-            return jsonify({'message': 'Formato de fecha inválido. Use formato ISO (YYYY-MM-DDTHH:MM:SS).'}), 400
+            return jsonify({'message': 'Formato de fecha inválido. Use formato ISO.'}), 400
             
     new_task = Task(
         title=title,
@@ -82,7 +88,9 @@ def create_task(current_user):
         due_date=due_date,
         user_id=assigned_user_id,
         institution_id=institution_id,
-        created_by=current_user.id
+        created_by=current_user.id,
+        assigned_type=assigned_type,
+        assigned_target=assigned_target
     )
     
     try:
@@ -93,6 +101,8 @@ def create_task(current_user):
             'task': new_task.to_dict()
         }), 201
     except Exception as e:
+        db.session.rollback()
+        return jsonify({'message': f'Error al guardar la tarea: {str(e)}'}), 500
         db.session.rollback()
         return jsonify({'message': f'Error al guardar la tarea: {str(e)}'}), 500
 

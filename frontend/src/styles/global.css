@@ -825,3 +825,186 @@ input:focus, select:focus, textarea:focus {
     top: 0%;
   }
 }
+
+.calendar-day-hover:hover {
+  border-color: var(--primary) !important;
+  box-shadow: 0 0 8px var(--primary-light) !important;
+  transform: translateY(-2px);
+}
+
+/* DUOLINGO & GAMIFIED UI COMPONENTS */
+.duo-card {
+  background-color: var(--bg-secondary);
+  border: 2px solid var(--border);
+  border-bottom: 5px solid var(--border);
+  border-radius: 16px;
+  padding: 16px 20px;
+  cursor: pointer;
+  transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  user-select: none;
+}
+
+.duo-card:hover {
+  border-color: var(--primary);
+  transform: translateY(-3px);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.06);
+}
+
+.duo-card:active {
+  transform: translateY(2px);
+  border-bottom-width: 2px;
+}
+
+.duo-card.selected {
+  border-color: var(--primary);
+  border-bottom-color: var(--primary);
+  background-color: var(--primary-light);
+  color: var(--primary);
+  box-shadow: 0 0 12px var(--primary-light);
+}
+
+.duo-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  border-radius: 24px;
+  border: 2px solid var(--border);
+  border-bottom: 4px solid var(--border);
+  background-color: var(--bg-secondary);
+  font-weight: 700;
+  font-size: 12.5px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  user-select: none;
+}
+
+.duo-pill:hover {
+  border-color: var(--primary);
+  transform: translateY(-2px);
+}
+
+.duo-pill.selected {
+  border-color: var(--primary);
+  border-bottom-color: var(--primary);
+  background-color: var(--primary);
+  color: #ffffff;
+}
+
+.duo-streak-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  border-radius: 20px;
+  background: linear-gradient(135deg, #ff9f43 0%, #ff5252 100%);
+  color: #ffffff;
+  font-weight: 900;
+  font-size: 12px;
+  box-shadow: 0 4px 12px rgba(255, 82, 82, 0.3);
+  animation: pulseGlow 2s infinite alternate;
+}
+
+.duo-xp-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  border-radius: 20px;
+  background: linear-gradient(135deg, #10ac84 0%, #1dd1a1 100%);
+  color: #ffffff;
+  font-weight: 900;
+  font-size: 12px;
+  box-shadow: 0 4px 12px rgba(29, 209, 161, 0.3);
+}
+
+@keyframes pulseGlow {
+  0% { transform: scale(1); box-shadow: 0 4px 12px rgba(255, 82, 82, 0.3); }
+  100% { transform: scale(1.05); box-shadow: 0 6px 18px rgba(255, 82, 82, 0.5); }
+}
+
+/* CUSTOM FUTURISTIC LISTS & CALENDAR */
+.futuristic-card-item {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 16px;
+  transition: all 0.2s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.futuristic-card-item::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 4px;
+  height: 100%;
+  background: var(--primary);
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+.futuristic-card-item:hover {
+  border-color: var(--primary);
+  transform: translateX(4px);
+  box-shadow: var(--shadow-md);
+}
+
+.futuristic-card-item:hover::before {
+  opacity: 1;
+}
+
+.waveform-bar {
+  width: 3px;
+  height: 16px;
+  background-color: var(--primary);
+  border-radius: 2px;
+  animation: barGrow 0.8s ease-in-out infinite alternate;
+}
+
+/* NOTIFICATION DRAWER & RBAC ROLES MATRIX */
+.notification-popover {
+  position: absolute;
+  top: 50px;
+  right: 20px;
+  width: 340px;
+  background-color: var(--bg-secondary);
+  border: 2px solid var(--border);
+  border-radius: 16px;
+  box-shadow: 0 12px 32px rgba(0,0,0,0.15);
+  z-index: 9999;
+  padding: 16px;
+  animation: fadeIn 0.2s ease;
+}
+
+.notification-item {
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background-color: var(--bg-primary);
+  margin-bottom: 8px;
+  transition: all 0.2s ease;
+}
+
+.notification-item:hover {
+  border-color: var(--primary);
+  transform: translateX(2px);
+}
+
+.role-card-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+

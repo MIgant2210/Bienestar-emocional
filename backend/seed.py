@@ -27,6 +27,8 @@ with app.app_context():
             conn.execute(db.text("ALTER TABLE evaluations ALTER COLUMN institution_id DROP NOT NULL"))
             conn.execute(db.text("ALTER TABLE evaluations ADD COLUMN IF NOT EXISTS assigned_type VARCHAR(50) DEFAULT 'all'"))
             conn.execute(db.text("ALTER TABLE evaluations ADD COLUMN IF NOT EXISTS assigned_target VARCHAR(150)"))
+            conn.execute(db.text("ALTER TABLE tasks ADD COLUMN IF NOT EXISTS assigned_type VARCHAR(30) DEFAULT 'all'"))
+            conn.execute(db.text("ALTER TABLE tasks ADD COLUMN IF NOT EXISTS assigned_target VARCHAR(150)"))
             conn.execute(db.text("ALTER TABLE users ADD COLUMN IF NOT EXISTS department VARCHAR(80) DEFAULT 'General'"))
             conn.execute(db.text("ALTER TABLE reflections ADD COLUMN IF NOT EXISTS evaluation_id UUID REFERENCES evaluations(id) ON DELETE SET NULL"))
             conn.commit()
@@ -78,64 +80,71 @@ with app.app_context():
         db.session.commit()
 
     # 5. Plantillas Precargadas de Tests Estandarizados (Módulo 4 Multimodal)
-    existing_templates = Evaluation.query.filter_by(is_template=True).all()
-    if len(existing_templates) == 0:
-        # Template 1: Clima Laboral
-        q_clima = [
-            {"id": "q1", "question": "¿Cómo evalúas el apoyo y colaboración entre tus compañeros de equipo?", "type": "scale_1_5"},
-            {"id": "q2", "question": "¿Sientes que la exigencia de las tareas es razonable respecto al tiempo?", "type": "scale_1_5"},
-            {"id": "q3", "question": "¿Qué tan valorado(a) te sientes dentro del ambiente de la institución?", "type": "scale_1_5"},
-            {"id": "q4", "question": "Redacta tus sugerencias o vivencias sobre el clima laboral/académico actual.", "type": "text"}
-        ]
-        t1 = Evaluation(
-            title="[Plantilla] Test de Clima Laboral y Entorno Institucional",
-            description="Evaluación estándar para medir exigencias emocionales, relaciones de equipo y reconocimiento.",
-            category="Clima Laboral",
-            questions_json=json.dumps(q_clima),
-            is_active=True,
-            is_template=True,
-            institution_id=inst_edu.id
-        )
+    Evaluation.query.filter_by(is_template=True).delete()
+    db.session.commit()
 
-        # Template 2: Ánimo Personal
-        q_animo = [
-            {"id": "q1", "question": "¿Con qué frecuencia has sentido tensión o nerviosismo en los últimos días?", "type": "scale_1_5"},
-            {"id": "q2", "question": "¿Cómo calificarías la calidad de tu descanso y ritmo de sueño?", "type": "scale_1_5"},
-            {"id": "q3", "question": "¿Qué tan optimista te sientes respecto a tu energía y vitalidad diaria?", "type": "scale_1_5"},
-            {"id": "q4", "question": "Describe cualquier preocupación recurrente que haya afectado tu tranquilidad.", "type": "text"}
-        ]
-        t2 = Evaluation(
-            title="[Plantilla] Chequeo de Estado de Ánimo y Ansiedad Personal",
-            description="Cuestionario enfocado en la salud mental individual, hábitos de sueño y niveles de fatiga.",
-            category="Ánimo Personal",
-            questions_json=json.dumps(q_animo),
-            is_active=True,
-            is_template=True,
-            institution_id=inst_edu.id
-        )
+    # Template 1: Clima Laboral y Entorno Institucional
+    q_clima = [
+        {"id": "q1", "question": "¿Cómo evalúas la comunicación y apoyo de tus superiores o docentes?", "type": "scale_1_5"},
+        {"id": "q2", "question": "En una escala del 1 al 10, ¿qué tan manejable percibes tu carga de trabajo actual?", "type": "scale_1_10"},
+        {"id": "q3", "question": "¿Sientes que dispones de las herramientas necesarias para desarrollar tus labores diarias?", "type": "boolean"},
+        {"id": "q4", "question": "¿Qué tan satisfecho(a) te encuentras con la flexibilidad y el respeto a tu tiempo personal?", "type": "scale_1_5"},
+        {"id": "q5", "question": "¿Consideras que la institución promueve un ambiente inclusivo y libre de discriminación?", "type": "boolean"},
+        {"id": "q6", "question": "Dictado por Voz / Texto Libre: Expresa tus sugerencias o vivencias sobre el clima laboral actual.", "type": "text"}
+    ]
+    t1 = Evaluation(
+        title="[Plantilla] Evaluación Exhaustiva de Clima Laboral y Entorno",
+        description="Encuesta completa para medir comunicación, balance de tiempo, herramientas de trabajo y reconocimiento.",
+        category="Clima Laboral",
+        questions_json=json.dumps(q_clima),
+        is_active=True,
+        is_template=True,
+        institution_id=inst_edu.id
+    )
 
-        # Template 3: Bienestar Multimodal Integral
-        q_integral = [
-            {"id": "q1", "question": "En una escala de 1 a 5, ¿cuál es tu nivel general de satisfacción actual?", "type": "scale_1_5"},
-            {"id": "q2", "question": "¿Qué tan equilibrado percibes tu balance entre actividades y tiempo libre?", "type": "scale_1_5"},
-            {"id": "q3", "question": "¿Qué tan preparado(a) te sientes para resolver los retos de la próxima semana?", "type": "scale_1_5"},
-            {"id": "q4", "question": "Redacción Multimodal Libre: Describe abiertamente tu sentir para el análisis de IA.", "type": "text"}
-        ]
-        t3 = Evaluation(
-            title="[Plantilla] Evaluación Multimodal de Bienestar Integral",
-            description="Mapeo completo de adaptación, resiliencia y satisfacción con análisis por Gemini AI.",
-            category="Bienestar Integral",
-            questions_json=json.dumps(q_integral),
-            is_active=True,
-            is_template=True,
-            institution_id=inst_edu.id
-        )
+    # Template 2: Ánimo Personal y Salud Emocional
+    q_animo = [
+        {"id": "q1", "question": "¿Con qué frecuencia has experimentado tensión física, rigidez o nerviosismo esta semana?", "type": "scale_1_5"},
+        {"id": "q2", "question": "En una escala del 1 al 10, ¿cómo calificarías tu calidad de descanso y energía matutina?", "type": "scale_1_10"},
+        {"id": "q3", "question": "¿Has sentido momentos de desconexión o desmotivación profunda recientemente?", "type": "boolean"},
+        {"id": "q4", "question": "¿Qué tan optimista te sientes respecto a tu capacidad para cumplir tus metas del mes?", "type": "scale_1_5"},
+        {"id": "q5", "question": "¿Logras mantener pausas activas durante tus jornadas diarias?", "type": "boolean"},
+        {"id": "q6", "question": "Reflexión Dictada / Escrita: Describe libremente cualquier inquietud o emoción relevante de tu semana.", "type": "text"}
+    ]
+    t2 = Evaluation(
+        title="[Plantilla] Chequeo Integral de Salud Emocional y Ritmo de Vida",
+        description="Diagnóstico estandarizado de niveles de fatiga, calidad del sueño, ansiedad y resiliencia.",
+        category="Ánimo Personal",
+        questions_json=json.dumps(q_animo),
+        is_active=True,
+        is_template=True,
+        institution_id=inst_edu.id
+    )
 
-        db.session.add(t1)
-        db.session.add(t2)
-        db.session.add(t3)
-        db.session.commit()
-        print("[Tests Precargados] 3 plantillas estandarizadas sembradas correctamente.")
+    # Template 3: Bienestar Multimodal Integral
+    q_integral = [
+        {"id": "q1", "question": "En una escala del 1 al 5, ¿cuál es tu índice general de bienestar y equilibrio personal?", "type": "scale_1_5"},
+        {"id": "q2", "question": "Del 1 al 10, ¿qué tan integrado y valorado te sientes en la comunidad de la institución?", "type": "scale_1_10"},
+        {"id": "q3", "question": "¿Recomendarías a un colega o compañero formar parte de este equipo?", "type": "boolean"},
+        {"id": "q4", "question": "¿Qué tan preparado(a) te sientes para adaptarte a nuevos retos o cambios organizacionales?", "type": "scale_1_5"},
+        {"id": "q5", "question": "¿Sientes que tus opiniones y sugerencias son escuchadas con seriedad?", "type": "boolean"},
+        {"id": "q6", "question": "Espacio Multimodal Libre: Graba tu voz o redacta tus comentarios para el análisis con IA.", "type": "text"}
+    ]
+    t3 = Evaluation(
+        title="[Plantilla] Diagnóstico Multimodal de Bienestar Institucional 360°",
+        description="Cuestionario amplio de adaptación cultural, pertenencia y salud integral procesado por Gemini AI.",
+        category="Bienestar Integral",
+        questions_json=json.dumps(q_integral),
+        is_active=True,
+        is_template=True,
+        institution_id=inst_edu.id
+    )
+
+    db.session.add(t1)
+    db.session.add(t2)
+    db.session.add(t3)
+    db.session.commit()
+    print("[Tests Precargados] 3 plantillas estandarizadas ampliadas sembradas correctamente.")
 
     # 6. Miembro demo
     member_email = "miembro@bienestar.com"

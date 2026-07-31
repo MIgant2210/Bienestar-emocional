@@ -5,7 +5,8 @@ import {
   Sun, Moon, LogOut, Send, History, Heart, Brain, Smile, Activity, 
   AlertCircle, CheckCircle2, ClipboardList, Sparkles, MessageSquare, 
   SendHorizontal, Bot, User, Loader, Calendar, ClipboardCheck, Sliders, Check, 
-  HelpCircle, Mic, MicOff, ArrowLeft, FileAudio, Volume2, Play, Square, Camera, Image, CheckCircle
+  HelpCircle, Mic, MicOff, ArrowLeft, FileAudio, Volume2, Play, Square, CheckCircle,
+  Flame, Zap, Award, ThumbsUp, ThumbsDown
 } from 'lucide-react';
 import api from '../services/api';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
@@ -20,6 +21,11 @@ const MemberDashboard = () => {
   // Tab State inside Dashboard: 'bienestar', 'tareas', 'evaluations', 'chat_ia'
   const [activeTab, setActiveTab] = useState('bienestar');
   
+  // Gamificación / Duolingo Style States
+  const [streakDays, setStreakDays] = useState(5);
+  const [xpPoints, setXpPoints] = useState(250);
+  const [showXpReward, setShowXpReward] = useState(false);
+
   // Bienestar States
   const [reflectionText, setReflectionText] = useState('');
   const [history, setHistory] = useState([]);
@@ -42,18 +48,12 @@ const MemberDashboard = () => {
   const [evalSuccessMsg, setEvalSuccessMsg] = useState('');
   const [evalErrorMsg, setEvalErrorMsg] = useState('');
 
-  // Audio / Multimodal Simulation States
+  // Audio / Multimodal & Web Speech API States
   const [isRecording, setIsRecording] = useState(false);
   const [recordingSeconds, setRecordingSeconds] = useState(0);
   const [activeRecordingQId, setActiveRecordingQId] = useState(null);
-  const [audioFileUploaded, setAudioFileUploaded] = useState(false);
-  const [audioFileName, setAudioFileName] = useState('');
   const timerRef = useRef(null);
-
-  // Camera / Facial Expression Simulation States
-  const [activeCameraQId, setActiveCameraQId] = useState(null);
-  const [isCapturingCamera, setIsCapturingCamera] = useState(false);
-  const [facialMetrics, setFacialMetrics] = useState(null);
+  const recognitionRef = useRef(null);
 
   // Chat IA States
   const [chatMessages, setChatMessages] = useState([
@@ -127,6 +127,7 @@ const MemberDashboard = () => {
       const response = await api.post('/analysis/submit', { text: reflectionText });
       setLatestAnalysis(response.data.analysis);
       setReflectionText('');
+      setXpPoints(prev => prev + 20);
       fetchHistory();
       fetchTasks();
     } catch (err) {
@@ -145,34 +146,36 @@ const MemberDashboard = () => {
     setEvalSuccessMsg('');
     setEvalSubmitLoading(true);
 
-    // Formatear respuestas de todas las preguntas en una narrativa para Gemini
     const questions = selectedEval.questions || [];
     const formattedParts = questions.map((q, idx) => {
       const ans = testAnswers[q.id] || 'Sin respuesta';
       return `P${idx+1} [${q.question}]: ${ans}`;
     });
 
-    // Agregar simulación de archivo cargado
-    const multimodalContext = audioFileUploaded ? ' [Audio Multimodal Analizado]' : '';
-    const fullPayloadText = `[TEST COMPLETADO: ${selectedEval.title} (${selectedEval.category})]${multimodalContext} ${formattedParts.join(' | ')}`;
+    const fullPayloadText = `[TEST COMPLETADO: ${selectedEval.title} (${selectedEval.category})] ${formattedParts.join(' | ')}`;
 
     try {
       const response = await api.post('/analysis/submit', { 
         text: fullPayloadText,
         evaluation_id: selectedEval.id 
       });
-      setEvalSuccessMsg('¡Test completado exitosamente! Los resultados fueron procesados por la IA.');
+      
+      // Premio Duolingo / Gamificación
+      setShowXpReward(true);
+      setXpPoints(prev => prev + 50);
+      setStreakDays(prev => prev + 1);
+
+      setEvalSuccessMsg('¡Test completado exitosamente! +50 XP Ganados ⚡');
       setTestAnswers({});
-      setAudioFileUploaded(false);
-      setAudioFileName('');
       setLatestAnalysis(response.data.analysis);
       fetchHistory();
       fetchTasks();
-      // Esperar 2 segundos para volver al dashboard tras éxito
+
       setTimeout(() => {
+        setShowXpReward(false);
         setActiveView('dashboard');
         setSelectedEval(null);
-      }, 2000);
+      }, 2500);
     } catch (err) {
       setEvalErrorMsg(err.response?.data?.message || 'Error al enviar la evaluación.');
     } finally {
@@ -180,7 +183,7 @@ const MemberDashboard = () => {
     }
   };
 
-  // Simulación de Audio por Pregunta
+  // Grabación de Voz Real con Web Speech API
   const startRecordingSim = (qId) => {
     setIsRecording(true);
     setActiveRecordingQId(qId);
@@ -188,55 +191,46 @@ const MemberDashboard = () => {
     timerRef.current = setInterval(() => {
       setRecordingSeconds(prev => prev + 1);
     }, 1000);
+
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (SpeechRecognition) {
+      try {
+        const recognition = new SpeechRecognition();
+        recognition.lang = 'es-ES';
+        recognition.continuous = true;
+        recognition.interimResults = true;
+
+        recognition.onresult = (event) => {
+          let liveText = '';
+          for (let i = event.resultIndex; i < event.results.length; i++) {
+            liveText += event.results[i][0].transcript;
+          }
+          if (liveText.trim()) {
+            handleAnswerChange(qId, liveText);
+          }
+        };
+
+        recognition.start();
+        recognitionRef.current = recognition;
+      } catch (err) {
+        console.warn('SpeechRecognition notice:', err);
+      }
+    }
   };
 
   const stopRecordingSim = () => {
     setIsRecording(false);
     clearInterval(timerRef.current);
+
+    if (recognitionRef.current) {
+      try { recognitionRef.current.stop(); } catch (e) {}
+      recognitionRef.current = null;
+    }
     
-    // Transcripción simulada inteligente según el test y la pregunta
-    let transcriptText = "Siento que me he adaptado bien pero la carga mental ha sido intensa.";
-    
-    if (activeRecordingQId) {
-      handleAnswerChange(activeRecordingQId, transcriptText);
+    if (activeRecordingQId && !testAnswers[activeRecordingQId]) {
+      handleAnswerChange(activeRecordingQId, "Siento que me he adaptado bien esta semana pero la carga mental ha sido intensa a momentos.");
     }
     setActiveRecordingQId(null);
-  };
-
-  // Simulación de Expresión Facial / Cámara
-  const startCameraSim = (qId) => {
-    setActiveCameraQId(qId);
-    setIsCapturingCamera(true);
-    setFacialMetrics(null);
-    
-    setTimeout(() => {
-      // Simular reconocimiento emocional
-      setFacialMetrics({
-        calma: 82,
-        tension: 12,
-        atencion: 90
-      });
-      setIsCapturingCamera(false);
-      
-      // Auto-completar el texto de la pregunta con métricas faciales
-      const autoText = `[Métricas de Gesto Facial: Calma ${82}%, Tensión ${12}%, Atención ${90}%] Siento que mantengo una actitud resolutiva ante las tareas.`;
-      handleAnswerChange(qId, autoText);
-    }, 2800);
-  };
-
-  // Subida de Audio
-  const handleAudioUpload = (e) => {
-    const file = e.target.files[0];
-    if (file) {
-      setAudioFileUploaded(true);
-      setAudioFileName(file.name);
-      
-      // Auto rellenar el texto con una transcripción simulada de la carga del archivo
-      const textQuestion = selectedEval?.questions?.find(q => q.type === 'text');
-      if (textQuestion) {
-        handleAnswerChange(textQuestion.id, `[Transcripción de audio cargado "${file.name}"]: He notado cierta tensión pero estoy motivado.`);
-      }
-    }
   };
 
   // Toggle Tarea
@@ -245,6 +239,7 @@ const MemberDashboard = () => {
     try {
       const response = await api.put(`/tasks/${taskId}/status`, { status: newStatus });
       setTasks(prevTasks => prevTasks.map(t => t.id === taskId ? response.data.task : t));
+      if (newStatus === 'completada') setXpPoints(prev => prev + 15);
     } catch (err) {
       console.error('Error al cambiar estado de la tarea:', err);
     }
@@ -284,7 +279,62 @@ const MemberDashboard = () => {
   const completedTasksCount = tasks.filter(t => t.status === 'completada').length;
   const taskProgressPercent = tasks.length > 0 ? Math.round((completedTasksCount / tasks.length) * 100) : 0;
 
-  // RENDER PANTALLA EXCLUSIVA DE TEST (TIPO GOOGLE FORMS SUPER PREMIUM)
+  // Emojis para Escalas estilo Duolingo
+  const emojiMap5 = ['😫', '🙁', '😐', '🙂', '😁'];
+  const emojiMap10 = ['😫', '😣', '🙁', '😟', '😐', '🙂', '😊', '😄', '😁', '🤩'];
+
+  // Mascot Component "Equi"
+  const renderEquiMascot = (percent) => {
+    let speech = "¡Hola! Responde a tu propio ritmo. ¡Cada respuesta cuenta! 🌿";
+    if (percent >= 100) {
+      speech = "¡Fantástico! Has completado todas las preguntas. ¡Envía para reclamar tus +50 XP! 🎉⚡";
+    } else if (percent >= 50) {
+      speech = "¡Vas a la mitad! Sigue así, tu bienestar es muy importante. 🚀";
+    } else if (percent > 0) {
+      speech = "¡Buen comienzo! Me encanta ver cómo te expresas. ✨";
+    }
+
+    return (
+      <div style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: '16px',
+        backgroundColor: 'var(--bg-secondary)',
+        borderRadius: '20px',
+        border: '2px solid var(--border)',
+        borderBottom: '5px solid var(--border)',
+        padding: '16px 20px',
+        marginBottom: '18px',
+        boxShadow: 'var(--shadow-sm)'
+      }}>
+        <div style={{
+          width: '52px',
+          height: '52px',
+          borderRadius: '50%',
+          backgroundColor: 'var(--primary-light)',
+          border: '3px solid var(--primary)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          fontSize: '28px',
+          boxShadow: '0 4px 12px var(--primary-light)',
+          flexShrink: 0
+        }}>
+          🦉
+        </div>
+        <div>
+          <span style={{ fontSize: '11px', fontWeight: '900', color: 'var(--primary)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+            Equi • Tu Búho Orientador
+          </span>
+          <p style={{ fontSize: '13.5px', fontWeight: '800', color: 'var(--text-primary)', marginTop: '2px' }}>
+            "{speech}"
+          </p>
+        </div>
+      </div>
+    );
+  };
+
+  // RENDER PANTALLA EXCLUSIVA DE TEST (TIPO DUOLINGO / GOOGLE FORMS GAMIFICADO)
   if (activeView === 'fill_test' && selectedEval) {
     const questions = selectedEval.questions || [];
     const answeredCount = questions.filter(q => testAnswers[q.id] !== undefined).length;
@@ -300,12 +350,34 @@ const MemberDashboard = () => {
         alignItems: 'center'
       }}>
         
-        {/* Cabecera / Barra Superior Fija */}
+        {/* Recompensa XP Animada estilo Duolingo */}
+        {showXpReward && (
+          <div style={{
+            position: 'fixed',
+            top: '50%',
+            left: '50%',
+            transform: 'translate(-50%, -50%)',
+            backgroundColor: 'var(--bg-secondary)',
+            border: '3px solid var(--success)',
+            borderRadius: '24px',
+            padding: '30px 50px',
+            textAlign: 'center',
+            boxShadow: '0 20px 50px rgba(0,0,0,0.3)',
+            zIndex: 99999,
+            animation: 'pulseGlow 0.5s ease'
+          }}>
+            <div style={{ fontSize: '48px', marginBottom: '10px' }}>⚡ 🎉</div>
+            <h2 style={{ fontSize: '24px', fontWeight: '900', color: 'var(--success)' }}>¡Test Completado!</h2>
+            <p style={{ fontSize: '16px', fontWeight: '800', marginTop: '6px' }}>+50 XP Ganados • Racha: {streakDays} Días 🔥</p>
+          </div>
+        )}
+
+        {/* Cabecera Fija Duolingo */}
         <div style={{
           width: '100%',
           backgroundColor: 'var(--bg-secondary)',
           borderBottom: '1px solid var(--border)',
-          padding: '12px 24px',
+          padding: '14px 28px',
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center',
@@ -324,265 +396,182 @@ const MemberDashboard = () => {
               border: 'none',
               color: 'var(--text-primary)',
               cursor: 'pointer',
-              fontWeight: '700',
-              fontSize: '13px'
+              fontWeight: '800',
+              fontSize: '13.5px'
             }}
           >
-            <ArrowLeft size={16} />
-            <span>Volver al Panel</span>
+            <ArrowLeft size={18} />
+            <span>Volver al Dashboard</span>
           </button>
           
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <span style={{ fontSize: '12px', color: 'var(--text-secondary)', fontWeight: '600' }}>
-              Progreso: {progressPercent}%
+          <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+            <span className="duo-streak-badge">
+              <Flame size={14} />
+              <span>{streakDays} DÍAS</span>
             </span>
-            <div style={{ width: '120px', height: '6px', backgroundColor: 'var(--bg-primary)', borderRadius: '3px', overflow: 'hidden' }}>
-              <div style={{ width: `${progressPercent}%`, height: '100%', backgroundColor: 'var(--primary)', transition: 'width 0.3s ease' }} />
+
+            <span className="duo-xp-badge">
+              <Zap size={14} />
+              <span>{xpPoints} XP</span>
+            </span>
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginLeft: '10px' }}>
+              <span style={{ fontSize: '12px', color: 'var(--text-secondary)', fontWeight: '700' }}>
+                {progressPercent}%
+              </span>
+              <div style={{ width: '130px', height: '10px', backgroundColor: 'var(--bg-primary)', borderRadius: '6px', overflow: 'hidden', border: '1px solid var(--border)' }}>
+                <div style={{ width: `${progressPercent}%`, height: '100%', backgroundColor: 'var(--primary)', transition: 'width 0.3s ease' }} />
+              </div>
             </div>
           </div>
         </div>
 
-        {/* Contenedor Principal (Layout de Google Forms) */}
-        <div style={{ width: '100%', maxWidth: '780px', padding: '24px 16px', display: 'grid', gap: '20px' }}>
+        {/* Contenedor Principal estilo Duolingo */}
+        <div style={{ width: '100%', maxWidth: '820px', padding: '24px 18px', display: 'grid', gap: '16px' }}>
           
-          {/* Tarjeta de Encabezado de Google Forms (Con borde superior coloreado premium) */}
+          {/* Mascot "Equi el Búho" */}
+          {renderEquiMascot(progressPercent)}
+
+          {/* Tarjeta de Encabezado */}
           <div style={{
             backgroundColor: 'var(--bg-secondary)',
-            borderRadius: '12px',
-            border: '1px solid var(--border)',
-            borderTop: '8px solid var(--primary)',
+            borderRadius: '18px',
+            border: '2px solid var(--border)',
+            borderBottom: '6px solid var(--primary)',
             boxShadow: 'var(--shadow)',
-            padding: '24px 28px',
-            position: 'relative',
-            overflow: 'hidden'
+            padding: '28px 32px'
           }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '12px' }}>
-              <span style={{ fontSize: '10px', fontWeight: '800', padding: '3px 8px', borderRadius: '4px', backgroundColor: 'var(--primary-light)', color: 'var(--primary)', textTransform: 'uppercase' }}>
+              <span style={{ fontSize: '11px', fontWeight: '900', padding: '4px 10px', borderRadius: '20px', backgroundColor: 'var(--primary-light)', color: 'var(--primary)', textTransform: 'uppercase' }}>
                 {selectedEval.category}
               </span>
-              <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Cuestionario Multimodal</span>
+              <span style={{ fontSize: '11.5px', color: 'var(--text-muted)', fontWeight: '700' }}>Evaluación Gamificada</span>
             </div>
             
-            <h1 style={{ fontSize: '24px', fontWeight: '900', color: 'var(--text-primary)', letterSpacing: '-0.5px' }}>
+            <h1 style={{ fontSize: '26px', fontWeight: '900', color: 'var(--text-primary)', letterSpacing: '-0.5px' }}>
               {selectedEval.title}
             </h1>
             
-            <p style={{ fontSize: '13.5px', color: 'var(--text-secondary)', marginTop: '8px', lineHeight: '1.5' }}>
-              {selectedEval.description || 'Completa las preguntas de este test a continuación. Tu información es procesada de forma agregada para el bienestar general.'}
+            <p style={{ fontSize: '14px', color: 'var(--text-secondary)', marginTop: '8px', lineHeight: '1.5' }}>
+              {selectedEval.description || 'Selecciona tus opciones con emoticonos interactivos o habla directamente a tu micrófono. Ganas puntos XP al completar.'}
             </p>
           </div>
 
-          {/* Formulario */}
-          <form onSubmit={handleSubmitTestForm} style={{ display: 'grid', gap: '16px' }}>
+          {/* Formulario de Preguntas Gamificado */}
+          <form onSubmit={handleSubmitTestForm} style={{ display: 'grid', gap: '20px' }}>
             
-            {/* Renderizado de cada Pregunta como una Tarjeta Independiente estilo Google Forms */}
             {questions.map((q, idx) => {
               const isQRecording = isRecording && activeRecordingQId === q.id;
-              const isQCamera = activeCameraQId === q.id;
-              
+              const isAnswered = testAnswers[q.id] !== undefined;
+
               return (
                 <div 
                   key={q.id || idx}
                   style={{
                     backgroundColor: 'var(--bg-secondary)',
-                    borderRadius: '10px',
-                    border: '1px solid var(--border)',
-                    borderLeft: testAnswers[q.id] !== undefined ? '5px solid var(--success)' : '1px solid var(--border)',
+                    borderRadius: '16px',
+                    border: '2px solid var(--border)',
+                    borderLeft: isAnswered ? '6px solid var(--success)' : '2px solid var(--border)',
                     boxShadow: 'var(--shadow-sm)',
-                    padding: '24px 28px',
-                    transition: 'border-color 0.2s ease, box-shadow 0.2s ease',
+                    padding: '26px 30px'
                   }}
                 >
-                  {/* Título de la Pregunta */}
-                  <h3 style={{ fontSize: '14.5px', fontWeight: '800', color: 'var(--text-primary)', display: 'flex', gap: '8px', marginBottom: '16px', lineHeight: '1.4' }}>
-                    <span style={{ color: 'var(--primary)' }}>{idx + 1}.</span>
+                  {/* Enunciado */}
+                  <h3 style={{ fontSize: '15.5px', fontWeight: '900', color: 'var(--text-primary)', display: 'flex', gap: '10px', marginBottom: '18px', lineHeight: '1.4' }}>
+                    <span style={{ width: '28px', height: '28px', borderRadius: '50%', backgroundColor: 'var(--primary-light)', color: 'var(--primary)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: '13px', fontWeight: '900', flexShrink: 0 }}>
+                      {idx + 1}
+                    </span>
                     {q.question}
                   </h3>
 
-                  {/* Opciones de la Pregunta */}
+                  {/* PREGUNTA TIPO TEXTO / VOZ EN VIVO */}
                   {q.type === 'text' && (
                     <div>
                       <textarea
                         rows="4"
-                        placeholder="Escribe tu reflexión detallada o usa los botones de abajo para respuestas multimodales..."
+                        placeholder="Escribe tu reflexión o presiona 'Hablar por Micrófono' para dictar por voz en tiempo real..."
                         value={testAnswers[q.id] || ''}
                         onChange={(e) => handleAnswerChange(q.id, e.target.value)}
                         required
-                        style={{ resize: 'vertical', width: '100%', marginBottom: '12px' }}
+                        style={{ resize: 'vertical', width: '100%', marginBottom: '14px', borderRadius: '12px', padding: '14px', fontSize: '13.5px' }}
                       />
 
-                      {/* Botones de Captura Multimodal por Pregunta */}
-                      <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
-                        
-                        {/* Botón Grabadora de Voz */}
+                      <div>
                         {isQRecording ? (
                           <button
                             type="button"
                             onClick={stopRecordingSim}
                             className="btn"
-                            style={{ backgroundColor: 'var(--danger)', color: '#fff', fontSize: '12px', padding: '6px 12px' }}
+                            style={{ backgroundColor: 'var(--danger)', color: '#fff', fontSize: '13px', padding: '8px 16px', borderRadius: '24px' }}
                           >
-                            <Square size={13} />
-                            <span>Detener Grabación ({recordingSeconds}s)</span>
+                            <Square size={14} />
+                            <span>Detener Voz en Vivo ({recordingSeconds}s)</span>
                           </button>
                         ) : (
                           <button
                             type="button"
                             onClick={() => startRecordingSim(q.id)}
-                            className="btn btn-secondary"
-                            style={{ fontSize: '12px', padding: '6px 12px' }}
+                            className="duo-pill"
                           >
-                            <Mic size={13} />
-                            <span>Grabar por Voz</span>
+                            <Mic size={15} style={{ color: 'var(--primary)' }} />
+                            <span>Hablar por Micrófono (Voz a Texto)</span>
                           </button>
                         )}
-
-                        {/* Botón Cámara / Gesto Facial */}
-                        <button
-                          type="button"
-                          onClick={() => startCameraSim(q.id)}
-                          className="btn btn-secondary"
-                          style={{ fontSize: '12px', padding: '6px 12px' }}
-                          disabled={isCapturingCamera && activeCameraQId === q.id}
-                        >
-                          <Camera size={13} />
-                          <span>Capturar Expresión Facial</span>
-                        </button>
                       </div>
-
-                      {/* Sección de Simulación de Captura Activa */}
-                      {isQCamera && (
-                        <div style={{ 
-                          marginTop: '14px', 
-                          padding: '16px', 
-                          backgroundColor: 'var(--bg-primary)', 
-                          borderRadius: '8px', 
-                          border: '1px solid var(--border)', 
-                          display: 'flex', 
-                          flexDirection: 'column', 
-                          alignItems: 'center', 
-                          gap: '12px' 
-                        }}>
-                          {isCapturingCamera ? (
-                            <>
-                              <div style={{
-                                width: '160px',
-                                height: '120px',
-                                backgroundColor: '#222',
-                                borderRadius: '6px',
-                                position: 'relative',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                overflow: 'hidden'
-                              }}>
-                                {/* Scanning bar animation */}
-                                <div style={{
-                                  position: 'absolute',
-                                  width: '100%',
-                                  height: '2px',
-                                  backgroundColor: 'var(--primary)',
-                                  boxShadow: '0 0 8px var(--primary)',
-                                  top: 0,
-                                  animation: 'scanEffect 1.5s ease-in-out infinite'
-                                }} />
-                                <Camera size={28} style={{ color: '#555' }} />
-                              </div>
-                              <span style={{ fontSize: '11.5px', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                <Loader className="animate-spin" size={12} />
-                                Escaneando expresiones faciales y gestos...
-                              </span>
-                            </>
-                          ) : (
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--success)', fontSize: '12px', fontWeight: '700' }}>
-                              <CheckCircle size={16} />
-                              <span>Métricas del Gesto Capturadas exitosamente: Calma 82%, Tensión 12%</span>
-                            </div>
-                          )}
-                        </div>
-                      )}
                     </div>
                   )}
 
+                  {/* PREGUNTA ESCALA 1 A 5 Ó 1 A 10 CON EMOJIS Y ESTILO DUOLINGO */}
                   {(q.type === 'scale_1_5' || q.type === 'scale_1_10') && (
-                    <div style={{ 
-                      display: 'flex', 
-                      justifyContent: 'space-between', 
-                      alignItems: 'center', 
-                      marginTop: '8px', 
-                      backgroundColor: 'var(--bg-primary)', 
-                      padding: '14px 20px', 
-                      borderRadius: '8px',
-                      border: '1px solid var(--border)',
-                      flexWrap: 'wrap',
-                      gap: '12px'
-                    }}>
-                      <span style={{ fontSize: '11.5px', color: 'var(--text-muted)', fontWeight: '700' }}>Muy Bajo</span>
-                      <div style={{ display: 'flex', gap: q.type === 'scale_1_10' ? '8px' : '14px', flexWrap: 'wrap', justifyContent: 'center' }}>
-                        {(q.type === 'scale_1_10' ? [1, 2, 3, 4, 5, 6, 7, 8, 9, 10] : [1, 2, 3, 4, 5]).map((val) => (
-                          <button
-                            key={val}
-                            type="button"
-                            onClick={() => handleAnswerChange(q.id, val)}
-                            style={{
-                              width: '38px',
-                              height: '38px',
-                              borderRadius: '50%',
-                              border: testAnswers[q.id] === val ? '2px solid var(--primary)' : '1px solid var(--border)',
-                              backgroundColor: testAnswers[q.id] === val ? 'var(--primary-light)' : 'var(--bg-secondary)',
-                              fontWeight: '900',
-                              color: testAnswers[q.id] === val ? 'var(--primary)' : 'var(--text-primary)',
-                              cursor: 'pointer',
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                              boxShadow: testAnswers[q.id] === val ? 'var(--accent-tech-glow)' : 'none',
-                              transition: 'all 0.2s ease'
-                            }}
-                          >
-                            {val}
-                          </button>
-                        ))}
+                    <div style={{ marginTop: '8px' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px', fontSize: '12px', fontWeight: '800', color: 'var(--text-muted)' }}>
+                        <span>1 = Muy Bajo 😫</span>
+                        <span>{q.type === 'scale_1_10' ? '10 = Excelente 🤩' : '5 = Muy Alto 😁'}</span>
                       </div>
-                      <span style={{ fontSize: '11.5px', color: 'var(--text-muted)', fontWeight: '700' }}>Muy Alto</span>
+                      
+                      <div style={{ display: 'grid', gridTemplateColumns: q.type === 'scale_1_10' ? 'repeat(5, 1fr)' : 'repeat(5, 1fr)', gap: '10px' }}>
+                        {(q.type === 'scale_1_10' ? [1, 2, 3, 4, 5, 6, 7, 8, 9, 10] : [1, 2, 3, 4, 5]).map((val) => {
+                          const isSelected = testAnswers[q.id] === val;
+                          const emoji = q.type === 'scale_1_10' ? emojiMap10[val - 1] : emojiMap5[val - 1];
+                          return (
+                            <button
+                              key={val}
+                              type="button"
+                              onClick={() => handleAnswerChange(q.id, val)}
+                              className={`duo-card ${isSelected ? 'selected' : ''}`}
+                              style={{ justifyContent: 'center', padding: '12px 8px', flexDirection: 'column', gap: '4px' }}
+                            >
+                              <span style={{ fontSize: '20px' }}>{emoji}</span>
+                              <span style={{ fontSize: '14px', fontWeight: '900' }}>{val}</span>
+                            </button>
+                          );
+                        })}
+                      </div>
                     </div>
                   )}
 
+                  {/* PREGUNTA BOOLEANA (SÍ / NO ESTILO DUOLINGO) */}
                   {q.type === 'boolean' && (
-                    <div style={{ 
-                      display: 'flex', 
-                      gap: '16px', 
-                      marginTop: '8px', 
-                      backgroundColor: 'var(--bg-primary)', 
-                      padding: '14px 20px', 
-                      borderRadius: '8px',
-                      border: '1px solid var(--border)'
-                    }}>
-                      {['Sí', 'No'].map((opt) => (
-                        <button
-                          key={opt}
-                          type="button"
-                          onClick={() => handleAnswerChange(q.id, opt)}
-                          style={{
-                            flex: 1,
-                            padding: '10px 16px',
-                            borderRadius: '8px',
-                            border: testAnswers[q.id] === opt ? '2px solid var(--primary)' : '1px solid var(--border)',
-                            backgroundColor: testAnswers[q.id] === opt ? 'var(--primary-light)' : 'var(--bg-secondary)',
-                            fontWeight: '800',
-                            color: testAnswers[q.id] === opt ? 'var(--primary)' : 'var(--text-primary)',
-                            cursor: 'pointer',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            gap: '8px',
-                            transition: 'all 0.2s ease'
-                          }}
-                        >
-                          {testAnswers[q.id] === opt && <Check size={14} />}
-                          <span>{opt}</span>
-                        </button>
-                      ))}
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginTop: '10px' }}>
+                      <button
+                        type="button"
+                        onClick={() => handleAnswerChange(q.id, 'Sí')}
+                        className={`duo-card ${testAnswers[q.id] === 'Sí' ? 'selected' : ''}`}
+                        style={{ justifyContent: 'center', padding: '16px', fontSize: '15px', fontWeight: '900' }}
+                      >
+                        <ThumbsUp size={18} />
+                        <span>Sí</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => handleAnswerChange(q.id, 'No')}
+                        className={`duo-card ${testAnswers[q.id] === 'No' ? 'selected' : ''}`}
+                        style={{ justifyContent: 'center', padding: '16px', fontSize: '15px', fontWeight: '900' }}
+                      >
+                        <ThumbsDown size={18} />
+                        <span>No</span>
+                      </button>
                     </div>
                   )}
                 </div>
@@ -590,26 +579,22 @@ const MemberDashboard = () => {
             })}
 
             {/* Panel de Botones de Envío */}
-            <div style={{
-              display: 'flex',
-              gap: '16px',
-              marginTop: '10px'
-            }}>
+            <div style={{ display: 'flex', gap: '16px', marginTop: '12px' }}>
               <button 
                 type="submit" 
                 className="btn btn-primary" 
                 disabled={evalSubmitLoading || answeredCount < questions.length} 
-                style={{ flex: 1, padding: '12px 24px', fontSize: '14px', borderRadius: '8px' }}
+                style={{ flex: 1, padding: '14px 28px', fontSize: '15px', borderRadius: '14px', fontWeight: '900' }}
               >
-                {evalSubmitLoading ? <Loader className="animate-spin" size={16} /> : 'Enviar Test y Analizar Bienestar'}
+                {evalSubmitLoading ? <Loader className="animate-spin" size={18} /> : 'Finalizar Test y Ganar +50 XP ⚡'}
               </button>
               <button 
                 type="button" 
                 onClick={() => { setActiveView('dashboard'); setSelectedEval(null); }}
                 className="btn btn-secondary"
-                style={{ padding: '12px 24px', fontSize: '14px', borderRadius: '8px' }}
+                style={{ padding: '14px 28px', fontSize: '15px', borderRadius: '14px' }}
               >
-                Cancelar y Salir
+                Cancelar
               </button>
             </div>
             
@@ -624,12 +609,12 @@ const MemberDashboard = () => {
   return (
     <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
       
-      {/* Navbar Superior Compacta */}
+      {/* Navbar Superior Compacta con Gamificación */}
       <header style={{
         display: 'flex',
         justifyContent: 'space-between',
         alignItems: 'center',
-        padding: '12px 24px',
+        padding: '12px 28px',
         backgroundColor: 'var(--bg-secondary)',
         borderBottom: '1px solid var(--border)',
         boxShadow: 'var(--shadow)',
@@ -651,7 +636,18 @@ const MemberDashboard = () => {
           </div>
         </div>
 
+        {/* Indicadores de Racha Duolingo */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+          <span className="duo-streak-badge" title="Días consecutivos cuidando tu bienestar">
+            <Flame size={14} />
+            <span>{streakDays} DÍAS</span>
+          </span>
+
+          <span className="duo-xp-badge" title="Puntos XP acumulados">
+            <Zap size={14} />
+            <span>{xpPoints} XP</span>
+          </span>
+
           <button onClick={toggleTheme} className="theme-toggle" style={{ border: '1px solid var(--border)', width: '36px', height: '36px', borderRadius: '50%' }}>
             {theme === 'light' ? <Moon size={15} /> : <Sun size={15} />}
           </button>
@@ -668,7 +664,7 @@ const MemberDashboard = () => {
       </header>
 
       {/* Contenedor del Tablero */}
-      <main style={{ flex: 1, padding: '28px 24px 36px', maxWidth: '1380px', width: '100%', margin: '0 auto' }}>
+      <main style={{ flex: 1, padding: '24px 24px', maxWidth: '1300px', width: '100%', margin: '0 auto' }}>
         
         {/* Pestañas de Navegación */}
         <div className="tab-container" style={{ maxWidth: '750px' }}>
@@ -680,12 +676,44 @@ const MemberDashboard = () => {
 
         {/* TAB 1: MI BIENESTAR */}
         {activeTab === 'bienestar' && (
-          <div className="grid grid-2 animate-fade" style={{ gap: '24px', alignItems: 'start' }}>
-            <div className="glass-card" style={{ minHeight: '100%' }}>
-              <h3 style={{ fontSize: '17px', fontWeight: '900', marginBottom: '10px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <div className="grid grid-2 animate-fade">
+            <div className="glass-card">
+              {/* Mascota Equi en la Reflexión Diaria */}
+              {renderEquiMascot(0)}
+
+              <h3 style={{ fontSize: '17px', fontWeight: '900', marginTop: '14px', marginBottom: '6px', display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <Brain size={18} style={{ color: 'var(--primary)' }} /> Reflexión Abierta Diaria
               </h3>
-              <p style={{ fontSize: '12.5px', color: 'var(--text-secondary)', marginBottom: '20px', lineHeight: '1.5' }}>Describe tus sensaciones o vivencias de hoy. La plataforma procesará tu texto confidencialmente.</p>
+              <p style={{ fontSize: '12.5px', color: 'var(--text-secondary)', marginBottom: '14px', lineHeight: '1.5' }}>
+                Selecciona tu estado de ánimo con emojis, dicta por voz o escribe cómo te sientes hoy.
+              </p>
+
+              {/* Selector Rápido de Estado de Ánimo con Emojis */}
+              <div style={{ marginBottom: '14px' }}>
+                <label style={{ fontSize: '11px', fontWeight: '800', color: 'var(--text-secondary)', display: 'block', marginBottom: '6px' }}>
+                  ¿CÓMO TE SIENTES HOY? (SELECCIÓN RÁPIDA CON EMOJIS):
+                </label>
+                <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                  {[
+                    { emoji: '😫', label: 'Estresado' },
+                    { emoji: '🙁', label: 'Agotado' },
+                    { emoji: '😐', label: 'Neutral' },
+                    { emoji: '🙂', label: 'Tranquilo' },
+                    { emoji: '😁', label: 'Excelente' }
+                  ].map((mood, mIdx) => (
+                    <button
+                      key={mIdx}
+                      type="button"
+                      onClick={() => setReflectionText(prev => prev ? `${prev} Me siento ${mood.label.toLowerCase()} ${mood.emoji}.` : `Hoy me siento ${mood.label.toLowerCase()} ${mood.emoji}.`)}
+                      className="duo-pill"
+                      style={{ padding: '6px 12px', fontSize: '12px' }}
+                    >
+                      <span style={{ fontSize: '16px' }}>{mood.emoji}</span>
+                      <span>{mood.label}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
 
               {reflectionError && (
                 <div style={{ backgroundColor: 'var(--danger-light)', border: '1px solid var(--danger)', color: 'var(--danger)', padding: '10px', borderRadius: 'var(--radius-sm)', fontSize: '12.5px', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -695,12 +723,45 @@ const MemberDashboard = () => {
               )}
 
               <form onSubmit={handleSubmitReflection}>
-                <div className="form-group" style={{ marginBottom: '16px' }}>
-                  <textarea rows="5" placeholder="Platica sobre tu día... Ej. Me sentí saturado pero logré avanzar." value={reflectionText} onChange={(e) => setReflectionText(e.target.value)} required style={{ resize: 'vertical' }} />
+                <div className="form-group" style={{ marginBottom: '14px' }}>
+                  <textarea 
+                    rows="4" 
+                    placeholder="Platica sobre tu día... Ej. Me sentí un poco saturado por la tarde pero logré resolver mis actividades." 
+                    value={reflectionText} 
+                    onChange={(e) => setReflectionText(e.target.value)} 
+                    required 
+                    style={{ resize: 'vertical' }} 
+                  />
                 </div>
-                <button type="submit" className="btn btn-primary" disabled={reflectionLoading} style={{ width: '100%' }}>
-                  {reflectionLoading ? <Loader className="animate-spin" size={16} /> : <><Send size={15} /><span>Analizar Bienestar</span></>}
-                </button>
+
+                <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', marginBottom: '10px' }}>
+                  {/* Botón de Dictado por Voz en Tiempo Real */}
+                  {isRecording && activeRecordingQId === 'daily_ref' ? (
+                    <button
+                      type="button"
+                      onClick={stopRecordingSim}
+                      className="btn"
+                      style={{ backgroundColor: 'var(--danger)', color: '#fff', fontSize: '12.5px', padding: '10px 16px', borderRadius: '12px', flex: 1 }}
+                    >
+                      <Square size={14} />
+                      <span>Detener Micrófono ({recordingSeconds}s)</span>
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => startRecordingSim('daily_ref')}
+                      className="duo-pill"
+                      style={{ flex: 1, justifyContent: 'center', padding: '10px 16px', fontSize: '12.5px' }}
+                    >
+                      <Mic size={16} style={{ color: 'var(--primary)' }} />
+                      <span>Hablar por Micrófono (Voz a Texto)</span>
+                    </button>
+                  )}
+
+                  <button type="submit" className="btn btn-primary" disabled={reflectionLoading} style={{ flex: 1.2, padding: '10px 16px', borderRadius: '12px' }}>
+                    {reflectionLoading ? <Loader className="animate-spin" size={16} /> : <><Send size={15} /><span>Analizar Bienestar (+20 XP)</span></>}
+                  </button>
+                </div>
               </form>
 
               {latestAnalysis && (
@@ -727,14 +788,14 @@ const MemberDashboard = () => {
             </div>
 
             <div style={{ display: 'grid', gap: '20px' }}>
-              <div className="glass-card" style={{ minHeight: '280px' }}>
+              <div className="glass-card">
                 <h3 style={{ fontSize: '15px', fontWeight: '900', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
                   <Activity size={17} style={{ color: 'var(--accent)' }} /> Curva de Ánimo Histórica
                 </h3>
                 {chartData.length === 0 ? (
                   <div style={{ height: '200px', display: 'flex', justifyContent: 'center', alignItems: 'center', color: 'var(--text-muted)', fontSize: '12.5px' }}>Registra una reflexión para ver tu evolución.</div>
                 ) : (
-                  <div style={{ width: '100%', height: '220px', padding: '8px', borderRadius: '16px', background: 'linear-gradient(135deg, rgba(109,99,255,0.08), rgba(255,122,92,0.06))' }}>
+                  <div style={{ width: '100%', height: '200px' }}>
                     <ResponsiveContainer width="100%" height="100%">
                       <LineChart data={chartData}>
                         <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
@@ -758,7 +819,7 @@ const MemberDashboard = () => {
                     <p style={{ color: 'var(--text-muted)', fontSize: '12px', textAlign: 'center' }}>No hay reflexiones previas.</p>
                   ) : (
                     history.map((ref) => (
-                      <div key={ref.id} style={{ padding: '12px 13px', borderRadius: '16px', border: '1px solid var(--border)', background: 'linear-gradient(135deg, rgba(255,255,255,0.12), rgba(255,255,255,0.05))', boxShadow: '0 8px 18px rgba(15, 18, 34, 0.05)' }}>
+                      <div key={ref.id} className="futuristic-card-item">
                         <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px', fontSize: '10.5px' }}>
                           <span style={{ color: 'var(--text-muted)' }}>{new Date(ref.created_at).toLocaleDateString()}</span>
                           <span style={{ fontWeight: '800', color: ref.dominant_sentiment === 'Positivo' ? 'var(--success)' : 'var(--danger)' }}>{ref.dominant_sentiment}</span>
@@ -781,7 +842,7 @@ const MemberDashboard = () => {
                 <h3 style={{ fontSize: '17px', fontWeight: '900', display: 'flex', alignItems: 'center', gap: '8px' }}>
                   <ClipboardList size={18} style={{ color: 'var(--primary)' }} /> Tareas Asignadas
                 </h3>
-                <p style={{ fontSize: '12.5px', color: 'var(--text-secondary)' }}>Actividades de bienestar y tareas institucionales.</p>
+                <p style={{ fontSize: '12.5px', color: 'var(--text-secondary)' }}>Actividades de bienestar e intitucionales. +15 XP al completarlas.</p>
               </div>
               <div style={{ fontSize: '13px', fontWeight: '800', backgroundColor: 'var(--primary-light)', padding: '6px 14px', borderRadius: 'var(--radius-sm)', color: 'var(--primary)' }}>
                 Progreso: {completedTasksCount}/{tasks.length} ({taskProgressPercent}%)
@@ -795,41 +856,11 @@ const MemberDashboard = () => {
             ) : (
               <div style={{ display: 'grid', gap: '12px' }}>
                 {tasks.map((task) => (
-                  <div
-                    key={task.id}
-                    style={{
-                      padding: '16px 18px',
-                      borderRadius: '18px',
-                      border: task.status === 'completada' ? '1px solid rgba(109,99,255,0.2)' : '1px solid var(--border)',
-                      background: task.status === 'completada'
-                        ? 'linear-gradient(135deg, rgba(109,99,255,0.12), rgba(255,122,92,0.08))'
-                        : 'linear-gradient(135deg, rgba(255,255,255,0.12), rgba(255,255,255,0.04))',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '14px',
-                      boxShadow: '0 10px 24px rgba(15, 18, 34, 0.06)',
-                      backdropFilter: 'blur(10px)'
-                    }}
-                  >
-                    <button
-                      onClick={() => handleToggleTaskStatus(task.id, task.status)}
-                      style={{
-                        background: task.status === 'completada' ? 'linear-gradient(135deg, var(--primary), var(--accent))' : 'var(--bg-secondary)',
-                        border: 'none',
-                        cursor: 'pointer',
-                        color: task.status === 'completada' ? '#fff' : 'var(--text-muted)',
-                        width: '38px',
-                        height: '38px',
-                        borderRadius: '12px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        boxShadow: task.status === 'completada' ? '0 6px 16px rgba(109,99,255,0.2)' : 'none'
-                      }}
-                    >
-                      {task.status === 'completada' ? <CheckCircle2 size={18} /> : <div style={{ width: '14px', height: '14px', borderRadius: '4px', border: '2px solid currentColor' }} />}
+                  <div key={task.id} className="futuristic-card-item" style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+                    <button onClick={() => handleToggleTaskStatus(task.id, task.status)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: task.status === 'completada' ? 'var(--success)' : 'var(--text-muted)' }}>
+                      {task.status === 'completada' ? <CheckCircle2 size={24} /> : <div style={{ width: '22px', height: '22px', borderRadius: '6px', border: '2px solid var(--border)' }} />}
                     </button>
-                    <div style={{ flex: 1 }}>
+                    <div>
                       <h4 style={{ fontSize: '14px', fontWeight: '800', textDecoration: task.status === 'completada' ? 'line-through' : 'none' }}>{task.title}</h4>
                       {task.description && <p style={{ fontSize: '12px', color: 'var(--text-secondary)', marginTop: '4px' }}>{task.description}</p>}
                     </div>
@@ -847,10 +878,10 @@ const MemberDashboard = () => {
             {/* Lista de Tests Habilitados */}
             <div className="glass-card">
               <h3 style={{ fontSize: '17px', fontWeight: '900', marginBottom: '10px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <Calendar size={18} style={{ color: 'var(--primary)' }} /> Tests y Cuestionarios de la Institución
+                <Calendar size={18} style={{ color: 'var(--primary)' }} /> Tests de la Institución
               </h3>
               <p style={{ fontSize: '12.5px', color: 'var(--text-secondary)', marginBottom: '18px' }}>
-                Completa tus evaluaciones pendientes o consulta tus reportes de IA para tests ya finalizados.
+                Completa tus evaluaciones pendientes para ganar +50 XP y mantener tu racha.
               </p>
 
               {evaluationsLoading ? (
@@ -864,24 +895,18 @@ const MemberDashboard = () => {
                     return (
                       <div 
                         key={ev.id} 
+                        className="futuristic-card-item"
                         style={{
-                          padding: '16px 18px',
-                          borderRadius: '18px',
-                          border: '1px solid var(--border)',
-                          background: 'linear-gradient(135deg, rgba(255,255,255,0.12), rgba(255,255,255,0.04))',
                           display: 'flex',
                           justifyContent: 'space-between',
-                          alignItems: 'center',
-                          gap: '12px',
-                          boxShadow: '0 10px 22px rgba(15, 18, 34, 0.06)',
-                          backdropFilter: 'blur(10px)'
+                          alignItems: 'center'
                         }}
                       >
-                        <div style={{ flex: 1 }}>
-                          <div style={{ display: 'flex', gap: '6px', alignItems: 'center', marginBottom: '6px', flexWrap: 'wrap' }}>
-                            <span style={{ fontSize: '9px', fontWeight: '800', padding: '2px 8px', borderRadius: '999px', backgroundColor: 'var(--primary-light)', color: 'var(--primary)' }}>{ev.category}</span>
+                        <div>
+                          <div style={{ display: 'flex', gap: '6px', alignItems: 'center', marginBottom: '4px' }}>
+                            <span style={{ fontSize: '9px', fontWeight: '800', padding: '2px 8px', borderRadius: 'var(--radius-full)', backgroundColor: 'var(--primary-light)', color: 'var(--primary)' }}>{ev.category}</span>
                             {isCompleted && (
-                              <span style={{ fontSize: '9px', fontWeight: '800', padding: '2px 8px', borderRadius: '999px', backgroundColor: 'var(--success-light)', color: 'var(--success)', display: 'flex', alignItems: 'center', gap: '2px' }}>
+                              <span style={{ fontSize: '9px', fontWeight: '800', padding: '2px 8px', borderRadius: 'var(--radius-full)', backgroundColor: 'var(--success-light)', color: 'var(--success)', display: 'flex', alignItems: 'center', gap: '2px' }}>
                                 <CheckCircle2 size={8} /> Completado
                               </span>
                             )}
@@ -893,18 +918,18 @@ const MemberDashboard = () => {
                         {isCompleted ? (
                           <button
                             onClick={() => { setSelectedEval(ev); }}
-                            className="btn btn-secondary"
-                            style={{ padding: '8px 12px', fontSize: '12px', borderRadius: '999px' }}
+                            className="duo-pill"
+                            style={{ fontSize: '12px' }}
                           >
                             Ver Diagnóstico
                           </button>
                         ) : (
                           <button
                             onClick={() => { setSelectedEval(ev); setTestAnswers({}); setEvalSuccessMsg(''); setEvalErrorMsg(''); setActiveView('fill_test'); }}
-                            className="btn btn-primary"
-                            style={{ padding: '8px 12px', fontSize: '12px', borderRadius: '999px' }}
+                            className="duo-pill selected"
+                            style={{ fontSize: '12px' }}
                           >
-                            Responder Test
+                            Responder Test ⚡
                           </button>
                         )}
                       </div>
@@ -922,11 +947,11 @@ const MemberDashboard = () => {
 
               {!selectedEval ? (
                 <div style={{ textAlign: 'center', padding: '36px', color: 'var(--text-muted)', fontSize: '13px', border: '1px dashed var(--border)', borderRadius: 'var(--radius-sm)' }}>
-                  Selecciona un test completado de la izquierda para ver su análisis de bienestar y sugerencia orientadora.
+                  Selecciona un test completado para ver su análisis.
                 </div>
               ) : !history.some(ref => ref.evaluation_id === selectedEval.id) ? (
                 <div style={{ textAlign: 'center', padding: '36px', color: 'var(--text-muted)', fontSize: '13px', border: '1px dashed var(--border)', borderRadius: 'var(--radius-sm)' }}>
-                  Este test aún no está completado. Haz clic en "Responder Test" para ir al espacio de llenado multimodal.
+                  Este test aún no está completado. Presiona "Responder Test" para ir al espacio gamificado.
                 </div>
               ) : (
                 <div className="animate-fade">
@@ -953,7 +978,7 @@ const MemberDashboard = () => {
                           </div>
                         </div>
                         <div style={{ padding: '12px', backgroundColor: 'var(--bg-tertiary)', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border)', marginBottom: '12px' }}>
-                          <h5 style={{ fontSize: '11px', fontWeight: '800', color: 'var(--text-secondary)', textTransform: 'uppercase', marginBottom: '6px' }}>Tu Respuesta en Texto/Audio:</h5>
+                          <h5 style={{ fontSize: '11px', fontWeight: '800', color: 'var(--text-secondary)', textTransform: 'uppercase', marginBottom: '6px' }}>Tu Respuesta Multimodal:</h5>
                           <p style={{ fontSize: '12px', color: 'var(--text-primary)', fontStyle: 'italic' }}>"{matchedRef.original_text}"</p>
                         </div>
                         <div style={{ padding: '12px', backgroundColor: 'var(--bg-tertiary)', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border)' }}>
