@@ -20,14 +20,19 @@ class Reflection(db.Model):
     institution_suggestion = db.Column(db.Text, nullable=True)
     
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    clinical_notes = db.Column(db.Text, nullable=True) # Notas diagnósticas manuales de la Psicóloga
     
     # Relación
     evaluation = db.relationship('Evaluation', backref=db.backref('reflections', lazy=True))
+    user = db.relationship('User', foreign_keys=[user_id], back_populates='reflections')
     
     def to_dict(self):
         return {
             'id': str(self.id),
             'user_id': str(self.user_id) if self.user_id else None,
+            'user_name': f"{self.user.first_name} {self.user.last_name}" if self.user else "Anónimo / Desconocido",
+            'user_email': self.user.email if self.user else None,
+            'user_department': self.user.department if self.user else 'General',
             'institution_id': str(self.institution_id),
             'evaluation_id': str(self.evaluation_id) if self.evaluation_id else None,
             'original_text': self.original_text,
@@ -36,5 +41,6 @@ class Reflection(db.Model):
             'burnout_score': self.burnout_score,
             'dominant_sentiment': self.dominant_sentiment,
             'institution_suggestion': self.institution_suggestion,
+            'clinical_notes': self.clinical_notes,
             'created_at': self.created_at.isoformat()
         }

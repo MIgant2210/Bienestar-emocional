@@ -138,7 +138,7 @@ def get_suggestions(current_user):
 @roles_accepted('admin_institucion', 'superadmin')
 def get_institution_members(current_user):
     """
-    Retorna el directorio de miembros/usuarios de la institución.
+    Retorna el directorio de todos los usuarios de la institución.
     """
     institution_id = current_user.institution_id
     if current_user.role == 'superadmin':
@@ -146,9 +146,52 @@ def get_institution_members(current_user):
         if inst_param:
             institution_id = inst_param
 
-    query = User.query.filter_by(role='miembro')
+    query = User.query
     if institution_id:
         query = query.filter_by(institution_id=institution_id)
         
     members = query.order_by(User.created_at.desc()).all()
     return jsonify([m.to_dict() for m in members]), 200
+
+@institutions_bp.route('/members/<uuid:user_id>', methods=['PUT'])
+@token_required
+@roles_accepted('admin_institucion', 'superadmin')
+def update_institution_member(current_user, user_id):
+    """
+    Actualiza el rol, departamento o restablece la contraseña de un usuario.
+    """
+    target_user = User.query.get(user_id)
+    if not target_user:
+        return jsonify({'message': 'Usuario no encontrado.'}), 404
+        
+    # Verificar que pertenezca a la misma institución si no es superadmin global
+    if current_user.role != 'superadmin' and target_user.institution_id != current_user.institution_id:
+        return jsonify({'message': 'No tiene permisos para modificar este usuario.'}), 403
+
+    data = request.get_json() or {}
+    
+    if 'role' in data:
+        valid_roles = ['superadmin', 'admin_institucion', 'profesional_apoyo', 'lider_depto', 'miembro']
+        if data['role'] in valid_roles:
+            target_user.role = data['role']
+
+    if 'department' in data:
+        target_user.department = data['department']
+
+    if 'first_name' in data:
+        target_user.first_name = data['first_name']
+
+    if 'last_name' in data:
+        target_user.last_name = data['last_name']
+
+    if 'new_password' in data and data['new_password']:
+        if len(data['new_password']) < 6:
+            return jsonify({'message': 'La contraseña debe tener al menos 6 caracteres.'}), 400
+        target_user.set_password(data['new_password'])
+
+    db.session.commit()
+    return jsonify({
+        'message': f'Usuario {target_user.first_name} {target_user.last_name} actualizado exitosamente.',
+        'user': target_user.to_dict()
+    }), 200
+

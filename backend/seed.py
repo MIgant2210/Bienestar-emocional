@@ -29,8 +29,13 @@ with app.app_context():
             conn.execute(db.text("ALTER TABLE evaluations ADD COLUMN IF NOT EXISTS assigned_target VARCHAR(150)"))
             conn.execute(db.text("ALTER TABLE tasks ADD COLUMN IF NOT EXISTS assigned_type VARCHAR(30) DEFAULT 'all'"))
             conn.execute(db.text("ALTER TABLE tasks ADD COLUMN IF NOT EXISTS assigned_target VARCHAR(150)"))
+            conn.execute(db.text("ALTER TABLE tasks ADD COLUMN IF NOT EXISTS priority VARCHAR(20) DEFAULT 'Media'"))
+            conn.execute(db.text("ALTER TABLE tasks ADD COLUMN IF NOT EXISTS estimated_minutes INTEGER DEFAULT 15"))
+            conn.execute(db.text("ALTER TABLE tasks ADD COLUMN IF NOT EXISTS submission_notes TEXT"))
+            conn.execute(db.text("ALTER TABLE tasks ADD COLUMN IF NOT EXISTS completed_at TIMESTAMP"))
             conn.execute(db.text("ALTER TABLE users ADD COLUMN IF NOT EXISTS department VARCHAR(80) DEFAULT 'General'"))
             conn.execute(db.text("ALTER TABLE reflections ADD COLUMN IF NOT EXISTS evaluation_id UUID REFERENCES evaluations(id) ON DELETE SET NULL"))
+            conn.execute(db.text("ALTER TABLE reflections ADD COLUMN IF NOT EXISTS clinical_notes TEXT"))
             conn.commit()
         print("[Migración SQL] Columnas de category, questions_json, is_template, assigned_type, department y evaluation_id agregadas correctamente.")
     except Exception as e:
@@ -60,11 +65,11 @@ with app.app_context():
             role="superadmin",
             institution_id=inst_edu.id
         )
-        super_admin.set_password("AdminBienestar2026*")
         db.session.add(super_admin)
-        db.session.commit()
+    super_admin.set_password("AdminBienestar2026*")
+    db.session.commit()
 
-    # 4. Profesional de Apoyo
+    # 4. Profesional de Apoyo (Psicóloga)
     prof_email = "profesional@bienestar.com"
     prof_user = User.query.filter_by(email=prof_email).first()
     if not prof_user:
@@ -73,11 +78,44 @@ with app.app_context():
             first_name="Sofía",
             last_name="Gómez",
             role="profesional_apoyo",
+            department="Salud",
             institution_id=inst_edu.id
         )
-        prof_user.set_password("ProfBienestar2026*")
         db.session.add(prof_user)
-        db.session.commit()
+    prof_user.set_password("ProfBienestar2026*")
+    db.session.commit()
+
+    # 5. Líder de Departamento
+    lider_email = "lider@bienestar.com"
+    lider_user = User.query.filter_by(email=lider_email).first()
+    if not lider_user:
+        lider_user = User(
+            email=lider_email,
+            first_name="Carlos",
+            last_name="Mendoza",
+            role="lider_depto",
+            department="Tecnología",
+            institution_id=inst_edu.id
+        )
+        db.session.add(lider_user)
+    lider_user.set_password("LiderBienestar2026*")
+    db.session.commit()
+
+    # 6. Colaborador / Miembro Demo
+    member_email = "miembro@bienestar.com"
+    member_user = User.query.filter_by(email=member_email).first()
+    if not member_user:
+        member_user = User(
+            email=member_email,
+            first_name="Ana",
+            last_name="Martínez",
+            role="miembro",
+            department="Tecnología",
+            institution_id=inst_edu.id
+        )
+        db.session.add(member_user)
+    member_user.set_password("MiembroBienestar2026*")
+    db.session.commit()
 
     # 5. Plantillas Precargadas de Tests Estandarizados (Módulo 4 Multimodal)
     Evaluation.query.filter_by(is_template=True).delete()
@@ -87,9 +125,9 @@ with app.app_context():
     q_clima = [
         {"id": "q1", "question": "¿Cómo evalúas la comunicación y apoyo de tus superiores o docentes?", "type": "scale_1_5"},
         {"id": "q2", "question": "En una escala del 1 al 10, ¿qué tan manejable percibes tu carga de trabajo actual?", "type": "scale_1_10"},
-        {"id": "q3", "question": "¿Sientes que dispones de las herramientas necesarias para desarrollar tus labores diarias?", "type": "boolean"},
-        {"id": "q4", "question": "¿Qué tan satisfecho(a) te encuentras con la flexibilidad y el respeto a tu tiempo personal?", "type": "scale_1_5"},
-        {"id": "q5", "question": "¿Consideras que la institución promueve un ambiente inclusivo y libre de discriminación?", "type": "boolean"},
+        {"id": "q3", "question": "Selecciona con emojis tu nivel de ánimo durante las reuniones de esta semana:", "type": "emoji_scale_5"},
+        {"id": "q4", "question": "¿Sientes que dispones de las herramientas necesarias para desarrollar tus labores diarias?", "type": "boolean"},
+        {"id": "q5", "question": "¿Qué tan satisfecho(a) te encuentras con la flexibilidad y el respeto a tu tiempo personal?", "type": "scale_1_5"},
         {"id": "q6", "question": "Dictado por Voz / Texto Libre: Expresa tus sugerencias o vivencias sobre el clima laboral actual.", "type": "text"}
     ]
     t1 = Evaluation(
@@ -106,8 +144,8 @@ with app.app_context():
     q_animo = [
         {"id": "q1", "question": "¿Con qué frecuencia has experimentado tensión física, rigidez o nerviosismo esta semana?", "type": "scale_1_5"},
         {"id": "q2", "question": "En una escala del 1 al 10, ¿cómo calificarías tu calidad de descanso y energía matutina?", "type": "scale_1_10"},
-        {"id": "q3", "question": "¿Has sentido momentos de desconexión o desmotivación profunda recientemente?", "type": "boolean"},
-        {"id": "q4", "question": "¿Qué tan optimista te sientes respecto a tu capacidad para cumplir tus metas del mes?", "type": "scale_1_5"},
+        {"id": "q3", "question": "¿Cómo calificarías tu estado de ánimo emocional general usando los emojis?", "type": "emoji_scale_5"},
+        {"id": "q4", "question": "¿Has sentido momentos de desconexión o desmotivación profunda recientemente?", "type": "boolean"},
         {"id": "q5", "question": "¿Logras mantener pausas activas durante tus jornadas diarias?", "type": "boolean"},
         {"id": "q6", "question": "Reflexión Dictada / Escrita: Describe libremente cualquier inquietud o emoción relevante de tu semana.", "type": "text"}
     ]
@@ -125,8 +163,8 @@ with app.app_context():
     q_integral = [
         {"id": "q1", "question": "En una escala del 1 al 5, ¿cuál es tu índice general de bienestar y equilibrio personal?", "type": "scale_1_5"},
         {"id": "q2", "question": "Del 1 al 10, ¿qué tan integrado y valorado te sientes en la comunidad de la institución?", "type": "scale_1_10"},
-        {"id": "q3", "question": "¿Recomendarías a un colega o compañero formar parte de este equipo?", "type": "boolean"},
-        {"id": "q4", "question": "¿Qué tan preparado(a) te sientes para adaptarte a nuevos retos o cambios organizacionales?", "type": "scale_1_5"},
+        {"id": "q3", "question": "Selecciona el emoji de WhatsApp que mejor represente tu nivel de paz interna:", "type": "emoji_scale_5"},
+        {"id": "q4", "question": "¿Recomendarías a un colega o compañero formar parte de este equipo?", "type": "boolean"},
         {"id": "q5", "question": "¿Sientes que tus opiniones y sugerencias son escuchadas con seriedad?", "type": "boolean"},
         {"id": "q6", "question": "Espacio Multimodal Libre: Graba tu voz o redacta tus comentarios para el análisis con IA.", "type": "text"}
     ]

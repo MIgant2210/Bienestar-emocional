@@ -40,15 +40,17 @@ def get_tasks(current_user):
 
 @tasks_bp.route('', methods=['POST'])
 @token_required
-@roles_accepted('admin_institucion', 'superadmin')
+@roles_accepted('admin_institucion', 'superadmin', 'profesional_apoyo', 'lider_depto')
 def create_task(current_user):
     """
-    Crea una nueva tarea para la institución con segmentación de destinatarios.
+    Crea una nueva tarea para la institución con segmentación de destinatarios, prioridad y tiempo estimado.
     """
     data = request.get_json() or {}
     title = data.get('title')
     description = data.get('description')
     category = data.get('category', 'Bienestar')  # 'Bienestar', 'Académica', 'Laboral'
+    priority = data.get('priority', 'Media')      # 'Alta', 'Media', 'Baja'
+    estimated_minutes = int(data.get('estimated_minutes', 15))
     due_date_str = data.get('due_date')           # Formato ISO (ej: '2026-07-15')
     assigned_type = data.get('assigned_type', 'all') # 'all', 'department', 'individual'
     assigned_target = data.get('assigned_target')    # Nombre de depto o correo
@@ -62,7 +64,7 @@ def create_task(current_user):
         
     institution_id = current_user.institution_id
     if not institution_id:
-        return jsonify({'message': 'El administrador no tiene una institución vinculada.'}), 400
+        return jsonify({'message': 'El usuario no tiene una institución vinculada.'}), 400
         
     assigned_user_id = None
     if assigned_type == 'individual' and assigned_email:
@@ -85,6 +87,8 @@ def create_task(current_user):
         title=title,
         description=description,
         category=category,
+        priority=priority,
+        estimated_minutes=estimated_minutes,
         due_date=due_date,
         user_id=assigned_user_id,
         institution_id=institution_id,
@@ -103,18 +107,16 @@ def create_task(current_user):
     except Exception as e:
         db.session.rollback()
         return jsonify({'message': f'Error al guardar la tarea: {str(e)}'}), 500
-        db.session.rollback()
-        return jsonify({'message': f'Error al guardar la tarea: {str(e)}'}), 500
 
 @tasks_bp.route('/<uuid:task_id>/status', methods=['PUT'])
 @token_required
 def update_task_status(current_user, task_id):
     """
-    Actualiza el estado de una tarea ('pendiente' o 'completada').
-    Los miembros solo pueden actualizar tareas que les pertenecen o son de su institución.
+    Actualiza el estado de una tarea ('pendiente' o 'completada') e ingresa notas de evidencia.
     """
     data = request.get_json() or {}
     status = data.get('status')
+    submission_notes = data.get('submission_notes')
     
     if status not in ['pendiente', 'completada']:
         return jsonify({'message': 'Estado inválido. Use pendiente o completada.'}), 400
@@ -129,6 +131,13 @@ def update_task_status(current_user, task_id):
             return jsonify({'message': 'Esta tarea está asignada a otro usuario.'}), 403
             
     task.status = status
+    if submission_notes:
+        task.submission_notes = submission_notes
+        
+    if status == 'completada':
+        task.completed_at = datetime.utcnow()
+    else:
+        task.completed_at = None
     
     try:
         db.session.commit()

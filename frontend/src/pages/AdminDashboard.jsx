@@ -6,14 +6,14 @@ import {
   PlusCircle, Trash2, Calendar, ClipboardList, Sparkles, Loader, CheckCircle2,
   AlertTriangle, CheckSquare, Settings, Activity, ShieldCheck, Download,
   UserCheck, Lock, FileSpreadsheet, RefreshCw, Zap, Layers, HelpCircle, Eye, Sliders,
-  Target, ChevronRight, Check, ArrowLeft, Volume2, Mic, Bell, UserX, Key
+  Target, ChevronRight, Check, ArrowLeft, Volume2, Mic, Bell, UserX, Key, Palette, Edit3, KeyRound
 } from 'lucide-react';
 import api from '../services/api';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 
 const AdminDashboard = () => {
   const { user, logout } = useContext(AuthContext);
-  const { theme, toggleTheme } = useContext(ThemeContext);
+  const { theme, toggleTheme, colorPalette, changePalette, PALETTES } = useContext(ThemeContext);
 
   // Tab State: 'analytics', 'tasks', 'alerts', 'evaluations', 'members', 'audit', 'reports', 'ai_plans'
   const [activeTab, setActiveTab] = useState('analytics');
@@ -23,6 +23,15 @@ const AdminDashboard = () => {
 
   // Sub-Tab State for Members: 'directory', 'roles_rbac'
   const [membersSubTab, setMembersSubTab] = useState('directory');
+
+  // Paletas & Edición de Usuario
+  const [showPaletteMenu, setShowPaletteMenu] = useState(false);
+  const [editingUser, setEditingUser] = useState(null);
+  const [editRole, setEditRole] = useState('miembro');
+  const [editDept, setEditDept] = useState('General');
+  const [editPassword, setEditPassword] = useState('');
+  const [userUpdateLoading, setUserUpdateLoading] = useState(false);
+  const [userUpdateMsg, setUserUpdateMsg] = useState('');
 
   // Notification Drawer State
   const [showNotifications, setShowNotifications] = useState(false);
@@ -63,12 +72,32 @@ const AdminDashboard = () => {
   const [taskTitle, setTaskTitle] = useState('');
   const [taskDesc, setTaskDesc] = useState('');
   const [taskCategory, setTaskCategory] = useState('Bienestar');
+  const [taskPriority, setTaskPriority] = useState('Media');
+  const [taskEstMinutes, setTaskEstMinutes] = useState(15);
   const [taskDueDate, setTaskDueDate] = useState('');
   const [taskAssignedType, setTaskAssignedType] = useState('all');
   const [taskAssignedTarget, setTaskAssignedTarget] = useState('');
   const [createLoading, setCreateLoading] = useState(false);
   const [createError, setCreateError] = useState('');
   const [createSuccess, setCreateSuccess] = useState('');
+  const [viewSubmissionsTask, setViewSubmissionsTask] = useState(null);
+
+  // Form States: Clinical Diagnostic Notes & Analytics
+  const [clinicalNotesMap, setClinicalNotesMap] = useState({});
+  const [savingClinicalId, setSavingClinicalId] = useState(null);
+
+  const handleSaveClinicalNotes = async (reflectionId) => {
+    setSavingClinicalId(reflectionId);
+    try {
+      const noteText = clinicalNotesMap[reflectionId] || '';
+      await api.put(`/evaluations/response/${reflectionId}/clinical-notes`, { clinical_notes: noteText });
+      alert('¡Nota diagnóstica manual del profesional de salud guardada exitosamente!');
+    } catch (err) {
+      alert('Error al guardar nota clínica: ' + (err.response?.data?.message || err.message));
+    } finally {
+      setSavingClinicalId(null);
+    }
+  };
 
   // Form States: Evaluations / Tests Custom
   const [evalTitle, setEvalTitle] = useState('');
@@ -149,6 +178,41 @@ const AdminDashboard = () => {
     }
   }, [showPrivacyNotice]);
 
+  const openEditUserModal = (u) => {
+    setEditingUser(u);
+    setEditRole(u.role || 'miembro');
+    setEditDept(u.department || 'General');
+    setEditPassword('');
+    setUserUpdateMsg('');
+  };
+
+  const handleUpdateUser = async (e) => {
+    e.preventDefault();
+    if (!editingUser) return;
+    setUserUpdateLoading(true);
+    setUserUpdateMsg('');
+    try {
+      const payload = {
+        role: editRole,
+        department: editDept,
+        ...(editPassword.trim() ? { new_password: editPassword } : {})
+      };
+      const res = await api.put(`/institutions/members/${editingUser.id}`, payload);
+      setUserUpdateMsg(res.data.message);
+      setEditPassword('');
+      const membersRes = await api.get('/institutions/members');
+      if (membersRes.data) setMembers(membersRes.data);
+      setTimeout(() => {
+        setEditingUser(null);
+        setUserUpdateMsg('');
+      }, 1500);
+    } catch (err) {
+      alert(err.response?.data?.message || 'Error al actualizar el usuario');
+    } finally {
+      setUserUpdateLoading(false);
+    }
+  };
+
   // Toggle Permiso en la Matriz RBAC
   const togglePermission = (roleKey, permKey) => {
     setRolePermissions(prev => ({
@@ -171,6 +235,8 @@ const AdminDashboard = () => {
       title: taskTitle,
       description: taskDesc,
       category: taskCategory,
+      priority: taskPriority,
+      estimated_minutes: taskEstMinutes,
       due_date: taskDueDate || null,
       assigned_type: taskAssignedType,
       assigned_target: taskAssignedTarget
@@ -575,12 +641,12 @@ const AdminDashboard = () => {
 
         <div style={{ width: '100%', maxWidth: '780px', padding: '24px 16px', display: 'grid', gap: '20px' }}>
           
-          {/* Mascota Equi el Búho Orientador en la vista previa del Admin */}
+          {/* Mascota Equi el Elefante Sabio en la vista previa del Admin */}
           <div style={{
             backgroundColor: 'var(--bg-secondary)',
-            borderRadius: '16px',
-            border: '2px solid var(--primary-light)',
-            padding: '16px 20px',
+            borderRadius: '20px',
+            border: '3px solid var(--primary-light)',
+            padding: '16px 22px',
             display: 'flex',
             alignItems: 'center',
             gap: '16px',
@@ -595,17 +661,17 @@ const AdminDashboard = () => {
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              boxShadow: '0 4px 12px var(--primary-light)',
+              boxShadow: '0 4px 14px var(--primary-light)',
               flexShrink: 0
             }}>
-              🦉
+              🐘
             </div>
             <div>
               <span style={{ fontSize: '11px', fontWeight: '900', color: 'var(--primary)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                Equi • Tu Búho Orientador (Vista de Prueba Admin)
+                Equi • Tu Elefante Sabio (Vista de Prueba Admin) 🐘
               </span>
               <p style={{ fontSize: '13.5px', fontWeight: '800', color: 'var(--text-primary)', marginTop: '2px' }}>
-                "{progressPercent === 0 ? '¡Hola Administrador! Aquí puedes probar la experiencia completa con la escala de emojis y dictado por voz.' : progressPercent >= 100 ? '¡Excelente! Has completado todas las preguntas de prueba.' : '¡Vas por la mitad del test! Sigue completando las opciones.'}"
+                "{progressPercent === 0 ? '¡Hola Administrador! Aquí puedes probar la experiencia completa con escalas numéricas, la escala de 5 Emojis WhatsApp y dictado por voz.' : progressPercent >= 100 ? '¡Excelente! Has completado todas las preguntas de prueba.' : '¡Vas por la mitad del test! Sigue completando las opciones.'}"
               </p>
             </div>
           </div>
@@ -693,23 +759,40 @@ const AdminDashboard = () => {
 
                 {(q.type === 'scale_1_5' || q.type === 'scale_1_10') && (
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '10px', marginTop: '8px' }}>
-                    {(q.type === 'scale_1_10' ? [1, 2, 3, 4, 5, 6, 7, 8, 9, 10] : [1, 2, 3, 4, 5]).map((val) => {
-                      const emojiMap5 = ['😫', '🙁', '😐', '🙂', '😁'];
-                      const emojiMap10 = ['😫', '😣', '🙁', '😟', '😐', '🙂', '😊', '😄', '😁', '🤩'];
-                      const emoji = q.type === 'scale_1_10' ? emojiMap10[val - 1] : emojiMap5[val - 1];
-                      return (
-                        <button
-                          key={val}
-                          type="button"
-                          onClick={() => setPreviewAnswers(prev => ({ ...prev, [q.id]: val }))}
-                          className={`duo-card ${previewAnswers[q.id] === val ? 'selected' : ''}`}
-                          style={{ justifyContent: 'center', padding: '10px 6px', flexDirection: 'column', gap: '4px' }}
-                        >
-                          <span style={{ fontSize: '18px' }}>{emoji}</span>
-                          <span style={{ fontSize: '14px', fontWeight: '900' }}>{val}</span>
-                        </button>
-                      );
-                    })}
+                    {(q.type === 'scale_1_10' ? [1, 2, 3, 4, 5, 6, 7, 8, 9, 10] : [1, 2, 3, 4, 5]).map((val) => (
+                      <button
+                        key={val}
+                        type="button"
+                        onClick={() => setPreviewAnswers(prev => ({ ...prev, [q.id]: val }))}
+                        className={`duo-card ${previewAnswers[q.id] === val ? 'selected' : ''}`}
+                        style={{ justifyContent: 'center', padding: '12px 6px', fontSize: '15px', fontWeight: '900' }}
+                      >
+                        <span>{val}</span>
+                      </button>
+                    ))}
+                  </div>
+                )}
+
+                {q.type === 'emoji_scale_5' && (
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '10px', marginTop: '8px' }}>
+                    {[
+                      { emoji: '😡', label: 'Molesto' },
+                      { emoji: '🙁', label: 'Agotado' },
+                      { emoji: '😐', label: 'Neutral' },
+                      { emoji: '🙂', label: 'Tranquilo' },
+                      { emoji: '😁', label: 'Excelente' }
+                    ].map((item, eIdx) => (
+                      <button
+                        key={eIdx}
+                        type="button"
+                        onClick={() => setPreviewAnswers(prev => ({ ...prev, [q.id]: `${item.emoji} ${item.label}` }))}
+                        className={`duo-card ${previewAnswers[q.id] === `${item.emoji} ${item.label}` ? 'selected' : ''}`}
+                        style={{ justifyContent: 'center', padding: '10px 4px', flexDirection: 'column', gap: '4px' }}
+                      >
+                        <span style={{ fontSize: '24px' }}>{item.emoji}</span>
+                        <span style={{ fontSize: '11px', fontWeight: '800' }}>{item.label}</span>
+                      </button>
+                    ))}
                   </div>
                 )}
 
@@ -842,7 +925,60 @@ const AdminDashboard = () => {
             )}
           </div>
 
-          <button onClick={toggleTheme} className="theme-toggle" style={{ border: '1px solid var(--border)', width: '36px', height: '36px', borderRadius: '50%' }}>
+          {/* Botón Selector de Paletas de Colores 🎨 */}
+          <div style={{ position: 'relative' }}>
+            <button 
+              onClick={() => setShowPaletteMenu(!showPaletteMenu)}
+              className="theme-toggle"
+              style={{ border: '1px solid var(--border)', width: '36px', height: '36px', borderRadius: '50%' }}
+              title="Personalizar Paleta de Colores del Sistema"
+            >
+              <Palette size={16} style={{ color: 'var(--primary)' }} />
+            </button>
+
+            {showPaletteMenu && (
+              <div className="notification-popover" style={{ width: '220px', right: 0 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px', borderBottom: '1px solid var(--border)', paddingBottom: '6px' }}>
+                  <h4 style={{ fontSize: '12px', fontWeight: '900', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <Palette size={14} style={{ color: 'var(--primary)' }} /> Paleta de Colores
+                  </h4>
+                </div>
+                <div style={{ display: 'grid', gap: '6px' }}>
+                  {PALETTES.map((p) => (
+                    <button
+                      key={p.id}
+                      type="button"
+                      onClick={() => { changePalette(p.id); setShowPaletteMenu(false); }}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        padding: '8px 10px',
+                        borderRadius: '8px',
+                        border: colorPalette === p.id ? '2px solid var(--primary)' : '1px solid var(--border)',
+                        backgroundColor: colorPalette === p.id ? 'var(--primary-light)' : 'var(--bg-primary)',
+                        cursor: 'pointer',
+                        fontSize: '11.5px',
+                        fontWeight: '700',
+                        color: 'var(--text-primary)'
+                      }}
+                    >
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <span>{p.icon}</span>
+                        <span>{p.name}</span>
+                      </div>
+                      <div style={{ display: 'flex', gap: '3px' }}>
+                        <div style={{ width: '10px', height: '10px', borderRadius: '50%', backgroundColor: p.primary }} />
+                        <div style={{ width: '10px', height: '10px', borderRadius: '50%', backgroundColor: p.accent }} />
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+
+          <button onClick={toggleTheme} className="theme-toggle" style={{ border: '1px solid var(--border)', width: '36px', height: '36px', borderRadius: '50%' }} title="Cambiar Modo Claro/Oscuro">
             {theme === 'light' ? <Moon size={15} /> : <Sun size={15} />}
           </button>
           
@@ -892,16 +1028,31 @@ const AdminDashboard = () => {
           </div>
         )}
 
-        {/* Pestañas de Navegación de los Módulos */}
+        {/* Pestañas de Navegación Adaptativas por Rol Institucional (RBAC) */}
         <div className="tab-container">
           <button className={`tab-btn ${activeTab === 'analytics' ? 'active' : ''}`} onClick={() => setActiveTab('analytics')}><BarChart3 size={15} /><span>Analíticas</span></button>
           <button className={`tab-btn ${activeTab === 'tasks' ? 'active' : ''}`} onClick={() => setActiveTab('tasks')}><ClipboardList size={15} /><span>Tareas</span></button>
-          <button className={`tab-btn ${activeTab === 'alerts' ? 'active' : ''}`} onClick={() => setActiveTab('alerts')}><AlertTriangle size={15} /><span>Alertas</span>{alerts.length > 0 && <span style={{ backgroundColor: 'var(--danger)', color: '#fff', fontSize: '10px', padding: '2px 6px', borderRadius: 'var(--radius-full)', fontWeight: 'bold' }}>{alerts.length}</span>}</button>
+          
+          {(user?.role !== 'lider_depto') && (
+            <button className={`tab-btn ${activeTab === 'alerts' ? 'active' : ''}`} onClick={() => setActiveTab('alerts')}>
+              <AlertTriangle size={15} /><span>Alertas</span>
+              {alerts.length > 0 && <span style={{ backgroundColor: 'var(--danger)', color: '#fff', fontSize: '10px', padding: '2px 6px', borderRadius: 'var(--radius-full)', fontWeight: 'bold' }}>{alerts.length}</span>}
+            </button>
+          )}
+
           <button className={`tab-btn ${activeTab === 'evaluations' ? 'active' : ''}`} onClick={() => setActiveTab('evaluations')}><Calendar size={15} /><span>Tests</span></button>
           <button className={`tab-btn ${activeTab === 'members' ? 'active' : ''}`} onClick={() => setActiveTab('members')}><Users size={15} /><span>Miembros y Roles</span></button>
-          <button className={`tab-btn ${activeTab === 'reports' ? 'active' : ''}`} onClick={() => setActiveTab('reports')}><FileSpreadsheet size={15} /><span>Reportes</span></button>
-          <button className={`tab-btn ${activeTab === 'audit' ? 'active' : ''}`} onClick={() => setActiveTab('audit')}><ShieldCheck size={15} /><span>Auditoría</span></button>
-          <button className={`tab-btn ${activeTab === 'ai_plans' ? 'active' : ''}`} onClick={() => setActiveTab('ai_plans')}><Sparkles size={15} /><span>Sugerencias IA</span></button>
+
+          {(user?.role === 'superadmin' || user?.role === 'admin_institucion') && (
+            <>
+              <button className={`tab-btn ${activeTab === 'reports' ? 'active' : ''}`} onClick={() => setActiveTab('reports')}><FileSpreadsheet size={15} /><span>Reportes</span></button>
+              <button className={`tab-btn ${activeTab === 'audit' ? 'active' : ''}`} onClick={() => setActiveTab('audit')}><ShieldCheck size={15} /><span>Auditoría</span></button>
+            </>
+          )}
+
+          {(user?.role !== 'lider_depto') && (
+            <button className={`tab-btn ${activeTab === 'ai_plans' ? 'active' : ''}`} onClick={() => setActiveTab('ai_plans')}><Sparkles size={15} /><span>Sugerencias IA</span></button>
+          )}
         </div>
 
         {/* TAB 1: ANALÍTICAS Y CLIMA EMOCIONAL */}
@@ -1015,21 +1166,63 @@ const AdminDashboard = () => {
                   <textarea rows="3" placeholder="Describe los detalles de la actividad..." value={taskDesc} onChange={(e) => setTaskDesc(e.target.value)} style={{ resize: 'vertical' }} />
                 </div>
                 
-                {/* Categoría y Destinatarios */}
+                {/* Categoría, Prioridad y Tiempo Estimado */}
                 <div style={{ marginBottom: '16px' }}>
-                  <label style={{ fontSize: '11px', fontWeight: '800', color: 'var(--text-secondary)', display: 'block', marginBottom: '6px' }}>CATEGORÍA DE LA TAREA:</label>
-                  <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginBottom: '14px' }}>
-                    {['Bienestar', 'Académica', 'Laboral'].map(cat => (
-                      <button
-                        key={cat}
-                        type="button"
-                        onClick={() => setTaskCategory(cat)}
-                        className={`duo-pill ${taskCategory === cat ? 'selected' : ''}`}
-                        style={{ padding: '6px 14px', fontSize: '12px' }}
-                      >
-                        {cat}
-                      </button>
-                    ))}
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '14px', marginBottom: '14px' }}>
+                    <div>
+                      <label style={{ fontSize: '11px', fontWeight: '800', color: 'var(--text-secondary)', display: 'block', marginBottom: '6px' }}>CATEGORÍA DE LA TAREA:</label>
+                      <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+                        {['Bienestar', 'Académica', 'Laboral'].map(cat => (
+                          <button
+                            key={cat}
+                            type="button"
+                            onClick={() => setTaskCategory(cat)}
+                            className={`duo-pill ${taskCategory === cat ? 'selected' : ''}`}
+                            style={{ padding: '4px 10px', fontSize: '11.5px' }}
+                          >
+                            {cat}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div>
+                      <label style={{ fontSize: '11px', fontWeight: '800', color: 'var(--text-secondary)', display: 'block', marginBottom: '6px' }}>NIVEL DE PRIORIDAD:</label>
+                      <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+                        {[
+                          { id: 'Alta', label: '🔴 Alta' },
+                          { id: 'Media', label: '🟡 Media' },
+                          { id: 'Baja', label: '🟢 Baja' }
+                        ].map(p => (
+                          <button
+                            key={p.id}
+                            type="button"
+                            onClick={() => setTaskPriority(p.id)}
+                            className={`duo-pill ${taskPriority === p.id ? 'selected' : ''}`}
+                            style={{ padding: '4px 10px', fontSize: '11.5px' }}
+                          >
+                            {p.label}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div>
+                      <label style={{ fontSize: '11px', fontWeight: '800', color: 'var(--text-secondary)', display: 'block', marginBottom: '6px' }}>TIEMPO ESTIMADO:</label>
+                      <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+                        {[15, 30, 45, 60].map(m => (
+                          <button
+                            key={m}
+                            type="button"
+                            onClick={() => setTaskEstMinutes(m)}
+                            className={`duo-pill ${taskEstMinutes === m ? 'selected' : ''}`}
+                            style={{ padding: '4px 8px', fontSize: '11.5px' }}
+                          >
+                            ⏱️ {m}m
+                          </button>
+                        ))}
+                      </div>
+                    </div>
                   </div>
 
                   {/* Asignación por Público (Todos, Departamento, Individual) */}
@@ -1335,18 +1528,58 @@ const AdminDashboard = () => {
                           </div>
                         </div>
 
-                        <h5 style={{ fontSize: '12px', fontWeight: '800', marginBottom: '8px' }}>Respuestas del Cuestionario:</h5>
-                        <div style={{ display: 'grid', gap: '8px', maxHeight: '220px', overflowY: 'auto' }}>
+                        <h5 style={{ fontSize: '12.5px', fontWeight: '800', marginBottom: '8px', color: 'var(--primary)' }}>
+                          Respuestas Detalladas de Colaboradores e Historial Clínico:
+                        </h5>
+                        <div style={{ display: 'grid', gap: '12px', maxHeight: '380px', overflowY: 'auto' }}>
                           {selectedTestAnalytics.responses.length === 0 ? (
                             <p style={{ color: 'var(--text-muted)', fontSize: '12px', textAlign: 'center' }}>No hay respuestas registradas aún para este test.</p>
                           ) : (
                             selectedTestAnalytics.responses.map((r) => (
-                              <div key={r.id} className="futuristic-card-item" style={{ padding: '10px', fontSize: '12px' }}>
-                                <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--text-muted)', fontSize: '10px', marginBottom: '4px' }}>
-                                  <span>{new Date(r.created_at).toLocaleDateString()}</span>
-                                  <span style={{ fontWeight: '800', color: r.dominant_sentiment === 'Positivo' ? 'var(--success)' : 'var(--danger)' }}>{r.dominant_sentiment}</span>
+                              <div key={r.id} className="futuristic-card-item" style={{ padding: '14px', fontSize: '12px', borderLeft: '4px solid var(--primary)' }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                                  <div>
+                                    <span style={{ fontWeight: '900', fontSize: '13px', color: 'var(--text-primary)' }}>{r.user_name}</span>
+                                    <span style={{ fontSize: '11px', color: 'var(--text-secondary)', marginLeft: '6px' }}>({r.user_email || 'Anónimo'}) • Depto: <strong>{r.user_department || 'General'}</strong></span>
+                                  </div>
+                                  <span style={{ fontWeight: '800', fontSize: '10.5px', padding: '2px 6px', borderRadius: '10px', backgroundColor: r.dominant_sentiment === 'Positivo' ? 'var(--success-light)' : 'var(--danger-light)', color: r.dominant_sentiment === 'Positivo' ? 'var(--success)' : 'var(--danger)' }}>
+                                    {r.dominant_sentiment}
+                                  </span>
                                 </div>
-                                <p style={{ fontStyle: 'italic', color: 'var(--text-primary)' }}>"{r.original_text}"</p>
+
+                                <p style={{ fontStyle: 'italic', color: 'var(--text-primary)', margin: '6px 0', backgroundColor: 'var(--bg-primary)', padding: '8px 10px', borderRadius: '8px', border: '1px solid var(--border)' }}>
+                                  "{r.original_text}"
+                                </p>
+
+                                <div style={{ display: 'flex', gap: '12px', fontSize: '10.5px', color: 'var(--text-secondary)', marginBottom: '8px' }}>
+                                  <span>Estrés: <strong>{r.stress_score}%</strong></span>
+                                  <span>Motivación: <strong>{r.motivation_score}%</strong></span>
+                                  <span>Agotamiento: <strong>{r.burnout_score}%</strong></span>
+                                  <span>Fecha: <strong>{new Date(r.created_at).toLocaleDateString()}</strong></span>
+                                </div>
+
+                                {/* SECCIÓN DE DIAGNÓSTICO CLÍNICO MANUAL DE LA PSICÓLOGA */}
+                                <div style={{ marginTop: '8px', borderTop: '1px dashed var(--border)', paddingTop: '8px' }}>
+                                  <label style={{ fontSize: '10.5px', fontWeight: '800', color: 'var(--primary)', display: 'block', marginBottom: '4px' }}>
+                                    🧠 DIAGNÓSTICO CLÍNICO Y OBSERVACIONES DE LA PSICÓLOGA:
+                                  </label>
+                                  <textarea
+                                    rows="2"
+                                    placeholder="Escribe tus observaciones clínicas, diagnóstico manual o seguimiento..."
+                                    value={clinicalNotesMap[r.id] !== undefined ? clinicalNotesMap[r.id] : (r.clinical_notes || '')}
+                                    onChange={(e) => setClinicalNotesMap(prev => ({ ...prev, [r.id]: e.target.value }))}
+                                    style={{ width: '100%', fontSize: '11.5px', padding: '6px 10px', borderRadius: '8px', marginBottom: '6px' }}
+                                  />
+                                  <button
+                                    type="button"
+                                    onClick={() => handleSaveClinicalNotes(r.id)}
+                                    className="duo-pill"
+                                    disabled={savingClinicalId === r.id}
+                                    style={{ fontSize: '11px', padding: '4px 10px' }}
+                                  >
+                                    {savingClinicalId === r.id ? <Loader className="animate-spin" size={12} /> : '💾 Guardar Diagnóstico Clínico'}
+                                  </button>
+                                </div>
                               </div>
                             ))
                           )}
@@ -1542,8 +1775,9 @@ const AdminDashboard = () => {
                           </div>
                           <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
                             <span style={{ fontSize: '10px', color: 'var(--primary)', fontWeight: '800', padding: '2px 8px', borderRadius: '12px', backgroundColor: 'var(--primary-light)' }}>
-                              {q.type === 'scale_1_5' ? 'Escala 1-5' : 
-                               q.type === 'scale_1_10' ? 'Escala 1-10' : 
+                              {q.type === 'scale_1_5' ? 'Numérica 1-5' : 
+                               q.type === 'scale_1_10' ? 'Numérica 1-10' : 
+                               q.type === 'emoji_scale_5' ? '5 Emojis WhatsApp 😡😁' :
                                q.type === 'boolean' ? 'Sí / No' : 'Texto + Voz'}
                             </span>
                             <button 
@@ -1563,8 +1797,9 @@ const AdminDashboard = () => {
                       <label style={{ fontSize: '11px', fontWeight: '800', color: 'var(--text-secondary)', display: 'block', marginBottom: '6px' }}>SELECCIONAR TIPO DE LA NUEVA PREGUNTA:</label>
                       <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
                         {[
-                          { id: 'scale_1_5', label: '⭕ Escala 1 a 5' },
-                          { id: 'scale_1_10', label: '🔟 Escala 1 a 10' },
+                          { id: 'scale_1_5', label: '🔢 Numérica 1 a 5' },
+                          { id: 'scale_1_10', label: '🔟 Numérica 1 a 10' },
+                          { id: 'emoji_scale_5', label: '😡 Escala 5 Emojis WhatsApp' },
                           { id: 'text', label: '📝 Texto / Voz' },
                           { id: 'boolean', label: '🔘 Sí / No' }
                         ].map(typeOpt => (
@@ -1680,26 +1915,124 @@ const AdminDashboard = () => {
             </div>
 
             {membersSubTab === 'directory' && (
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '16px' }}>
-                {members.length === 0 ? (
-                  <p style={{ color: 'var(--text-muted)', fontSize: '13px', textAlign: 'center' }}>No hay miembros registrados.</p>
-                ) : (
-                  members.map((m) => (
-                    <div key={m.id} className="futuristic-card-item" style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
-                      <div style={{ width: '42px', height: '42px', borderRadius: '50%', background: 'linear-gradient(135deg, var(--primary) 0%, var(--accent) 100%)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '900', fontSize: '15px' }}>
-                        {m.first_name?.[0]}{m.last_name?.[0]}
-                      </div>
-                      <div>
-                        <h4 style={{ fontSize: '14px', fontWeight: '800' }}>{m.first_name} {m.last_name}</h4>
-                        <p style={{ fontSize: '11.5px', color: 'var(--text-secondary)' }}>{m.email}</p>
-                        <div style={{ display: 'flex', gap: '6px', marginTop: '6px' }}>
-                          <span style={{ fontSize: '9px', fontWeight: '800', padding: '2px 6px', borderRadius: '10px', backgroundColor: 'var(--primary-light)', color: 'var(--primary)' }}>{m.department || 'General'}</span>
-                          <span style={{ fontSize: '9px', fontWeight: '800', padding: '2px 6px', borderRadius: '10px', backgroundColor: 'var(--bg-primary)', color: 'var(--text-secondary)' }}>{m.role}</span>
-                        </div>
-                      </div>
+              <div>
+                {/* Modal / Editor de Usuario Seleccionado */}
+                {editingUser && (
+                  <div style={{
+                    backgroundColor: 'var(--bg-primary)',
+                    border: '2px solid var(--primary)',
+                    borderRadius: '16px',
+                    padding: '20px',
+                    marginBottom: '20px',
+                    boxShadow: 'var(--shadow-md)',
+                    animation: 'fadeIn 0.2s ease'
+                  }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px', borderBottom: '1px solid var(--border)', paddingBottom: '10px' }}>
+                      <h4 style={{ fontSize: '15px', fontWeight: '900', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <Edit3 size={16} style={{ color: 'var(--primary)' }} />
+                        Edición de Usuario: <span style={{ color: 'var(--primary)' }}>{editingUser.first_name} {editingUser.last_name}</span> ({editingUser.email})
+                      </h4>
+                      <button onClick={() => setEditingUser(null)} style={{ border: 'none', background: 'none', color: 'var(--text-muted)', cursor: 'pointer', fontSize: '18px', fontWeight: 'bold' }}>×</button>
                     </div>
-                  ))
+
+                    {userUpdateMsg && (
+                      <div style={{ backgroundColor: 'var(--success-light)', color: 'var(--success)', border: '1px solid var(--success)', padding: '10px', borderRadius: '8px', fontSize: '12.5px', marginBottom: '14px' }}>
+                        {userUpdateMsg}
+                      </div>
+                    )}
+
+                    <form onSubmit={handleUpdateUser} style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px', alignItems: 'end' }}>
+                      <div>
+                        <label style={{ fontSize: '11px', fontWeight: '800', color: 'var(--text-secondary)', display: 'block', marginBottom: '6px' }}>
+                          ASIGNAR ROL INSTITUCIONAL:
+                        </label>
+                        <select 
+                          value={editRole} 
+                          onChange={(e) => setEditRole(e.target.value)}
+                          style={{ width: '100%', padding: '10px', borderRadius: '10px', fontSize: '12.5px', border: '1px solid var(--border)', backgroundColor: 'var(--bg-secondary)', color: 'var(--text-primary)' }}
+                        >
+                          <option value="miembro">👤 Miembro / Colaborador</option>
+                          <option value="profesional_apoyo">🧠 Psicólogo / Profesional de Apoyo</option>
+                          <option value="lider_depto">👔 Líder de Departamento / Manager</option>
+                          <option value="superadmin">🛡️ Administrador General</option>
+                        </select>
+                      </div>
+
+                      <div>
+                        <label style={{ fontSize: '11px', fontWeight: '800', color: 'var(--text-secondary)', display: 'block', marginBottom: '6px' }}>
+                          DEPARTAMENTO / ÁREA:
+                        </label>
+                        <select 
+                          value={editDept} 
+                          onChange={(e) => setEditDept(e.target.value)}
+                          style={{ width: '100%', padding: '10px', borderRadius: '10px', fontSize: '12.5px', border: '1px solid var(--border)', backgroundColor: 'var(--bg-secondary)', color: 'var(--text-primary)' }}
+                        >
+                          {departmentsList.concat(['General']).map(d => (
+                            <option key={d} value={d}>{d}</option>
+                          ))}
+                        </select>
+                      </div>
+
+                      <div>
+                        <label style={{ fontSize: '11px', fontWeight: '800', color: 'var(--text-secondary)', display: 'block', marginBottom: '6px' }}>
+                          RESTABLECER CONTRASEÑA (OPCIONAL):
+                        </label>
+                        <input 
+                          type="password" 
+                          placeholder="Nueva contraseña..." 
+                          value={editPassword}
+                          onChange={(e) => setEditPassword(e.target.value)}
+                          style={{ width: '100%', padding: '10px', borderRadius: '10px', fontSize: '12.5px', border: '1px solid var(--border)' }}
+                        />
+                      </div>
+
+                      <div style={{ display: 'flex', gap: '8px' }}>
+                        <button type="submit" className="btn btn-primary" disabled={userUpdateLoading} style={{ flex: 1, padding: '10px', fontSize: '12.5px', borderRadius: '10px', fontWeight: '800' }}>
+                          {userUpdateLoading ? <Loader className="animate-spin" size={14} /> : 'Guardar Cambios'}
+                        </button>
+                        <button type="button" onClick={() => setEditingUser(null)} className="btn btn-secondary" style={{ padding: '10px', fontSize: '12.5px', borderRadius: '10px' }}>
+                          Cancelar
+                        </button>
+                      </div>
+                    </form>
+                  </div>
                 )}
+
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '16px' }}>
+                  {members.length === 0 ? (
+                    <p style={{ color: 'var(--text-muted)', fontSize: '13px', textAlign: 'center' }}>No hay miembros registrados.</p>
+                  ) : (
+                    members.map((m) => (
+                      <div key={m.id} className="futuristic-card-item" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+                          <div style={{ width: '42px', height: '42px', borderRadius: '50%', background: 'linear-gradient(135deg, var(--primary) 0%, var(--accent) 100%)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '900', fontSize: '15px' }}>
+                            {m.first_name?.[0]}{m.last_name?.[0]}
+                          </div>
+                          <div>
+                            <h4 style={{ fontSize: '14px', fontWeight: '800' }}>{m.first_name} {m.last_name}</h4>
+                            <p style={{ fontSize: '11.5px', color: 'var(--text-secondary)' }}>{m.email}</p>
+                            <div style={{ display: 'flex', gap: '6px', marginTop: '6px' }}>
+                              <span style={{ fontSize: '9px', fontWeight: '800', padding: '2px 6px', borderRadius: '10px', backgroundColor: 'var(--primary-light)', color: 'var(--primary)' }}>{m.department || 'General'}</span>
+                              <span style={{ fontSize: '9px', fontWeight: '800', padding: '2px 6px', borderRadius: '10px', backgroundColor: 'var(--bg-primary)', color: 'var(--text-secondary)' }}>
+                                {m.role === 'superadmin' ? '🛡️ Admin' : m.role === 'profesional_apoyo' ? '🧠 Psicólogo' : m.role === 'lider_depto' ? '👔 Líder' : '👤 Miembro'}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+
+                        <button 
+                          onClick={() => openEditUserModal(m)} 
+                          className="duo-pill" 
+                          style={{ padding: '6px 12px', fontSize: '11.5px' }}
+                          title="Editar Rol y Contraseña"
+                        >
+                          <Edit3 size={13} />
+                          <span>Editar</span>
+                        </button>
+                      </div>
+                    ))
+                  )}
+                </div>
               </div>
             )}
 

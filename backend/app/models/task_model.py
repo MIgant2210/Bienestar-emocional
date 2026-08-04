@@ -23,6 +23,12 @@ class Task(db.Model):
     assigned_type = db.Column(db.String(30), nullable=False, default='all') # 'all', 'department', 'individual'
     assigned_target = db.Column(db.String(150), nullable=True)             # Email o Nombre del departamento
 
+    # Nuevos atributos de gestión avanzada de tareas
+    priority = db.Column(db.String(20), nullable=False, default='Media')   # 'Alta', 'Media', 'Baja'
+    estimated_minutes = db.Column(db.Integer, nullable=False, default=15)
+    submission_notes = db.Column(db.Text, nullable=True)                  # Comentarios o evidencia de entrega
+    completed_at = db.Column(db.DateTime, nullable=True)
+
     # Relaciones adicionales para facilidad en consultas
     assigned_user = db.relationship('User', foreign_keys=[user_id], backref=db.backref('assigned_tasks', lazy=True))
     creator = db.relationship('User', foreign_keys=[created_by], backref=db.backref('created_tasks', lazy=True))
@@ -35,6 +41,10 @@ class Task(db.Model):
             'category': self.category,
             'status': self.status,
             'due_date': self.due_date.isoformat() if self.due_date else None,
+            'priority': self.priority or 'Media',
+            'estimated_minutes': self.estimated_minutes or 15,
+            'submission_notes': self.submission_notes,
+            'completed_at': self.completed_at.isoformat() if self.completed_at else None,
             'user_id': str(self.user_id) if self.user_id else None,
             'assigned_type': self.assigned_type or 'all',
             'assigned_target': self.assigned_target,

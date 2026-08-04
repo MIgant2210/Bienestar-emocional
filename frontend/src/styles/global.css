@@ -1007,4 +1007,45 @@ input:focus, select:focus, textarea:focus {
   text-transform: uppercase;
 }
 
+/* REGLAS DE CONTRASTE PARA MODO OSCURO */
+[data-theme="dark"] .duo-pill {
+  color: var(--text-primary) !important;
+  background-color: var(--bg-secondary) !important;
+}
+
+[data-theme="dark"] .duo-pill.selected {
+  color: #ffffff !important;
+  background-color: var(--primary) !important;
+}
+
+[data-theme="dark"] .duo-card {
+  color: var(--text-primary) !important;
+  background-color: var(--bg-secondary) !important;
+}
+
+[data-theme="dark"] .duo-card.selected {
+  color: var(--primary) !important;
+  background-color: var(--primary-light) !important;
+}
+
+[data-theme="dark"] .btn-secondary {
+  background-color: var(--bg-tertiary) !important;
+  color: var(--text-primary) !important;
+  border-color: var(--border) !important;
+}
+
+[data-theme="dark"] select,
+[data-theme="dark"] input,
+[data-theme="dark"] textarea {
+  color: var(--text-primary) !important;
+  background-color: var(--bg-secondary) !important;
+  border-color: var(--border) !important;
+}
+
+[data-theme="dark"] option {
+  background-color: var(--bg-secondary) !important;
+  color: var(--text-primary) !important;
+}
+
+
 

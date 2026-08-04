@@ -194,10 +194,10 @@ def update_evaluation(current_user, eval_id):
 
 @evaluations_bp.route('/<uuid:eval_id>/responses', methods=['GET'])
 @token_required
-@roles_accepted('admin_institucion', 'superadmin')
+@roles_accepted('admin_institucion', 'superadmin', 'profesional_apoyo', 'lider_depto')
 def get_evaluation_responses(current_user, eval_id):
     """
-    Retorna los datos agregados, promedios y lista de respuestas asociadas a un test específico.
+    Retorna los datos agregados, promedios y lista de respuestas individuales asociadas a un test específico para Psicóloga, Líder y Admin.
     """
     evaluation = Evaluation.query.get_or_404(eval_id)
     if current_user.role != 'superadmin' and evaluation.institution_id != current_user.institution_id:
@@ -232,6 +232,27 @@ def get_evaluation_responses(current_user, eval_id):
         },
         'sentiments': sentiments,
         'responses': [r.to_dict() for r in reflections]
+    }), 200
+
+@evaluations_bp.route('/response/<uuid:reflection_id>/clinical-notes', methods=['PUT'])
+@token_required
+@roles_accepted('admin_institucion', 'superadmin', 'profesional_apoyo', 'lider_depto')
+def update_clinical_notes(current_user, reflection_id):
+    """
+    Permite a la Psicóloga / Profesional de Apoyo o Admin guardar notas de diagnóstico clínico manual sobre la respuesta de un colaborador.
+    """
+    data = request.get_json() or {}
+    notes = data.get('clinical_notes', '')
+    
+    reflection = Reflection.query.get_or_404(reflection_id)
+    if current_user.role != 'superadmin' and reflection.institution_id != current_user.institution_id:
+        return jsonify({'message': 'No tiene permisos para modificar la nota de este usuario.'}), 403
+        
+    reflection.clinical_notes = notes
+    db.session.commit()
+    return jsonify({
+        'message': 'Notas diagnósticas manuales guardadas exitosamente.',
+        'reflection': reflection.to_dict()
     }), 200
 
 @evaluations_bp.route('/<uuid:eval_id>', methods=['DELETE'])

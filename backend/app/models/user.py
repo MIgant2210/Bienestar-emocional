@@ -17,7 +17,13 @@ class User(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     
     # Relación con Reflexiones
-    reflections = db.relationship('Reflection', backref='user', lazy=True, cascade="all, delete-orphan")
+    reflections = db.relationship(
+        'Reflection',
+        foreign_keys='Reflection.user_id',
+        back_populates='user',
+        lazy=True,
+        cascade='all, delete-orphan'
+    )
     
     def set_password(self, password):
         salt = bcrypt.gensalt()
