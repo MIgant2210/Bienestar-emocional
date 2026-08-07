@@ -9,7 +9,7 @@ institutions_bp = Blueprint('institutions', __name__)
 
 @institutions_bp.route('/dashboard', methods=['GET'])
 @token_required
-@roles_accepted('admin_institucion', 'superadmin')
+@roles_accepted('admin_institucion', 'superadmin', 'profesional_apoyo', 'lider_depto')
 def get_dashboard_data(current_user):
     """
     Obtiene datos agregados e históricos del bienestar emocional para la institución.
@@ -100,7 +100,7 @@ def get_dashboard_data(current_user):
 
 @institutions_bp.route('/suggestions', methods=['GET'])
 @token_required
-@roles_accepted('admin_institucion', 'superadmin')
+@roles_accepted('admin_institucion', 'superadmin', 'profesional_apoyo', 'lider_depto')
 def get_suggestions(current_user):
     """
     Retorna el listado de sugerencias colectivas generadas por la IA para la institución.
@@ -135,7 +135,7 @@ def get_suggestions(current_user):
 
 @institutions_bp.route('/members', methods=['GET'])
 @token_required
-@roles_accepted('admin_institucion', 'superadmin')
+@roles_accepted('admin_institucion', 'superadmin', 'profesional_apoyo', 'lider_depto')
 def get_institution_members(current_user):
     """
     Retorna el directorio de todos los usuarios de la institución.

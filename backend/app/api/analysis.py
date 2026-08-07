@@ -8,10 +8,10 @@ analysis_bp = Blueprint('analysis', __name__)
 
 @analysis_bp.route('/submit', methods=['POST'])
 @token_required
-@roles_accepted('miembro', 'admin_institucion', 'superadmin')
+@roles_accepted('miembro', 'profesional_apoyo', 'lider_depto', 'admin_institucion', 'superadmin')
 def submit_reflection(current_user):
     """
-    Recibe el texto de un miembro, lo analiza mediante Gemini
+    Recibe el texto de cualquier usuario autenticado, lo analiza mediante Gemini
     y guarda la reflexión asociada al usuario y a su institución.
     """
     data = request.get_json() or {}
@@ -68,10 +68,9 @@ def submit_reflection(current_user):
 
 @analysis_bp.route('/my-history', methods=['GET'])
 @token_required
-@roles_accepted('miembro')
 def get_my_history(current_user):
     """
-    Retorna el historial de reflexiones del miembro autenticado.
+    Retorna el historial de reflexiones del usuario autenticado.
     Esto permite que el usuario vea su propio progreso.
     """
     reflections = Reflection.query.filter_by(user_id=current_user.id).order_by(Reflection.created_at.desc()).all()
@@ -79,7 +78,6 @@ def get_my_history(current_user):
 
 @analysis_bp.route('/chat', methods=['POST'])
 @token_required
-@roles_accepted('miembro')
 def chat_with_advisor(current_user):
     """
     Ruta para conversar con el asistente emocional Gemini.

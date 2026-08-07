@@ -7,6 +7,9 @@ from app.models.evaluation import Evaluation
 from app.models.reflection import Reflection
 from app.models.alert import Alert
 from app.models.audit_log import AuditLog
+from app.models.reward import Reward
+from app.models.kudos import Kudos
+from app.utils.db_schema import ensure_task_schema
 from datetime import datetime, timedelta
 
 app = create_app()
@@ -16,6 +19,7 @@ with app.app_context():
     
     # 1. Crear / Validar tablas
     db.create_all()
+    ensure_task_schema(db)
     print("[Tablas] Creadas o validadas correctamente.")
     
     # 1.1 Ejecutar migración automática de columnas en PostgreSQL para 'evaluations' y 'reflections'
@@ -184,43 +188,73 @@ with app.app_context():
     db.session.commit()
     print("[Tests Precargados] 3 plantillas estandarizadas ampliadas sembradas correctamente.")
 
-    # 6. Miembro demo
-    member_email = "miembro@bienestar.com"
-    member_user = User.query.filter_by(email=member_email).first()
-    if not member_user:
-        member_user = User(
-            email=member_email,
-            first_name="Juan",
-            last_name="Pérez",
-            role="miembro",
+    # 5b. Crear Evaluaciones Activas Habilitadas en la Institución
+    active_eval1 = Evaluation.query.filter_by(title="Chequeo Mensual de Clima y Salud Emocional", institution_id=inst_edu.id).first()
+    if not active_eval1:
+        active_eval1 = Evaluation(
+            title="Chequeo Mensual de Clima y Salud Emocional",
+            description="Evaluación periódica institucional sobre niveles de estrés, comunicación y apoyo de equipo.",
+            category="Clima Laboral",
+            questions_json=json.dumps(q_clima),
+            is_active=True,
+            is_template=False,
             institution_id=inst_edu.id
         )
-        member_user.set_password("Miembro123*")
-        db.session.add(member_user)
+        db.session.add(active_eval1)
         db.session.commit()
 
-        # Alerta demo
-        ref = Reflection(
+    # 5c. Reflexiones e Indicadores Demo para la Psicóloga y Dashboard
+    if Reflection.query.filter_by(institution_id=inst_edu.id).count() == 0:
+        ref1 = Reflection(
             user_id=member_user.id,
             institution_id=inst_edu.id,
-            original_text="Me siento sumamente agotado y presionado por los parciales. Siento que la sobrecarga del entorno laboral y académico es insoportable esta semana.",
-            stress_score=88,
-            motivation_score=15,
-            burnout_score=92,
-            dominant_sentiment="Negativo",
-            institution_suggestion="Canalizar al estudiante para brindar orientación en manejo del tiempo y descansos."
+            evaluation_id=active_eval1.id,
+            original_text="Me he sentido presionado por los plazos del proyecto esta semana, pero la dinámica de pausas activas me ayudó a recuperar la tranquilidad.",
+            stress_score=68,
+            motivation_score=72,
+            burnout_score=54,
+            dominant_sentiment="Neutro",
+            institution_suggestion="Fomentar talleres de gestión de carga de trabajo y priorización semanal."
         )
-        db.session.add(ref)
+        ref2 = Reflection(
+            user_id=member_user.id,
+            institution_id=inst_edu.id,
+            evaluation_id=active_eval1.id,
+            original_text="Excelente ambiente de colaboración en el departamento. Me siento motivado y con energía renovada.",
+            stress_score=25,
+            motivation_score=90,
+            burnout_score=18,
+            dominant_sentiment="Positivo",
+            institution_suggestion="Reconocer públicamente el esfuerzo y liderazgo positivo del colaborador."
+        )
+        db.session.add_all([ref1, ref2])
         db.session.commit()
 
-        alert = Alert(
+        # Alerta Demo de Prueba
+        alert1 = Alert(
             user_id=member_user.id,
-            reflection_id=ref.id,
+            reflection_id=ref1.id,
             institution_id=inst_edu.id,
-            priority="Alta",
+            priority="Media",
             status="pendiente"
         )
-        db.session.add(alert)
+        db.session.add(alert1)
         db.session.commit()
 
-    print("[ÉXITO] ¡Siembra de base de datos con Tests Precargados finalizada!")
+    # 6. Recompensas Demo en la Tienda XP
+    if Reward.query.filter_by(institution_id=inst_edu.id).count() == 0:
+        r1 = Reward(title="Medalla Virtual de Resiliencia", description="Reconocimiento especial visible en tu perfil institucional.", cost_xp=50, category="Reconocimiento", icon="🏅", institution_id=inst_edu.id)
+        r2 = Reward(title="Pase de Salida Temprana (1 Hora)", description="Permiso de flexibilidad laboral u horaria autorizado por tu líder.", cost_xp=250, category="Flexibilidad", icon="⏰", institution_id=inst_edu.id)
+        r3 = Reward(title="Sesión Privada de Masaje Ergonométrico", description="Sesión de relajación física y postura de 20 minutos en la institución.", cost_xp=400, category="Bienestar", icon="💆‍♂️", institution_id=inst_edu.id)
+        r4 = Reward(title="Insignia de Embajador del Equilibrio", description="Reconocimiento público a colaboradores con alta racha de salud.", cost_xp=150, category="Comunidad", icon="⭐", institution_id=inst_edu.id)
+        db.session.add_all([r1, r2, r3, r4])
+        db.session.commit()
+
+    # 7. Kudos y Muro de Gratitud Demo
+    if Kudos.query.filter_by(institution_id=inst_edu.id).count() == 0:
+        k1 = Kudos(sender_id=super_admin.id, institution_id=inst_edu.id, receiver_name="Ana Martínez", receiver_department="Tecnología", message="¡Muchas gracias por apoyar con la organización del taller de respiración!", badge_type="Compañerismo", is_anonymous=False, likes_count=4)
+        k2 = Kudos(sender_id=prof_user.id, institution_id=inst_edu.id, receiver_name="Equipo de Salud", receiver_department="Salud", message="Excelente actitud y empatía demostrada durante los chequeos semanales.", badge_type="Resiliencia", is_anonymous=True, likes_count=7)
+        db.session.add_all([k1, k2])
+        db.session.commit()
+
+    print("[ÉXITO] ¡Siembra de base de datos finalizada!")

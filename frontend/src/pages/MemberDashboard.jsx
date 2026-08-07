@@ -36,9 +36,35 @@ const MemberDashboard = () => {
   const [reflectionError, setReflectionError] = useState('');
   const [latestAnalysis, setLatestAnalysis] = useState(null);
 
-  // Tareas States
+  // Tareas & Tablero Kanban States
   const [tasks, setTasks] = useState([]);
   const [tasksLoading, setTasksLoading] = useState(false);
+  const [taskViewMode, setTaskViewMode] = useState('list'); // 'list' o 'kanban'
+
+  // Tienda de Recompensas States
+  const [rewards, setRewards] = useState([]);
+  const [myRedemptions, setMyRedemptions] = useState([]);
+  const [rewardLoading, setRewardLoading] = useState(false);
+  const [rewardMsg, setRewardMsg] = useState('');
+
+  // Agenda de Citas 1 a 1 States
+  const [appointments, setAppointments] = useState([]);
+  const [apptDate, setApptDate] = useState('');
+  const [apptTime, setApptTime] = useState('10:00');
+  const [apptReason, setApptReason] = useState('Sesión de Apoyo y Orientación Emocional');
+  const [apptLoading, setApptLoading] = useState(false);
+  const [apptMsg, setApptMsg] = useState('');
+
+  // Muro de Gratitud y Kudos States
+  const [members, setMembers] = useState([]);
+  const [kudosList, setKudosList] = useState([]);
+  const [kudoReceiver, setKudoReceiver] = useState('');
+  const [kudoDept, setKudoDept] = useState('General');
+  const [kudoMessage, setKudoMessage] = useState('');
+  const [kudoBadge, setKudoBadge] = useState('Gratitud');
+  const [kudoAnonymous, setKudoAnonymous] = useState(false);
+  const [kudoLoading, setKudoLoading] = useState(false);
+  const [kudoMsg, setKudoMsg] = useState('');
 
   // Evaluaciones / Tests Guiados (Módulo 4 Multimodal)
   const [evaluations, setEvaluations] = useState([]);
@@ -99,8 +125,116 @@ const MemberDashboard = () => {
     }
   };
 
+  const fetchRewards = async () => {
+    try {
+      const [rRes, myRes] = await Promise.all([api.get('/rewards'), api.get('/rewards/my-redemptions')]);
+      setRewards(rRes.data);
+      setMyRedemptions(myRes.data);
+    } catch (err) {
+      console.error('Error al cargar recompensas:', err);
+    }
+  };
+
+  const fetchAppointments = async () => {
+    try {
+      const response = await api.get('/appointments');
+      setAppointments(response.data);
+    } catch (err) {
+      console.error('Error al cargar citas:', err);
+    }
+  };
+
+  const fetchKudos = async () => {
+    try {
+      const response = await api.get('/kudos');
+      setKudosList(response.data);
+    } catch (err) {
+      console.error('Error al cargar kudos:', err);
+    }
+  };
+
+  const fetchMembers = async () => {
+    try {
+      const response = await api.get('/institutions/members');
+      setMembers(response.data);
+    } catch (err) {
+      console.error('Error al cargar lista de miembros:', err);
+    }
+  };
+
+  const handleRedeemReward = async (reward) => {
+    if (xpPoints < reward.cost_xp) {
+      alert(`Necesitas ${reward.cost_xp} XP para canjear esta recompensa. Actualmente tienes ${xpPoints} XP. ¡Completa más tareas y reflexiones!`);
+      return;
+    }
+
+    setRewardLoading(true);
+    try {
+      await api.post('/rewards/redeem', { reward_id: reward.id });
+      setXpPoints(prev => prev - reward.cost_xp);
+      setRewardMsg(`¡Felicidades! Has canjeado "${reward.title}" por ${reward.cost_xp} XP 🏆`);
+      fetchRewards();
+    } catch (err) {
+      alert('Error al canjear recompensa: ' + (err.response?.data?.message || err.message));
+    } finally {
+      setRewardLoading(false);
+    }
+  };
+
+  const handleCreateAppointment = async (e) => {
+    e.preventDefault();
+    if (!apptDate) {
+      alert('Por favor selecciona una fecha para tu cita.');
+      return;
+    }
+    setApptLoading(true);
+    setApptMsg('');
+    try {
+      const fullIso = `${apptDate}T${apptTime}:00`;
+      await api.post('/appointments', {
+        date_time: fullIso,
+        reason: apptReason
+      });
+      setApptMsg('¡Cita agendada exitosamente con la Psicóloga! 📅');
+      setApptDate('');
+      fetchAppointments();
+    } catch (err) {
+      alert('Error al agendar cita: ' + (err.response?.data?.message || err.message));
+    } finally {
+      setApptLoading(false);
+    }
+  };
+
+  const handleCreateKudos = async (e) => {
+    e.preventDefault();
+    if (!kudoReceiver || !kudoMessage) {
+      alert('Por favor ingresa el nombre del compañero y tu mensaje de gratitud.');
+      return;
+    }
+    setKudoLoading(true);
+    setKudoMsg('');
+    try {
+      await api.post('/kudos', {
+        receiver_name: kudoReceiver,
+        receiver_department: kudoDept,
+        message: kudoMessage,
+        badge_type: kudoBadge,
+        is_anonymous: kudoAnonymous
+      });
+      setXpPoints(prev => prev + 10);
+      setKudoMsg('¡Kudo publicado exitosamente en el Muro de Gratitud! (+10 XP) 💖');
+      setKudoReceiver('');
+      setKudoMessage('');
+      fetchKudos();
+    } catch (err) {
+      alert('Error al publicar kudo: ' + (err.response?.data?.message || err.message));
+    } finally {
+      setKudoLoading(false);
+    }
+  };
+
   useEffect(() => {
-    Promise.allSettled([fetchHistory(), fetchTasks(), fetchEvaluations()]);
+    Promise.allSettled([fetchHistory(), fetchTasks(), fetchEvaluations(), fetchRewards(), fetchAppointments(), fetchKudos(), fetchMembers()]);
   }, []);
 
   useEffect(() => {
@@ -240,9 +374,25 @@ const MemberDashboard = () => {
   const [taskSubmissionNote, setTaskSubmissionNote] = useState('');
   const [taskSubmitting, setTaskSubmitting] = useState(false);
 
+  // Cambiar columna del tablero Kanban
+  const handleUpdateTaskColumn = async (taskId, targetColumn, notes = '') => {
+    try {
+      const response = await api.put(`/tasks/${taskId}/status`, { 
+        board_column: targetColumn,
+        submission_notes: notes || taskSubmissionNote 
+      });
+      setTasks(prevTasks => prevTasks.map(t => t.id === taskId ? response.data.task : t));
+      if (targetColumn === 'completed') setXpPoints(prev => prev + 20);
+      setSelectedTaskModal(null);
+      setTaskSubmissionNote('');
+    } catch (err) {
+      console.error('Error al mover columna de tarea:', err);
+    }
+  };
+
   // Toggle Tarea con Evidencias y XP Recompensa
   const handleToggleTaskStatus = async (taskId, currentStatus, notes = '') => {
-    const newStatus = currentStatus === 'pendiente' ? 'completada' : 'pendiente';
+    const newStatus = currentStatus === 'completada' ? 'pendiente' : 'completada';
     setTaskSubmitting(true);
     try {
       const response = await api.put(`/tasks/${taskId}/status`, { 
@@ -258,6 +408,40 @@ const MemberDashboard = () => {
     } finally {
       setTaskSubmitting(false);
     }
+  };
+
+  // Helper para estructurar respuestas multimodales en componentes legibles
+  const formatMultimodalText = (rawText) => {
+    if (!rawText) return <p style={{ fontSize: '12px', fontStyle: 'italic' }}>Sin respuesta.</p>;
+    
+    // Si contiene delimitadores de preguntas (ej. P1 [Pregunta]: respuesta | P2 ...)
+    if (rawText.includes(' | ') || rawText.includes('P1 [')) {
+      const parts = rawText.replace(/^\[TEST COMPLETADO:[^\]]+\]\s*/, '').split(' | ');
+      return (
+        <div style={{ display: 'grid', gap: '8px', marginTop: '6px' }}>
+          {parts.map((p, pIdx) => {
+            const match = p.match(/^(P\d+)\s*\[(.*?)\]:\s*(.*)$/);
+            if (match) {
+              return (
+                <div key={pIdx} style={{ backgroundColor: 'var(--bg-secondary)', padding: '10px 12px', borderRadius: '10px', borderLeft: '4px solid var(--primary)', fontSize: '12px' }}>
+                  <span style={{ fontSize: '10px', fontWeight: '900', color: 'var(--primary)', display: 'block', textTransform: 'uppercase', marginBottom: '2px' }}>
+                    {match[1]} • {match[2]}
+                  </span>
+                  <span style={{ fontWeight: '700', color: 'var(--text-primary)' }}>{match[3]}</span>
+                </div>
+              );
+            }
+            return (
+              <div key={pIdx} style={{ backgroundColor: 'var(--bg-secondary)', padding: '8px 12px', borderRadius: '8px', fontSize: '12px' }}>
+                {p}
+              </div>
+            );
+          })}
+        </div>
+      );
+    }
+
+    return <p style={{ fontSize: '12px', fontStyle: 'italic', lineHeight: '1.5' }}>"{rawText}"</p>;
   };
 
   // Enviar Mensaje al Chat
@@ -764,11 +948,14 @@ const MemberDashboard = () => {
       {/* Contenedor del Tablero */}
       <main style={{ flex: 1, padding: '24px 24px', maxWidth: '1300px', width: '100%', margin: '0 auto' }}>
         
-        {/* Pestañas de Navegación */}
-        <div className="tab-container" style={{ maxWidth: '750px' }}>
+        {/* Pestañas de Navegación Profesional (Sin Emojis en Menú) */}
+        <div className="tab-container" style={{ width: '100%', overflowX: 'auto', flexWrap: 'nowrap' }}>
           <button className={`tab-btn ${activeTab === 'bienestar' ? 'active' : ''}`} onClick={() => setActiveTab('bienestar')}><Brain size={15} /><span>Mi Bienestar</span></button>
           <button className={`tab-btn ${activeTab === 'tareas' ? 'active' : ''}`} onClick={() => setActiveTab('tareas')}><ClipboardList size={15} /><span>Mis Tareas</span>{tasks.filter(t => t.status === 'pendiente').length > 0 && <span style={{ backgroundColor: 'var(--danger)', color: '#fff', fontSize: '10px', padding: '2px 6px', borderRadius: 'var(--radius-full)', fontWeight: 'bold' }}>{tasks.filter(t => t.status === 'pendiente').length}</span>}</button>
-          <button className={`tab-btn ${activeTab === 'evaluations' ? 'active' : ''}`} onClick={() => setActiveTab('evaluations')}><Calendar size={15} /><span>Tests de Evaluación</span>{evaluations.length > 0 && <span style={{ backgroundColor: 'var(--primary)', color: '#fff', fontSize: '10px', padding: '2px 6px', borderRadius: 'var(--radius-full)', fontWeight: 'bold' }}>{evaluations.length}</span>}</button>
+          <button className={`tab-btn ${activeTab === 'evaluations' ? 'active' : ''}`} onClick={() => setActiveTab('evaluations')}><Calendar size={15} /><span>Tests</span>{evaluations.length > 0 && <span style={{ backgroundColor: 'var(--primary)', color: '#fff', fontSize: '10px', padding: '2px 6px', borderRadius: 'var(--radius-full)', fontWeight: 'bold' }}>{evaluations.length}</span>}</button>
+          <button className={`tab-btn ${activeTab === 'rewards' ? 'active' : ''}`} onClick={() => setActiveTab('rewards')}><Award size={15} /><span>Recompensas</span></button>
+          <button className={`tab-btn ${activeTab === 'appointments' ? 'active' : ''}`} onClick={() => setActiveTab('appointments')}><Calendar size={15} /><span>Citas 1 a 1</span></button>
+          <button className={`tab-btn ${activeTab === 'kudos' ? 'active' : ''}`} onClick={() => setActiveTab('kudos')}><Heart size={15} /><span>Muro de Gratitud</span></button>
           <button className={`tab-btn ${activeTab === 'chat_ia' ? 'active' : ''}`} onClick={() => setActiveTab('chat_ia')}><Sparkles size={15} /><span>Asistente IA</span></button>
         </div>
 
@@ -932,18 +1119,25 @@ const MemberDashboard = () => {
           </div>
         )}
 
-        {/* TAB 2: TAREAS */}
+        {/* TAB 2: TAREAS (VISTA LISTA Y TABLERO KANBAN INTERACTIVO) */}
         {activeTab === 'tareas' && (
           <div className="glass-card animate-fade">
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', flexWrap: 'wrap', gap: '12px' }}>
               <div>
                 <h3 style={{ fontSize: '17px', fontWeight: '900', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <ClipboardList size={18} style={{ color: 'var(--primary)' }} /> Tareas Asignadas
+                  <ClipboardList size={18} style={{ color: 'var(--primary)' }} /> Gestor Institucional de Tareas
                 </h3>
-                <p style={{ fontSize: '12.5px', color: 'var(--text-secondary)' }}>Actividades de bienestar e intitucionales. +15 XP al completarlas.</p>
+                <p style={{ fontSize: '12.5px', color: 'var(--text-secondary)' }}>Organiza tus actividades en lista o en el tablero Kanban. +20 XP por entrega.</p>
               </div>
-              <div style={{ fontSize: '13px', fontWeight: '800', backgroundColor: 'var(--primary-light)', padding: '6px 14px', borderRadius: 'var(--radius-sm)', color: 'var(--primary)' }}>
-                Progreso: {completedTasksCount}/{tasks.length} ({taskProgressPercent}%)
+              <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+                <div style={{ display: 'flex', backgroundColor: 'var(--bg-secondary)', padding: '3px', borderRadius: '10px', border: '1px solid var(--border)' }}>
+                  <button onClick={() => setTaskViewMode('list')} className={`duo-pill ${taskViewMode === 'list' ? 'selected' : ''}`} style={{ padding: '4px 12px', fontSize: '11px' }}>
+                    📋 Lista
+                  </button>
+                  <button onClick={() => setTaskViewMode('kanban')} className={`duo-pill ${taskViewMode === 'kanban' ? 'selected' : ''}`} style={{ padding: '4px 12px', fontSize: '11px' }}>
+                    📊 Tablero Kanban
+                  </button>
+                </div>
               </div>
             </div>
 
@@ -1019,9 +1213,101 @@ const MemberDashboard = () => {
 
             {tasksLoading ? (
               <div style={{ display: 'flex', justifyContent: 'center', padding: '30px' }}><Loader className="animate-spin" size={20} /></div>
+            ) : taskViewMode === 'kanban' ? (
+              /* VISTA TABLERO KANBAN ESTILO JIRA (4 COLUMNAS INTERACTIVAS) */
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(230px, 1fr))', gap: '14px', alignItems: 'start' }}>
+                {/* Columna 1: Por Hacer */}
+                <div style={{ backgroundColor: 'var(--bg-secondary)', borderRadius: '14px', padding: '12px', border: '1px solid var(--border)' }}>
+                  <h4 style={{ fontSize: '12.5px', fontWeight: '900', color: 'var(--primary)', marginBottom: '10px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span>📌 Por Hacer</span>
+                    <span style={{ fontSize: '10px', backgroundColor: 'var(--primary-light)', padding: '2px 6px', borderRadius: '10px' }}>
+                      {tasks.filter(t => (t.board_column === 'todo' || !t.board_column) && t.status !== 'completada').length}
+                    </span>
+                  </h4>
+                  <div style={{ display: 'grid', gap: '8px' }}>
+                    {tasks.filter(t => (t.board_column === 'todo' || !t.board_column) && t.status !== 'completada').map(task => (
+                      <div key={task.id} className="futuristic-card-item" style={{ padding: '10px' }}>
+                        <h5 style={{ fontSize: '12.5px', fontWeight: '800' }}>{task.title}</h5>
+                        <p style={{ fontSize: '11px', color: 'var(--text-secondary)', margin: '3px 0' }}>{task.description}</p>
+                        <div style={{ display: 'flex', gap: '4px', marginTop: '6px' }}>
+                          <button onClick={() => handleUpdateTaskColumn(task.id, 'in_progress')} className="duo-pill" style={{ flex: 1, justifyContent: 'center', fontSize: '10px', padding: '4px 6px' }}>
+                            ▶ Mover a En Proceso
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Columna 2: En Proceso */}
+                <div style={{ backgroundColor: 'var(--bg-secondary)', borderRadius: '14px', padding: '12px', border: '1px solid var(--border)' }}>
+                  <h4 style={{ fontSize: '12.5px', fontWeight: '900', color: 'var(--warning)', marginBottom: '10px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span>⏳ En Proceso</span>
+                    <span style={{ fontSize: '10px', backgroundColor: 'var(--warning-light)', padding: '2px 6px', borderRadius: '10px' }}>
+                      {tasks.filter(t => t.board_column === 'in_progress').length}
+                    </span>
+                  </h4>
+                  <div style={{ display: 'grid', gap: '8px' }}>
+                    {tasks.filter(t => t.board_column === 'in_progress').map(task => (
+                      <div key={task.id} className="futuristic-card-item" style={{ padding: '10px', borderLeft: '3px solid var(--warning)' }}>
+                        <h5 style={{ fontSize: '12.5px', fontWeight: '800' }}>{task.title}</h5>
+                        <div style={{ display: 'flex', gap: '4px', marginTop: '6px' }}>
+                          <button onClick={() => handleUpdateTaskColumn(task.id, 'todo')} className="duo-pill" style={{ fontSize: '10px', padding: '4px 6px' }}>
+                            ◀ Regresar
+                          </button>
+                          <button onClick={() => handleUpdateTaskColumn(task.id, 'in_review')} className="duo-pill selected" style={{ flex: 1, justifyContent: 'center', fontSize: '10px', padding: '4px 6px' }}>
+                            📝 Enviar a Revisión
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Columna 3: En Revisión */}
+                <div style={{ backgroundColor: 'var(--bg-secondary)', borderRadius: '14px', padding: '12px', border: '1px solid var(--border)' }}>
+                  <h4 style={{ fontSize: '12.5px', fontWeight: '900', color: 'var(--accent)', marginBottom: '10px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span>📝 En Revisión</span>
+                    <span style={{ fontSize: '10px', backgroundColor: 'var(--accent-light)', padding: '2px 6px', borderRadius: '10px' }}>
+                      {tasks.filter(t => t.board_column === 'in_review').length}
+                    </span>
+                  </h4>
+                  <div style={{ display: 'grid', gap: '8px' }}>
+                    {tasks.filter(t => t.board_column === 'in_review').map(task => (
+                      <div key={task.id} className="futuristic-card-item" style={{ padding: '10px', borderLeft: '3px solid var(--accent)' }}>
+                        <h5 style={{ fontSize: '12.5px', fontWeight: '800' }}>{task.title}</h5>
+                        <div style={{ display: 'flex', gap: '4px', marginTop: '6px' }}>
+                          <button onClick={() => setSelectedTaskModal(task)} className="duo-pill selected" style={{ width: '100%', justifyContent: 'center', fontSize: '10px', padding: '4px 6px' }}>
+                            ⚡ Adjuntar / Aprobar (+20 XP)
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Columna 4: Completadas */}
+                <div style={{ backgroundColor: 'var(--bg-secondary)', borderRadius: '14px', padding: '12px', border: '1px solid var(--border)' }}>
+                  <h4 style={{ fontSize: '12.5px', fontWeight: '900', color: 'var(--success)', marginBottom: '10px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span>✅ Completadas</span>
+                    <span style={{ fontSize: '10px', backgroundColor: 'var(--success-light)', padding: '2px 6px', borderRadius: '10px' }}>
+                      {tasks.filter(t => t.board_column === 'completed' || t.status === 'completada').length}
+                    </span>
+                  </h4>
+                  <div style={{ display: 'grid', gap: '8px' }}>
+                    {tasks.filter(t => t.board_column === 'completed' || t.status === 'completada').map(task => (
+                      <div key={task.id} className="futuristic-card-item" style={{ padding: '10px', borderLeft: '3px solid var(--success)' }}>
+                        <h5 style={{ fontSize: '12.5px', fontWeight: '800', textDecoration: 'line-through' }}>{task.title}</h5>
+                        <span style={{ fontSize: '10px', color: 'var(--success)', fontWeight: '800' }}>+20 XP Ganados ⚡</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
             ) : tasks.length === 0 ? (
               <div style={{ textAlign: 'center', padding: '40px', color: 'var(--text-muted)' }}>No tienes tareas asignadas.</div>
             ) : (
+              /* VISTA LISTA TRADICIONAL */
               <div style={{ display: 'grid', gap: '12px' }}>
                 {tasks.map((task) => (
                   <div key={task.id} className="futuristic-card-item" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px' }}>
@@ -1029,46 +1315,229 @@ const MemberDashboard = () => {
                       <button 
                         onClick={() => handleToggleTaskStatus(task.id, task.status)} 
                         style={{ background: 'none', border: 'none', cursor: 'pointer', color: task.status === 'completada' ? 'var(--success)' : 'var(--text-muted)' }}
-                        title={task.status === 'completada' ? 'Marcar como pendiente' : 'Marcar como completada'}
                       >
                         {task.status === 'completada' ? <CheckCircle2 size={26} /> : <div style={{ width: '24px', height: '24px', borderRadius: '6px', border: '2px solid var(--border)' }} />}
                       </button>
                       
                       <div>
                         <div style={{ display: 'flex', gap: '6px', marginBottom: '4px', alignItems: 'center' }}>
-                          <span style={{ fontSize: '9px', fontWeight: '800', padding: '2px 6px', borderRadius: '8px', backgroundColor: 'var(--primary-light)', color: 'var(--primary)' }}>
-                            {task.category || 'Bienestar'}
-                          </span>
-                          <span style={{ fontSize: '9px', fontWeight: '800', padding: '2px 6px', borderRadius: '8px', backgroundColor: 'var(--bg-primary)', color: 'var(--text-secondary)' }}>
-                            {task.priority === 'Alta' ? '🔴 Alta' : task.priority === 'Baja' ? '🟢 Baja' : '🟡 Media'}
-                          </span>
-                          <span style={{ fontSize: '9px', fontWeight: '800', color: 'var(--text-muted)' }}>
-                            ⏱️ {task.estimated_minutes || 15} min
-                          </span>
+                          <span style={{ fontSize: '9px', fontWeight: '800', padding: '2px 6px', borderRadius: '8px', backgroundColor: 'var(--primary-light)', color: 'var(--primary)' }}>{task.category || 'Bienestar'}</span>
+                          <span style={{ fontSize: '9px', fontWeight: '800', padding: '2px 6px', borderRadius: '8px', backgroundColor: 'var(--bg-primary)', color: 'var(--text-secondary)' }}>{task.priority === 'Alta' ? '🔴 Alta' : task.priority === 'Baja' ? '🟢 Baja' : '🟡 Media'}</span>
+                          <span style={{ fontSize: '9px', fontWeight: '800', color: 'var(--text-muted)' }}>⏱️ {task.estimated_minutes || 15} min</span>
                         </div>
-                        <h4 style={{ fontSize: '14px', fontWeight: '800', textDecoration: task.status === 'completada' ? 'line-through' : 'none', color: task.status === 'completada' ? 'var(--text-muted)' : 'var(--text-primary)' }}>
-                          {task.title}
-                        </h4>
+                        <h4 style={{ fontSize: '14px', fontWeight: '800', textDecoration: task.status === 'completada' ? 'line-through' : 'none', color: task.status === 'completada' ? 'var(--text-muted)' : 'var(--text-primary)' }}>{task.title}</h4>
                         {task.description && <p style={{ fontSize: '12px', color: 'var(--text-secondary)', marginTop: '2px' }}>{task.description}</p>}
-                        {task.submission_notes && (
-                          <p style={{ fontSize: '11px', color: 'var(--success)', fontStyle: 'italic', marginTop: '4px' }}>
-                            Evidencia entregada: "{task.submission_notes}"
-                          </p>
-                        )}
                       </div>
                     </div>
 
-                    <button
-                      onClick={() => { setSelectedTaskModal(task); setTaskSubmissionNote(task.submission_notes || ''); }}
-                      className="duo-pill"
-                      style={{ padding: '6px 12px', fontSize: '11.5px' }}
-                    >
+                    <button onClick={() => { setSelectedTaskModal(task); setTaskSubmissionNote(task.submission_notes || ''); }} className="duo-pill" style={{ padding: '6px 12px', fontSize: '11.5px' }}>
                       <span>Ver Detalles / Entregar</span>
                     </button>
                   </div>
                 ))}
               </div>
             )}
+          </div>
+        )}
+
+        {/* NUEVO MÓDULO 1: TIENDA DE RECOMPENSAS Y CANJE XP 🎁 */}
+        {activeTab === 'rewards' && (
+          <div className="glass-card animate-fade">
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', flexWrap: 'wrap', gap: '12px' }}>
+              <div>
+                <h3 style={{ fontSize: '17px', fontWeight: '900', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <Award size={18} style={{ color: 'var(--accent)' }} /> Tienda de Recompensas e Insignias de Bienestar
+                </h3>
+                <p style={{ fontSize: '12.5px', color: 'var(--text-secondary)' }}>Canjea tus puntos XP por reconocimientos institucionales, permisos de flexibilidad e insignias.</p>
+              </div>
+              <div style={{ fontSize: '15px', fontWeight: '900', backgroundColor: 'var(--primary-light)', color: 'var(--primary)', padding: '8px 16px', borderRadius: '12px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <Zap size={16} /> Saldo XP: {xpPoints} Puntos
+              </div>
+            </div>
+
+            {rewardMsg && <div style={{ backgroundColor: 'var(--success-light)', border: '1px solid var(--success)', color: 'var(--success)', padding: '12px', borderRadius: '10px', fontSize: '13px', marginBottom: '16px' }}>{rewardMsg}</div>}
+
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '16px' }}>
+              {rewards.map(r => (
+                <div key={r.id} className="futuristic-card-item" style={{ padding: '18px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', gap: '14px' }}>
+                  <div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+                      <span style={{ fontSize: '32px' }}>{r.icon}</span>
+                      <span style={{ fontSize: '10px', fontWeight: '800', padding: '3px 8px', borderRadius: '10px', backgroundColor: 'var(--primary-light)', color: 'var(--primary)' }}>{r.category}</span>
+                    </div>
+                    <h4 style={{ fontSize: '15px', fontWeight: '800' }}>{r.title}</h4>
+                    <p style={{ fontSize: '12px', color: 'var(--text-secondary)', marginTop: '4px' }}>{r.description}</p>
+                  </div>
+
+                  <button
+                    onClick={() => handleRedeemReward(r)}
+                    disabled={rewardLoading || xpPoints < r.cost_xp}
+                    className="btn btn-primary"
+                    style={{ width: '100%', padding: '10px', fontSize: '12.5px', borderRadius: '10px', fontWeight: '900' }}
+                  >
+                    Canjear por {r.cost_xp} XP 🏆
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* NUEVO MÓDULO 2: AGENDA DE CITAS Y SESIONES DE ACOMPAÑAMIENTO 1 A 1 📅 */}
+        {activeTab === 'appointments' && (
+          <div className="grid grid-2 animate-fade" style={{ alignItems: 'start' }}>
+            <div className="glass-card">
+              <h3 style={{ fontSize: '16px', fontWeight: '900', marginBottom: '14px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <Calendar size={18} style={{ color: 'var(--primary)' }} /> Agendar Sesión de Apoyo 1 a 1
+              </h3>
+              <p style={{ fontSize: '12.5px', color: 'var(--text-secondary)', marginBottom: '16px' }}>
+                Reserva un espacio confidencial con la Psicóloga institucional de apoyo.
+              </p>
+
+              {apptMsg && <div style={{ backgroundColor: 'var(--success-light)', border: '1px solid var(--success)', color: 'var(--success)', padding: '10px', borderRadius: '8px', fontSize: '12.5px', marginBottom: '14px' }}>{apptMsg}</div>}
+
+              <form onSubmit={handleCreateAppointment}>
+                <div className="form-group" style={{ marginBottom: '12px' }}>
+                  <label style={{ fontSize: '11px', fontWeight: '800' }}>SELECCIONAR FECHA:</label>
+                  <input type="date" value={apptDate} onChange={(e) => setApptDate(e.target.value)} required style={{ borderRadius: '8px' }} />
+                </div>
+
+                <div className="form-group" style={{ marginBottom: '12px' }}>
+                  <label style={{ fontSize: '11px', fontWeight: '800' }}>HORARIO DE DISPONIBILIDAD:</label>
+                  <select value={apptTime} onChange={(e) => setApptTime(e.target.value)} style={{ borderRadius: '8px', width: '100%', padding: '10px', fontSize: '12.5px' }}>
+                    <option value="09:00">09:00 AM</option>
+                    <option value="10:00">10:00 AM</option>
+                    <option value="11:00">11:00 AM</option>
+                    <option value="14:00">02:00 PM</option>
+                    <option value="16:00">04:00 PM</option>
+                  </select>
+                </div>
+
+                <div className="form-group" style={{ marginBottom: '16px' }}>
+                  <label style={{ fontSize: '11px', fontWeight: '800' }}>MOTIVO DE LA CONSULTA:</label>
+                  <input type="text" placeholder="Ej. Estrés laboral, orientación académica o respiración" value={apptReason} onChange={(e) => setApptReason(e.target.value)} required style={{ borderRadius: '8px' }} />
+                </div>
+
+                <button type="submit" className="btn btn-primary" disabled={apptLoading} style={{ width: '100%', padding: '12px', borderRadius: '10px', fontWeight: '900' }}>
+                  {apptLoading ? <Loader className="animate-spin" size={16} /> : '📅 Confirmar y Reservar Cita Privada'}
+                </button>
+              </form>
+            </div>
+
+            <div className="glass-card">
+              <h3 style={{ fontSize: '16px', fontWeight: '900', marginBottom: '14px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <Calendar size={18} style={{ color: 'var(--accent)' }} /> Tus Citas Programadas
+              </h3>
+              <div style={{ display: 'grid', gap: '10px', maxHeight: '380px', overflowY: 'auto' }}>
+                {appointments.length === 0 ? (
+                  <p style={{ color: 'var(--text-muted)', fontSize: '12.5px', textAlign: 'center' }}>No tienes citas reservadas actualmente.</p>
+                ) : (
+                  appointments.map(a => (
+                    <div key={a.id} className="futuristic-card-item" style={{ padding: '14px', borderLeft: '4px solid var(--primary)' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
+                        <span style={{ fontSize: '13px', fontWeight: '800' }}>{a.professional_name}</span>
+                        <span style={{ fontSize: '10px', fontWeight: '800', padding: '2px 6px', borderRadius: '8px', backgroundColor: 'var(--success-light)', color: 'var(--success)' }}>{a.status}</span>
+                      </div>
+                      <p style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>{a.reason}</p>
+                      <span style={{ fontSize: '11px', color: 'var(--primary)', fontWeight: '800', marginTop: '6px', display: 'block' }}>
+                        📆 {new Date(a.date_time).toLocaleString()}
+                      </span>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* NUEVO MÓDULO 3: MURO DE RECONOCIMIENTO Y KUDOS 💖 */}
+        {activeTab === 'kudos' && (
+          <div className="grid grid-2 animate-fade" style={{ alignItems: 'start' }}>
+            <div className="glass-card">
+              <h3 style={{ fontSize: '16px', fontWeight: '900', marginBottom: '14px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <Heart size={18} style={{ color: 'var(--danger)' }} /> Publicar un Kudo de Gratitud
+              </h3>
+              <p style={{ fontSize: '12.5px', color: 'var(--text-secondary)', marginBottom: '14px' }}>
+                Reconoce públicamente o de forma anónima el esfuerzo de un compañero de equipo. (+10 XP)
+              </p>
+
+              {kudoMsg && <div style={{ backgroundColor: 'var(--success-light)', border: '1px solid var(--success)', color: 'var(--success)', padding: '10px', borderRadius: '8px', fontSize: '12.5px', marginBottom: '14px' }}>{kudoMsg}</div>}
+
+              <form onSubmit={handleCreateKudos}>
+                <div className="form-group" style={{ marginBottom: '12px' }}>
+                  <label style={{ fontSize: '11px', fontWeight: '800' }}>SELECCIONAR COMPAÑERO / DEPARTAMENTO:</label>
+                  <select 
+                    value={kudoReceiver}
+                    onChange={(e) => {
+                      setKudoReceiver(e.target.value);
+                      const targetMem = members.find(m => `${m.first_name} ${m.last_name}` === e.target.value);
+                      if (targetMem) setKudoDept(targetMem.department || 'General');
+                    }}
+                    required
+                    style={{ width: '100%', padding: '10px', borderRadius: '8px', fontSize: '12.5px', backgroundColor: 'var(--bg-secondary)', color: 'var(--text-primary)', border: '1px solid var(--border)' }}
+                  >
+                    <option value="">-- Seleccionar Compañero de la Lista --</option>
+                    {members.map(m => (
+                      <option key={m.id} value={`${m.first_name} ${m.last_name}`}>{m.first_name} {m.last_name} ({m.department || 'General'})</option>
+                    ))}
+                    <option value="Equipo General">Toda la Institución / Equipo</option>
+                  </select>
+                </div>
+
+                <div className="form-group" style={{ marginBottom: '12px' }}>
+                  <label style={{ fontSize: '11px', fontWeight: '800' }}>TIPO DE INSIGNIA / RECONOCIMIENTO:</label>
+                  <select value={kudoBadge} onChange={(e) => setKudoBadge(e.target.value)} style={{ borderRadius: '8px', width: '100%', padding: '10px', fontSize: '12.5px' }}>
+                    <option value="Gratitud">💖 Gratitud & Agradecimiento</option>
+                    <option value="Compañerismo">🤝 Compañerismo & Empatía</option>
+                    <option value="Resiliencia">🌿 Resiliencia & Apoyo</option>
+                    <option value="Liderazgo">⭐ Liderazgo Inspirador</option>
+                  </select>
+                </div>
+
+                <div className="form-group" style={{ marginBottom: '12px' }}>
+                  <label style={{ fontSize: '11px', fontWeight: '800' }}>MENSAJE DE RECONOCIMIENTO:</label>
+                  <textarea rows="3" placeholder="Escribe tus palabras de gratitud..." value={kudoMessage} onChange={(e) => setKudoMessage(e.target.value)} required style={{ borderRadius: '8px' }} />
+                </div>
+
+                <div style={{ marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <input type="checkbox" id="anon" checked={kudoAnonymous} onChange={(e) => setKudoAnonymous(e.target.checked)} />
+                  <label htmlFor="anon" style={{ fontSize: '12px', cursor: 'pointer' }}>Enviar de forma anónima 🕵️‍♂️</label>
+                </div>
+
+                <button type="submit" className="btn btn-primary" disabled={kudoLoading} style={{ width: '100%', padding: '12px', borderRadius: '10px', fontWeight: '900' }}>
+                  {kudoLoading ? <Loader className="animate-spin" size={16} /> : '💖 Publicar Kudo en el Muro (+10 XP)'}
+                </button>
+              </form>
+            </div>
+
+            <div className="glass-card">
+              <h3 style={{ fontSize: '16px', fontWeight: '900', marginBottom: '14px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <Sparkles size={18} style={{ color: 'var(--accent)' }} /> Muro de Gratitud Comunitario
+              </h3>
+              <div style={{ display: 'grid', gap: '12px', maxHeight: '420px', overflowY: 'auto' }}>
+                {kudosList.length === 0 ? (
+                  <p style={{ color: 'var(--text-muted)', fontSize: '12.5px', textAlign: 'center' }}>Sé el primero en enviar un Kudo de gratitud.</p>
+                ) : (
+                  kudosList.map(k => (
+                    <div key={k.id} className="futuristic-card-item" style={{ padding: '14px', borderLeft: '4px solid var(--accent)' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px' }}>
+                        <span style={{ fontSize: '12.5px', fontWeight: '900', color: 'var(--primary)' }}>
+                          {k.sender_name} ➔ <span style={{ color: 'var(--text-primary)' }}>{k.receiver_name}</span>
+                        </span>
+                        <span style={{ fontSize: '10px', fontWeight: '800', padding: '2px 6px', borderRadius: '8px', backgroundColor: 'var(--accent-light)', color: 'var(--accent)' }}>
+                          {k.badge_type}
+                        </span>
+                      </div>
+                      <p style={{ fontSize: '12px', color: 'var(--text-primary)', fontStyle: 'italic', margin: '4px 0' }}>"{k.message}"</p>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '10.5px', color: 'var(--text-muted)', marginTop: '6px' }}>
+                        <span>{new Date(k.created_at).toLocaleDateString()}</span>
+                        <span>❤️ {k.likes_count} Reacciones</span>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
           </div>
         )}
 
@@ -1179,8 +1648,8 @@ const MemberDashboard = () => {
                           </div>
                         </div>
                         <div style={{ padding: '12px', backgroundColor: 'var(--bg-tertiary)', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border)', marginBottom: '12px' }}>
-                          <h5 style={{ fontSize: '11px', fontWeight: '800', color: 'var(--text-secondary)', textTransform: 'uppercase', marginBottom: '6px' }}>Tu Respuesta Multimodal:</h5>
-                          <p style={{ fontSize: '12px', color: 'var(--text-primary)', fontStyle: 'italic' }}>"{matchedRef.original_text}"</p>
+                          <h5 style={{ fontSize: '11px', fontWeight: '800', color: 'var(--primary)', textTransform: 'uppercase', marginBottom: '6px' }}>Tu Respuesta Multimodal Estructurada:</h5>
+                          {formatMultimodalText(matchedRef.original_text)}
                         </div>
                         <div style={{ padding: '12px', backgroundColor: 'var(--bg-tertiary)', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border)' }}>
                           <h5 style={{ fontSize: '11px', fontWeight: '800', color: 'var(--text-secondary)', textTransform: 'uppercase', marginBottom: '6px' }}>Consejo Orientador de IA:</h5>

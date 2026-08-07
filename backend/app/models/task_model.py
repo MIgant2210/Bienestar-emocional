@@ -28,6 +28,9 @@ class Task(db.Model):
     estimated_minutes = db.Column(db.Integer, nullable=False, default=15)
     submission_notes = db.Column(db.Text, nullable=True)                  # Comentarios o evidencia de entrega
     completed_at = db.Column(db.DateTime, nullable=True)
+    review_status = db.Column(db.String(30), nullable=False, default='pendiente') # 'pendiente', 'aprobada', 'revision_solicitada'
+    feedback_notes = db.Column(db.Text, nullable=True)                    # Retroalimentación de la Psicóloga o Líder
+    board_column = db.Column(db.String(30), nullable=False, default='todo') # 'todo', 'in_progress', 'completed'
 
     # Relaciones adicionales para facilidad en consultas
     assigned_user = db.relationship('User', foreign_keys=[user_id], backref=db.backref('assigned_tasks', lazy=True))
@@ -44,6 +47,9 @@ class Task(db.Model):
             'priority': self.priority or 'Media',
             'estimated_minutes': self.estimated_minutes or 15,
             'submission_notes': self.submission_notes,
+            'review_status': self.review_status or 'pendiente',
+            'feedback_notes': self.feedback_notes,
+            'board_column': self.board_column or 'todo',
             'completed_at': self.completed_at.isoformat() if self.completed_at else None,
             'user_id': str(self.user_id) if self.user_id else None,
             'assigned_type': self.assigned_type or 'all',

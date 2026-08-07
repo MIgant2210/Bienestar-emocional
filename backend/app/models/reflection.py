@@ -24,7 +24,7 @@ class Reflection(db.Model):
     
     # Relación
     evaluation = db.relationship('Evaluation', backref=db.backref('reflections', lazy=True))
-    user = db.relationship('User', foreign_keys=[user_id], back_populates='reflections')
+    user = db.relationship('User', foreign_keys=[user_id], backref=db.backref('user_reflections', lazy=True), overlaps="reflections")
     
     def to_dict(self):
         return {

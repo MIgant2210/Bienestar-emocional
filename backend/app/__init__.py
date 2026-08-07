@@ -3,6 +3,7 @@ from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
 from flask_cors import CORS
 from app.config import Config
+from app.utils.db_schema import ensure_task_schema
 
 db = SQLAlchemy()
 migrate = Migrate()
@@ -16,6 +17,9 @@ def create_app(config_class=Config):
     
     db.init_app(app)
     migrate.init_app(app, db)
+
+    with app.app_context():
+        ensure_task_schema(db)
     
     # Registrar los Blueprints (rutas de la API)
     from app.api.auth import auth_bp
@@ -26,6 +30,9 @@ def create_app(config_class=Config):
     from app.api.audit import audit_bp
     from app.api.evaluations import evaluations_bp
     from app.api.reports import reports_bp
+    from app.api.rewards import rewards_bp
+    from app.api.appointments import appointments_bp
+    from app.api.kudos import kudos_bp
     
     app.register_blueprint(auth_bp, url_prefix='/api/auth')
     app.register_blueprint(analysis_bp, url_prefix='/api/analysis')
@@ -35,6 +42,9 @@ def create_app(config_class=Config):
     app.register_blueprint(audit_bp, url_prefix='/api/audit')
     app.register_blueprint(evaluations_bp, url_prefix='/api/evaluations')
     app.register_blueprint(reports_bp, url_prefix='/api/reports')
+    app.register_blueprint(rewards_bp, url_prefix='/api/rewards')
+    app.register_blueprint(appointments_bp, url_prefix='/api/appointments')
+    app.register_blueprint(kudos_bp, url_prefix='/api/kudos')
     
     @app.teardown_appcontext
     def shutdown_session(exception=None):

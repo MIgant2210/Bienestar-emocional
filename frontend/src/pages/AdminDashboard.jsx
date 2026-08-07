@@ -6,7 +6,7 @@ import {
   PlusCircle, Trash2, Calendar, ClipboardList, Sparkles, Loader, CheckCircle2,
   AlertTriangle, CheckSquare, Settings, Activity, ShieldCheck, Download,
   UserCheck, Lock, FileSpreadsheet, RefreshCw, Zap, Layers, HelpCircle, Eye, Sliders,
-  Target, ChevronRight, Check, ArrowLeft, Volume2, Mic, Bell, UserX, Key, Palette, Edit3, KeyRound
+  Target, ChevronRight, Check, ArrowLeft, Volume2, Mic, Bell, UserX, Key, Palette, Edit3, KeyRound, Heart, Bot, SendHorizontal
 } from 'lucide-react';
 import api from '../services/api';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
@@ -64,7 +64,17 @@ const AdminDashboard = () => {
   const [members, setMembers] = useState([]);
   const [auditLogs, setAuditLogs] = useState([]);
   const [reportData, setReportData] = useState(null);
+  const [rewards, setRewards] = useState([]);
+  const [kudosList, setKudosList] = useState([]);
   
+  // Chatbot IA States for Admin/SuperAdmin
+  const [chatMessages, setChatMessages] = useState([
+    { sender: 'ai', text: 'Hola Administrador, soy el orientador emocional e institucional de EquilibrIA. ¿En qué puedo asistirte hoy?' }
+  ]);
+  const [userInput, setUserInput] = useState('');
+  const [chatLoading, setChatLoading] = useState(false);
+  const messagesEndRef = useRef(null);
+
   const [loading, setLoading] = useState(true);
   const [showPrivacyNotice, setShowPrivacyNotice] = useState(true);
 
@@ -134,10 +144,68 @@ const AdminDashboard = () => {
   const [resolutionNotes, setResolutionNotes] = useState({});
   const [resolvingId, setResolvingId] = useState(null);
 
+  // Form States: Clinical Appointments (Agenda de Citas Clínicas de la Psicóloga)
+  const [appointments, setAppointments] = useState([]);
+  const [apptUserId, setApptUserId] = useState('');
+  const [apptDate, setApptDate] = useState('');
+  const [apptTime, setApptTime] = useState('10:00');
+  const [apptReason, setApptReason] = useState('Sesión de Orientación y Apoyo Emocional');
+  const [apptNotes, setApptNotes] = useState('');
+  const [apptLoading, setApptLoading] = useState(false);
+  const [apptSuccessMsg, setApptSuccessMsg] = useState('');
+
+  const fetchAppointments = async () => {
+    try {
+      const response = await api.get('/appointments');
+      setAppointments(response.data);
+    } catch (err) {
+      console.error('Error al cargar citas clínicas:', err);
+    }
+  };
+
+  const handleCreateApptManual = async (e) => {
+    e.preventDefault();
+    if (!apptUserId || !apptDate) {
+      alert('Por favor selecciona el colaborador / paciente y la fecha de la cita.');
+      return;
+    }
+    setApptLoading(true);
+    setApptSuccessMsg('');
+    try {
+      const fullIso = `${apptDate}T${apptTime}:00`;
+      await api.post('/appointments', {
+        user_id: apptUserId,
+        date_time: fullIso,
+        reason: apptReason,
+        clinical_notes: apptNotes
+      });
+      setApptSuccessMsg('¡Cita agendada exitosamente en la agenda del profesional! 📅');
+      setApptDate('');
+      setApptNotes('');
+      fetchAppointments();
+    } catch (err) {
+      alert('Error al agendar cita: ' + (err.response?.data?.message || err.message));
+    } finally {
+      setApptLoading(false);
+    }
+  };
+
+  const handleUpdateApptStatus = async (apptId, newStatus, currentNotes) => {
+    try {
+      await api.put(`/appointments/${apptId}/status`, {
+        status: newStatus,
+        clinical_notes: currentNotes
+      });
+      fetchAppointments();
+    } catch (err) {
+      alert('Error al actualizar estado de la cita: ' + (err.response?.data?.message || err.message));
+    }
+  };
+
   const fetchDashboardData = async () => {
     setLoading(true);
     try {
-      const [statsRes, sugRes, tasksRes, alertsRes, evalsRes, templatesRes, membersRes, auditRes, reportRes] = await Promise.allSettled([
+      const [statsRes, sugRes, tasksRes, alertsRes, evalsRes, templatesRes, membersRes, auditRes, reportRes, apptsRes, rewardsRes, kudosRes] = await Promise.allSettled([
         api.get('/institutions/dashboard'),
         api.get('/institutions/suggestions'),
         api.get('/tasks'),
@@ -146,7 +214,10 @@ const AdminDashboard = () => {
         api.get('/evaluations/templates'),
         api.get('/institutions/members'),
         api.get('/audit/logs'),
-        api.get('/reports/export')
+        api.get('/reports/export'),
+        api.get('/appointments'),
+        api.get('/rewards'),
+        api.get('/kudos')
       ]);
 
       if (statsRes.status === 'fulfilled' && statsRes.value.data) setStats(statsRes.value.data);
@@ -158,6 +229,9 @@ const AdminDashboard = () => {
       if (membersRes.status === 'fulfilled' && membersRes.value.data) setMembers(membersRes.value.data);
       if (auditRes.status === 'fulfilled' && auditRes.value.data) setAuditLogs(auditRes.value.data);
       if (reportRes.status === 'fulfilled' && reportRes.value.data) setReportData(reportRes.value.data);
+      if (apptsRes.status === 'fulfilled' && apptsRes.value.data) setAppointments(apptsRes.value.data);
+      if (rewardsRes.status === 'fulfilled' && rewardsRes.value.data) setRewards(rewardsRes.value.data);
+      if (kudosRes.status === 'fulfilled' && kudosRes.value.data) setKudosList(kudosRes.value.data);
     } catch (err) {
       console.error('Error al cargar datos del administrador:', err);
     } finally {
@@ -173,7 +247,7 @@ const AdminDashboard = () => {
     if (showPrivacyNotice) {
       const timer = setTimeout(() => {
         setShowPrivacyNotice(false);
-      }, 30000);
+      }, 20000); // 20 segundos sin desfasar el diseño
       return () => clearTimeout(timer);
     }
   }, [showPrivacyNotice]);
@@ -872,20 +946,20 @@ const AdminDashboard = () => {
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
           
-          {/* Botón de Notificaciones 🔔 */}
+          {/* Centro de Notificaciones */}
           <div style={{ position: 'relative' }}>
             <button 
-              onClick={() => setShowNotifications(!showNotifications)}
+              onClick={() => { setShowNotifications(!showNotifications); setShowPaletteMenu(false); }}
               className="theme-toggle"
               style={{ border: '1px solid var(--border)', width: '36px', height: '36px', borderRadius: '50%', position: 'relative' }}
-              title="Notificaciones en vivo"
+              title="Centro de Notificaciones"
             >
-              <Bell size={16} />
+              <Bell size={16} style={{ color: 'var(--primary)' }} />
               {unreadNotificationsCount > 0 && (
                 <span style={{
                   position: 'absolute',
-                  top: '-2px',
-                  right: '-2px',
+                  top: '-4px',
+                  right: '-4px',
                   backgroundColor: 'var(--danger)',
                   color: '#fff',
                   fontSize: '9px',
@@ -928,7 +1002,7 @@ const AdminDashboard = () => {
           {/* Botón Selector de Paletas de Colores 🎨 */}
           <div style={{ position: 'relative' }}>
             <button 
-              onClick={() => setShowPaletteMenu(!showPaletteMenu)}
+              onClick={() => { setShowPaletteMenu(!showPaletteMenu); setShowNotifications(false); }}
               className="theme-toggle"
               style={{ border: '1px solid var(--border)', width: '36px', height: '36px', borderRadius: '50%' }}
               title="Personalizar Paleta de Colores del Sistema"
@@ -998,38 +1072,40 @@ const AdminDashboard = () => {
       {/* Contenido Principal */}
       <main style={{ flex: 1, padding: '24px 24px', maxWidth: '1300px', width: '100%', margin: '0 auto' }}>
         
-        {/* Banner de Confidencialidad Superior */}
+        {/* Banner de Confidencialidad Flotante (Toast Fijo en Esquina para Evitar Desfase de Diseño) */}
         {showPrivacyNotice && (
           <div style={{
-            width: '100%',
-            backgroundColor: 'var(--bg-secondary)',
+            position: 'fixed',
+            bottom: '24px',
+            right: '24px',
+            zIndex: 9999,
+            maxWidth: '380px',
+            backgroundColor: 'var(--bg-primary)',
             color: 'var(--text-primary)',
-            padding: '16px 24px',
-            borderRadius: '14px',
-            border: '2px solid var(--border)',
-            borderLeft: '6px solid var(--primary)',
-            boxShadow: 'var(--shadow-sm)',
+            padding: '14px 18px',
+            borderRadius: '16px',
+            border: '2px solid var(--primary)',
+            boxShadow: 'var(--tech-glow)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
-            gap: '16px',
-            fontSize: '14px',
+            gap: '12px',
+            fontSize: '12.5px',
             fontWeight: '600',
-            marginBottom: '20px',
-            animation: 'fadeIn var(--transition-normal)'
+            animation: 'fadeIn 0.3s ease'
           }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-              <ShieldAlert size={20} style={{ color: 'var(--primary)', flexShrink: 0 }} />
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <ShieldAlert size={22} style={{ color: 'var(--primary)', flexShrink: 0 }} />
               <span>
-                <strong>Aviso de Confidencialidad</strong>: Para proteger la identidad y promover la honestidad de los colaboradores, toda la información de bienestar se presenta exclusivamente de forma agregada y anónima.
+                <strong>Aviso de Confidencialidad</strong>: La información de bienestar es anónima y agregada. (Se cerrará en 20s)
               </span>
             </div>
-            <button onClick={() => setShowPrivacyNotice(false)} aria-label="Cerrar aviso" style={{ border: 'none', background: 'transparent', color: 'var(--text-muted)', cursor: 'pointer', fontSize: '20px', fontWeight: 'bold', lineHeight: 1 }}>×</button>
+            <button onClick={() => setShowPrivacyNotice(false)} aria-label="Cerrar aviso" style={{ border: 'none', background: 'transparent', color: 'var(--text-muted)', cursor: 'pointer', fontSize: '18px', fontWeight: 'bold', lineHeight: 1 }}>×</button>
           </div>
         )}
 
-        {/* Pestañas de Navegación Adaptativas por Rol Institucional (RBAC) */}
-        <div className="tab-container">
+        {/* Pestañas de Navegación Adaptativas por Rol (Menú Multimódulo Ampliado en 2 Filas para SuperAdmin) */}
+        <div className="tab-container" style={{ width: '100%', flexWrap: 'wrap', gap: '8px', justifyContent: 'flex-start' }}>
           <button className={`tab-btn ${activeTab === 'analytics' ? 'active' : ''}`} onClick={() => setActiveTab('analytics')}><BarChart3 size={15} /><span>Analíticas</span></button>
           <button className={`tab-btn ${activeTab === 'tasks' ? 'active' : ''}`} onClick={() => setActiveTab('tasks')}><ClipboardList size={15} /><span>Tareas</span></button>
           
@@ -1041,10 +1117,20 @@ const AdminDashboard = () => {
           )}
 
           <button className={`tab-btn ${activeTab === 'evaluations' ? 'active' : ''}`} onClick={() => setActiveTab('evaluations')}><Calendar size={15} /><span>Tests</span></button>
-          <button className={`tab-btn ${activeTab === 'members' ? 'active' : ''}`} onClick={() => setActiveTab('members')}><Users size={15} /><span>Miembros y Roles</span></button>
 
+          {/* Agenda de Citas Clínicas 1 a 1 (Psicóloga, Superadmin, Admin) */}
+          {(user?.role === 'superadmin' || user?.role === 'admin_institucion' || user?.role === 'profesional_apoyo') && (
+            <button className={`tab-btn ${activeTab === 'clinical_appointments' ? 'active' : ''}`} onClick={() => setActiveTab('clinical_appointments')}>
+              <Calendar size={15} /><span>Agenda de Citas</span>
+            </button>
+          )}
+
+          {/* Módulos Adicionales para SuperAdmin y Admins */}
           {(user?.role === 'superadmin' || user?.role === 'admin_institucion') && (
             <>
+              <button className={`tab-btn ${activeTab === 'rewards' ? 'active' : ''}`} onClick={() => setActiveTab('rewards')}><Award size={15} /><span>Tienda Recompensas</span></button>
+              <button className={`tab-btn ${activeTab === 'kudos' ? 'active' : ''}`} onClick={() => setActiveTab('kudos')}><Heart size={15} /><span>Muro Gratitud</span></button>
+              <button className={`tab-btn ${activeTab === 'members' ? 'active' : ''}`} onClick={() => setActiveTab('members')}><Users size={15} /><span>Roles y Usuarios</span></button>
               <button className={`tab-btn ${activeTab === 'reports' ? 'active' : ''}`} onClick={() => setActiveTab('reports')}><FileSpreadsheet size={15} /><span>Reportes</span></button>
               <button className={`tab-btn ${activeTab === 'audit' ? 'active' : ''}`} onClick={() => setActiveTab('audit')}><ShieldCheck size={15} /><span>Auditoría</span></button>
             </>
@@ -1052,6 +1138,10 @@ const AdminDashboard = () => {
 
           {(user?.role !== 'lider_depto') && (
             <button className={`tab-btn ${activeTab === 'ai_plans' ? 'active' : ''}`} onClick={() => setActiveTab('ai_plans')}><Sparkles size={15} /><span>Sugerencias IA</span></button>
+          )}
+
+          {user?.role === 'superadmin' && (
+            <button className={`tab-btn ${activeTab === 'chat_ia' ? 'active' : ''}`} onClick={() => setActiveTab('chat_ia')}><Bot size={15} /><span>Chatbot IA</span></button>
           )}
         </div>
 
@@ -1347,6 +1437,158 @@ const AdminDashboard = () => {
                         {task.description && <p style={{ fontSize: '12px', color: 'var(--text-secondary)', marginTop: '4px' }}>{task.description}</p>}
                       </div>
                       <button onClick={() => handleDeleteTask(task.id)} className="theme-toggle" style={{ color: 'var(--danger)', border: '1px solid var(--border)', width: '30px', height: '30px' }} title="Eliminar"><Trash2 size={13} /></button>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* NUEVO MÓDULO DE LA PSICÓLOGA: AGENDA DE CITAS CLÍNICAS 1 A 1 📅 */}
+        {activeTab === 'clinical_appointments' && (
+          <div className="grid grid-2 animate-fade" style={{ alignItems: 'start' }}>
+            {/* Formulario para Agendar Cita Manualmente */}
+            <div className="glass-card">
+              <h3 style={{ fontSize: '17px', fontWeight: '900', marginBottom: '14px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <Calendar size={18} style={{ color: 'var(--primary)' }} /> Agendar Cita Manualmente (Psicóloga / Profesional)
+              </h3>
+              <p style={{ fontSize: '12.5px', color: 'var(--text-secondary)', marginBottom: '16px' }}>
+                Registra una cita directa para un colaborador o paciente de la institución.
+              </p>
+
+              {apptSuccessMsg && (
+                <div style={{ backgroundColor: 'var(--success-light)', border: '1px solid var(--success)', color: 'var(--success)', padding: '12px', borderRadius: '10px', fontSize: '13px', marginBottom: '16px' }}>
+                  {apptSuccessMsg}
+                </div>
+              )}
+
+              <form onSubmit={handleCreateApptManual}>
+                <div className="form-group" style={{ marginBottom: '12px' }}>
+                  <label style={{ fontSize: '11px', fontWeight: '800', textTransform: 'uppercase' }}>SELECCIONAR COLABORADOR / PACIENTE:</label>
+                  <select
+                    value={apptUserId}
+                    onChange={(e) => setApptUserId(e.target.value)}
+                    required
+                    style={{ width: '100%', padding: '10px', borderRadius: '10px', fontSize: '12.5px', backgroundColor: 'var(--bg-secondary)', color: 'var(--text-primary)', border: '1px solid var(--border)' }}
+                  >
+                    <option value="">-- Seleccionar Paciente de la Lista --</option>
+                    {members.map(m => (
+                      <option key={m.id} value={m.id}>{m.first_name} {m.last_name} ({m.email}) - Depto: {m.department || 'General'}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="form-group" style={{ marginBottom: '12px' }}>
+                  <label style={{ fontSize: '11px', fontWeight: '800', textTransform: 'uppercase' }}>FECHA DE LA CITA:</label>
+                  <input type="date" value={apptDate} onChange={(e) => setApptDate(e.target.value)} required style={{ borderRadius: '10px' }} />
+                </div>
+
+                <div className="form-group" style={{ marginBottom: '12px' }}>
+                  <label style={{ fontSize: '11px', fontWeight: '800', textTransform: 'uppercase' }}>HORARIO DE LA CITA:</label>
+                  <select value={apptTime} onChange={(e) => setApptTime(e.target.value)} style={{ borderRadius: '10px', width: '100%', padding: '10px', fontSize: '12.5px' }}>
+                    <option value="09:00">09:00 AM</option>
+                    <option value="10:00">10:00 AM</option>
+                    <option value="11:00">11:00 AM</option>
+                    <option value="14:00">02:00 PM</option>
+                    <option value="16:00">04:00 PM</option>
+                  </select>
+                </div>
+
+                <div className="form-group" style={{ marginBottom: '12px' }}>
+                  <label style={{ fontSize: '11px', fontWeight: '800', textTransform: 'uppercase' }}>MOTIVO DE LA CONSULTA:</label>
+                  <input type="text" placeholder="Ej. Acompañamiento por estrés laboral o seguimiento de burnout" value={apptReason} onChange={(e) => setApptReason(e.target.value)} required style={{ borderRadius: '10px' }} />
+                </div>
+
+                <div className="form-group" style={{ marginBottom: '16px' }}>
+                  <label style={{ fontSize: '11px', fontWeight: '800', textTransform: 'uppercase' }}>NOTAS PRELIMINARES DE LA PSICÓLOGA (CONFIDENCIAL):</label>
+                  <textarea rows="3" placeholder="Observaciones privadas sobre el caso..." value={apptNotes} onChange={(e) => setApptNotes(e.target.value)} style={{ width: '100%', borderRadius: '10px', fontSize: '12.5px', padding: '10px' }} />
+                </div>
+
+                <button type="submit" className="btn btn-primary" disabled={apptLoading} style={{ width: '100%', padding: '12px', borderRadius: '12px', fontWeight: '900' }}>
+                  {apptLoading ? <Loader className="animate-spin" size={16} /> : '📅 Agendar Cita Privada'}
+                </button>
+              </form>
+            </div>
+
+            {/* Listado y Calendario de Citas Solicitadas y Programadas */}
+            <div className="glass-card">
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+                <h3 style={{ fontSize: '17px', fontWeight: '900', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <Calendar size={18} style={{ color: 'var(--accent)' }} /> Citas Solicitadas y Programadas
+                </h3>
+                <span style={{ fontSize: '11px', fontWeight: '800', backgroundColor: 'var(--primary-light)', color: 'var(--primary)', padding: '4px 10px', borderRadius: '12px' }}>
+                  Total: {appointments.length} Citas
+                </span>
+              </div>
+
+              <div style={{ display: 'grid', gap: '14px', maxHeight: '560px', overflowY: 'auto' }}>
+                {appointments.length === 0 ? (
+                  <p style={{ color: 'var(--text-muted)', fontSize: '12.5px', textAlign: 'center', padding: '30px' }}>No hay citas registradas actualmente.</p>
+                ) : (
+                  appointments.map(a => (
+                    <div key={a.id} className="futuristic-card-item" style={{ padding: '16px', borderLeft: a.status === 'aprobada' ? '5px solid var(--success)' : a.status === 'pendiente' ? '5px solid var(--warning)' : '5px solid var(--border)' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '6px' }}>
+                        <div>
+                          <h4 style={{ fontSize: '14.5px', fontWeight: '800', color: 'var(--text-primary)' }}>
+                            👤 {a.user_name} <span style={{ fontSize: '11px', color: 'var(--text-secondary)', fontWeight: '500' }}>({a.user_department})</span>
+                          </h4>
+                          <p style={{ fontSize: '12px', color: 'var(--primary)', fontWeight: '700', marginTop: '2px' }}>
+                            📆 {new Date(a.date_time).toLocaleString()}
+                          </p>
+                        </div>
+                        <span style={{
+                          fontSize: '10.5px',
+                          fontWeight: '800',
+                          padding: '3px 8px',
+                          borderRadius: '10px',
+                          backgroundColor: a.status === 'aprobada' ? 'var(--success-light)' : a.status === 'pendiente' ? 'var(--warning-light)' : 'var(--bg-secondary)',
+                          color: a.status === 'aprobada' ? 'var(--success)' : a.status === 'pendiente' ? 'var(--warning)' : 'var(--text-secondary)',
+                          textTransform: 'uppercase'
+                        }}>
+                          {a.status}
+                        </span>
+                      </div>
+
+                      <p style={{ fontSize: '12.5px', color: 'var(--text-secondary)', marginBottom: '10px' }}>
+                        Motivo: "{a.reason}"
+                      </p>
+
+                      {a.clinical_notes && (
+                        <div style={{ backgroundColor: 'var(--bg-secondary)', padding: '8px 12px', borderRadius: '8px', fontSize: '11.5px', color: 'var(--text-primary)', marginBottom: '10px', fontStyle: 'italic' }}>
+                          Nota Clínica: "{a.clinical_notes}"
+                        </div>
+                      )}
+
+                      <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                        {a.status === 'pendiente' && (
+                          <button
+                            onClick={() => handleUpdateApptStatus(a.id, 'aprobada', a.clinical_notes)}
+                            className="duo-pill selected"
+                            style={{ fontSize: '11px', padding: '4px 10px' }}
+                          >
+                            🟢 Aprobar Cita
+                          </button>
+                        )}
+                        {a.status !== 'completada' && (
+                          <button
+                            onClick={() => handleUpdateApptStatus(a.id, 'completada', a.clinical_notes)}
+                            className="duo-pill"
+                            style={{ fontSize: '11px', padding: '4px 10px' }}
+                          >
+                            ✅ Marcar Completada
+                          </button>
+                        )}
+                        {a.status !== 'cancelada' && (
+                          <button
+                            onClick={() => handleUpdateApptStatus(a.id, 'cancelada', a.clinical_notes)}
+                            className="duo-pill"
+                            style={{ fontSize: '11px', padding: '4px 10px', color: 'var(--danger)' }}
+                          >
+                            ❌ Cancelar Cita
+                          </button>
+                        )}
+                      </div>
                     </div>
                   ))
                 )}
@@ -2177,6 +2419,107 @@ const AdminDashboard = () => {
                   </div>
                 ))
               )}
+            </div>
+          </div>
+        )}
+
+        {/* TAB 9: TIENDA DE RECOMPENSAS (SUPERADMIN / ADMIN) */}
+        {activeTab === 'rewards' && (
+          <div className="glass-card animate-fade">
+            <h3 style={{ fontSize: '17px', fontWeight: '900', marginBottom: '14px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <Award size={18} style={{ color: 'var(--primary)' }} /> Tienda Institucional de Recompensas XP
+            </h3>
+            <p style={{ fontSize: '12.5px', color: 'var(--text-secondary)', marginBottom: '18px' }}>
+              Catálogo de incentivos y reconocimientos habilitados para los miembros de la institución.
+            </p>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '14px' }}>
+              {rewards.length === 0 ? (
+                <p style={{ color: 'var(--text-muted)', fontSize: '13px' }}>No hay recompensas registradas.</p>
+              ) : (
+                rewards.map(r => (
+                  <div key={r.id} className="futuristic-card-item" style={{ padding: '16px' }}>
+                    <div style={{ fontSize: '28px', marginBottom: '8px' }}>{r.icon || '🏅'}</div>
+                    <h4 style={{ fontSize: '14.5px', fontWeight: '800' }}>{r.title}</h4>
+                    <p style={{ fontSize: '12px', color: 'var(--text-secondary)', margin: '6px 0' }}>{r.description}</p>
+                    <span style={{ fontSize: '12px', fontWeight: '900', color: 'var(--primary)' }}>Costo: {r.cost_xp} XP</span>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* TAB 10: MURO DE GRATITUD (SUPERADMIN / ADMIN) */}
+        {activeTab === 'kudos' && (
+          <div className="glass-card animate-fade">
+            <h3 style={{ fontSize: '17px', fontWeight: '900', marginBottom: '14px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <Heart size={18} style={{ color: 'var(--danger)' }} /> Muro Comunitario de Gratitud e Reconocimientos
+            </h3>
+            <div style={{ display: 'grid', gap: '12px', maxHeight: '520px', overflowY: 'auto' }}>
+              {kudosList.length === 0 ? (
+                <p style={{ color: 'var(--text-muted)', fontSize: '13px', textAlign: 'center', padding: '20px' }}>Aún no se han registrado reconocimientos en la comunidad.</p>
+              ) : (
+                kudosList.map(k => (
+                  <div key={k.id} className="futuristic-card-item" style={{ padding: '14px', borderLeft: '4px solid var(--accent)' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px' }}>
+                      <span style={{ fontSize: '13px', fontWeight: '900', color: 'var(--primary)' }}>
+                        {k.sender_name} ➔ <span style={{ color: 'var(--text-primary)' }}>{k.receiver_name}</span>
+                      </span>
+                      <span style={{ fontSize: '10.5px', fontWeight: '800', padding: '2px 8px', borderRadius: '8px', backgroundColor: 'var(--accent-light)', color: 'var(--accent)' }}>
+                        {k.badge_type}
+                      </span>
+                    </div>
+                    <p style={{ fontSize: '12px', color: 'var(--text-primary)', fontStyle: 'italic', margin: '4px 0' }}>"{k.message}"</p>
+                    <span style={{ fontSize: '10.5px', color: 'var(--text-muted)' }}>{new Date(k.created_at).toLocaleString()}</span>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* TAB 11: CHATBOT DE IA (SUPERADMIN) */}
+        {activeTab === 'chat_ia' && (
+          <div className="animate-fade" style={{ maxWidth: '800px', margin: '0 auto' }}>
+            <div className="glass-card" style={{ padding: '20px' }}>
+              <h3 style={{ fontSize: '16px', fontWeight: '900', marginBottom: '14px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <Bot size={20} style={{ color: 'var(--primary)' }} /> Asistente e Inspirador de Bienestar Institucional IA
+              </h3>
+              <div style={{ display: 'grid', gap: '10px', height: '360px', overflowY: 'auto', padding: '10px', backgroundColor: 'var(--bg-secondary)', borderRadius: '12px', marginBottom: '14px' }}>
+                {chatMessages.map((msg, idx) => (
+                  <div key={idx} style={{ display: 'flex', justifyContent: msg.sender === 'user' ? 'flex-end' : 'flex-start' }}>
+                    <div style={{
+                      maxWidth: '80%',
+                      padding: '10px 14px',
+                      borderRadius: '14px',
+                      backgroundColor: msg.sender === 'user' ? 'var(--primary)' : 'var(--bg-primary)',
+                      color: msg.sender === 'user' ? '#fff' : 'var(--text-primary)',
+                      fontSize: '12.5px',
+                      border: '1px solid var(--border)'
+                    }}>
+                      {msg.text}
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <form onSubmit={async (e) => {
+                e.preventDefault();
+                if (!userInput.trim()) return;
+                const txt = userInput;
+                setUserInput('');
+                setChatMessages(prev => [...prev, { sender: 'user', text: txt }]);
+                try {
+                  const res = await api.post('/analysis/chat', { message: txt });
+                  setChatMessages(prev => [...prev, { sender: 'ai', text: res.data.reply }]);
+                } catch (err) {
+                  setChatMessages(prev => [...prev, { sender: 'ai', text: 'Error al conectar con el asistente IA.' }]);
+                }
+              }} style={{ display: 'flex', gap: '10px' }}>
+                <input type="text" placeholder="Escribe una consulta sobre el clima o estrategias..." value={userInput} onChange={(e) => setUserInput(e.target.value)} style={{ flex: 1, borderRadius: '10px', padding: '10px' }} />
+                <button type="submit" className="btn btn-primary" style={{ padding: '10px 20px', borderRadius: '10px' }}>
+                  <SendHorizontal size={16} />
+                </button>
+              </form>
             </div>
           </div>
         )}

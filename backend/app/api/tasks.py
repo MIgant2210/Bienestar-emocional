@@ -112,15 +112,13 @@ def create_task(current_user):
 @token_required
 def update_task_status(current_user, task_id):
     """
-    Actualiza el estado de una tarea ('pendiente' o 'completada') e ingresa notas de evidencia.
+    Actualiza el estado de una tarea ('pendiente' o 'completada'), la columna del tablero Kanban y notas de evidencia.
     """
     data = request.get_json() or {}
     status = data.get('status')
+    board_column = data.get('board_column')
     submission_notes = data.get('submission_notes')
     
-    if status not in ['pendiente', 'completada']:
-        return jsonify({'message': 'Estado inválido. Use pendiente o completada.'}), 400
-        
     task = Task.query.get_or_404(task_id)
     
     # Validaciones de seguridad
@@ -130,19 +128,31 @@ def update_task_status(current_user, task_id):
         if task.user_id and task.user_id != current_user.id:
             return jsonify({'message': 'Esta tarea está asignada a otro usuario.'}), 403
             
-    task.status = status
-    if submission_notes:
+    if status:
+        if status in ['pendiente', 'completada']:
+            task.status = status
+            if status == 'completada':
+                task.completed_at = datetime.utcnow()
+                task.board_column = 'completed'
+            else:
+                task.completed_at = None
+                
+    if board_column and board_column in ['todo', 'in_progress', 'in_review', 'completed']:
+        task.board_column = board_column
+        if board_column == 'completed':
+            task.status = 'completada'
+            task.completed_at = datetime.utcnow()
+        elif board_column in ['todo', 'in_progress', 'in_review']:
+            task.status = 'pendiente'
+            task.completed_at = None
+
+    if submission_notes is not None:
         task.submission_notes = submission_notes
-        
-    if status == 'completada':
-        task.completed_at = datetime.utcnow()
-    else:
-        task.completed_at = None
     
     try:
         db.session.commit()
         return jsonify({
-            'message': f'Tarea marcada como {status}.',
+            'message': 'Tarea actualizada exitosamente.',
             'task': task.to_dict()
         }), 200
     except Exception as e:
