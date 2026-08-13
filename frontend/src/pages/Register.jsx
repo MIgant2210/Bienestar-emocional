@@ -3,6 +3,8 @@ import { AuthContext } from '../contexts/AuthContext';
 import { ThemeContext } from '../contexts/ThemeContext';
 import { Sun, Moon, ArrowLeft, UserPlus, Mail, Lock, User, Building, Loader, BrainCircuit } from 'lucide-react';
 import api from '../services/api';
+import CustomSelect from '../components/CustomSelect';
+import StarryBackground from '../components/StarryBackground';
 
 const Register = ({ onNavigate }) => {
   const { register } = useContext(AuthContext);
@@ -23,18 +25,19 @@ const Register = ({ onNavigate }) => {
   const [successMsg, setSuccessMsg] = useState('');
 
   useEffect(() => {
-    const fetchInstitutions = async () => {
+    // Cargar la lista de instituciones disponibles para colaboradores
+    const fetchInsts = async () => {
       try {
-        const response = await api.get('/auth/institutions');
-        setInstitutions(response.data);
-        if (response.data.length > 0) {
-          setSelectedInstId(response.data[0].id);
+        const res = await api.get('/institutions');
+        setInstitutions(res.data);
+        if (res.data.length > 0) {
+          setSelectedInstId(res.data[0].id);
         }
       } catch (err) {
-        console.error('Error al cargar instituciones:', err);
+        console.error('Error al obtener instituciones:', err);
       }
     };
-    fetchInstitutions();
+    fetchInsts();
   }, []);
 
   const handleSubmit = async (e) => {
@@ -79,50 +82,38 @@ const Register = ({ onNavigate }) => {
       minHeight: '100vh',
       padding: '60px 24px',
       position: 'relative',
-      background: theme === 'light' 
-        ? 'radial-gradient(circle at 10% 20%, rgb(240, 245, 255) 0%, rgb(220, 230, 250) 90%)'
-        : 'radial-gradient(circle at 10% 20%, rgb(5, 8, 22) 0%, rgb(15, 20, 45) 90%)',
+      backgroundColor: 'var(--bg-primary)',
+      background: 'var(--page-bg)',
       overflow: 'hidden'
     }} className="animate-fade">
       
-      {/* Luces de fondo difuminadas */}
-      <div style={{
-        position: 'absolute',
-        width: '400px',
-        height: '400px',
-        borderRadius: '50%',
-        background: 'radial-gradient(circle, var(--primary-glow) 0%, transparent 70%)',
-        top: '-120px',
-        left: '-120px',
-        filter: 'blur(60px)',
-        zIndex: 0
-      }} />
-      <div style={{
-        position: 'absolute',
-        width: '350px',
-        height: '350px',
-        borderRadius: '50%',
-        background: 'radial-gradient(circle, var(--accent-glow) 0%, transparent 70%)',
-        bottom: '-100px',
-        right: '-100px',
-        filter: 'blur(60px)',
-        zIndex: 0
-      }} />
+      {/* Cielo Estrellado con Destellos */}
+      <StarryBackground isLogin={true} />
 
       {/* Botones de navegación superior */}
       <div style={{ position: 'absolute', top: '24px', left: '24px', zIndex: 10 }}>
-        <button onClick={() => onNavigate('login')} className="theme-toggle" style={{
-          boxShadow: 'var(--shadow-sm)',
-          border: '1px solid var(--border)',
-          backgroundColor: 'var(--bg-secondary)',
-          display: 'flex',
-          gap: '8px',
-          padding: '8px 16px',
-          borderRadius: 'var(--radius-full)',
-          fontSize: '13px',
-          fontWeight: '700'
-        }}>
-          <ArrowLeft size={16} />
+        <button 
+          onClick={() => onNavigate('login')} 
+          style={{
+            boxShadow: 'var(--shadow-sm)',
+            border: '1.5px solid var(--primary)',
+            backgroundColor: 'var(--bg-glass)',
+            color: 'var(--text-primary)',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '10px',
+            padding: '10px 20px',
+            borderRadius: 'var(--radius-full)',
+            fontSize: '13.5px',
+            fontWeight: '800',
+            cursor: 'pointer',
+            backdropFilter: 'blur(12px)',
+            WebkitBackdropFilter: 'blur(12px)',
+            transition: 'all 0.25s ease'
+          }}
+          className="btn-glass-back"
+        >
+          <ArrowLeft size={18} style={{ color: 'var(--primary)' }} />
           <span>Volver al Login</span>
         </button>
       </div>
@@ -163,7 +154,7 @@ const Register = ({ onNavigate }) => {
           </div>
           <h2 style={{ fontSize: '24px', fontWeight: '900', letterSpacing: '-0.5px', marginBottom: '6px' }}>Registro de Cuenta</h2>
           <p style={{ color: 'var(--text-secondary)', fontSize: '13px', fontWeight: '500' }}>
-            Únete a la plataforma para coordinar tareas y monitorear bienestar.
+            Únete a tu institución para coordinar tareas y monitorear tu bienestar.
           </p>
         </div>
 
@@ -196,36 +187,6 @@ const Register = ({ onNavigate }) => {
         )}
 
         <form onSubmit={handleSubmit}>
-          
-          {/* Selector de Rol */}
-          <div className="form-group" style={{ marginBottom: '24px' }}>
-            <label style={{ textAlign: 'center' }}>Selecciona tu Perfil</label>
-            <div style={{
-              display: 'flex',
-              backgroundColor: 'var(--bg-tertiary)',
-              padding: '4px',
-              borderRadius: 'var(--radius-sm)',
-              border: '1px solid var(--border)',
-              marginTop: '6px'
-            }}>
-              <button
-                type="button"
-                className={`tab-btn ${role === 'miembro' ? 'active' : ''}`}
-                onClick={() => setRole('miembro')}
-                style={{ padding: '10px', fontSize: '13px', borderRadius: '6px' }}
-              >
-                Miembro / Estudiante
-              </button>
-              <button
-                type="button"
-                className={`tab-btn ${role === 'admin_institucion' ? 'active' : ''}`}
-                onClick={() => setRole('admin_institucion')}
-                style={{ padding: '10px', fontSize: '13px', borderRadius: '6px' }}
-              >
-                Administrador
-              </button>
-            </div>
-          </div>
 
           <div style={{ display: 'flex', gap: '16px' }}>
             <div className="form-group" style={{ flex: 1 }}>
@@ -286,65 +247,22 @@ const Register = ({ onNavigate }) => {
             </div>
           </div>
 
-          {/* Formulario condicional según Rol */}
-          {role === 'miembro' ? (
-            <div className="form-group">
-              <label>Institución / Organización</label>
-              <div style={{ position: 'relative' }}>
-                <select
-                  value={selectedInstId}
-                  onChange={(e) => setSelectedInstId(e.target.value)}
-                  required
-                  style={{ paddingLeft: '40px' }}
-                >
-                  {institutions.length === 0 ? (
-                    <option value="">No hay instituciones registradas</option>
-                  ) : (
-                    institutions.map((inst) => (
-                      <option key={inst.id} value={inst.id}>
-                        {inst.name} ({inst.type})
-                      </option>
-                    ))
-                  )}
-                </select>
-                <Building size={15} style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
-              </div>
-            </div>
-          ) : (
-            <div style={{ 
-              border: '1px solid var(--border)', 
-              padding: '20px', 
-              borderRadius: 'var(--radius-sm)', 
-              marginBottom: '24px', 
-              backgroundColor: 'var(--bg-tertiary)' 
-            }}>
-              <h4 style={{ fontSize: '13px', fontWeight: '800', marginBottom: '14px', textTransform: 'uppercase', color: 'var(--text-primary)', display: 'flex', gap: '6px', alignItems: 'center' }}>
-                <Building size={14} />
-                <span>Nueva Institución</span>
-              </h4>
-              <div className="form-group" style={{ marginBottom: '16px' }}>
-                <label>Nombre de la Organización</label>
-                <input
-                  type="text"
-                  placeholder="Ej. Universidad del Valle"
-                  value={newInstName}
-                  onChange={(e) => setNewInstName(e.target.value)}
-                  required={role === 'admin_institucion'}
-                />
-              </div>
-              <div className="form-group" style={{ marginBottom: 0 }}>
-                <label>Tipo de Institución</label>
-                <select
-                  value={newInstType}
-                  onChange={(e) => setNewInstType(e.target.value)}
-                >
-                  <option value="educativa">Educativa (Colegio, Universidad)</option>
-                  <option value="laboral">Laboral (Empresa, Oficina)</option>
-                  <option value="comunitaria">Comunitaria (Organización Social)</option>
-                </select>
-              </div>
-            </div>
-          )}
+          {/* Selección de Institución con CustomSelect */}
+          <div className="form-group">
+            <label>Institución / Organización</label>
+            <CustomSelect
+              options={institutions.map(inst => ({
+                value: inst.id,
+                label: inst.name,
+                sublabel: `Tipo: ${inst.type}`,
+                icon: '🏢'
+              }))}
+              value={selectedInstId}
+              onChange={(val) => setSelectedInstId(val)}
+              placeholder="Seleccionar institución..."
+              icon={Building}
+            />
+          </div>
 
           <button
             type="submit"

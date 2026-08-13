@@ -121,22 +121,26 @@ with app.app_context():
     member_user.set_password("MiembroBienestar2026*")
     db.session.commit()
 
-    # 5. Plantillas Precargadas de Tests Estandarizados (Módulo 4 Multimodal)
+    # 5. Plantillas Precargadas de Tests Estandarizados (Módulo 4 Multimodal - 10 Preguntas Completa)
     Evaluation.query.filter_by(is_template=True).delete()
     db.session.commit()
 
-    # Template 1: Clima Laboral y Entorno Institucional
+    # Template 1: Clima Laboral y Entorno Institucional (10 Preguntas)
     q_clima = [
-        {"id": "q1", "question": "¿Cómo evalúas la comunicación y apoyo de tus superiores o docentes?", "type": "scale_1_5"},
-        {"id": "q2", "question": "En una escala del 1 al 10, ¿qué tan manejable percibes tu carga de trabajo actual?", "type": "scale_1_10"},
-        {"id": "q3", "question": "Selecciona con emojis tu nivel de ánimo durante las reuniones de esta semana:", "type": "emoji_scale_5"},
-        {"id": "q4", "question": "¿Sientes que dispones de las herramientas necesarias para desarrollar tus labores diarias?", "type": "boolean"},
-        {"id": "q5", "question": "¿Qué tan satisfecho(a) te encuentras con la flexibilidad y el respeto a tu tiempo personal?", "type": "scale_1_5"},
-        {"id": "q6", "question": "Dictado por Voz / Texto Libre: Expresa tus sugerencias o vivencias sobre el clima laboral actual.", "type": "text"}
+        {"id": "q1", "question": "¿Cómo evalúas la comunicación y apertura con tus superiores o líderes directos?", "type": "scale_1_5"},
+        {"id": "q2", "question": "En una escala del 1 al 10, ¿qué tan manejable y equilibrada percibes tu carga de trabajo actual?", "type": "scale_1_10"},
+        {"id": "q3", "question": "Selecciona con un emoji tu nivel general de motivación y entusiasmo durante la jornada:", "type": "emoji_scale_5"},
+        {"id": "q4", "question": "¿Sientes que dispones de los recursos físicos, tecnológicos y de capacitación necesarios para tus labores?", "type": "boolean"},
+        {"id": "q5", "question": "¿Qué tan satisfecho(a) te encuentras con el respeto a tus horarios de descanso y tiempo personal?", "type": "scale_1_5"},
+        {"id": "q6", "question": "¿Consideras que tus opiniones y aportes son tomados en cuenta de forma justa en las decisiones de equipo?", "type": "boolean"},
+        {"id": "q7", "question": "En una escala del 1 al 10, ¿qué tan seguro(a) y respaldado(a) te sientes en tu entorno de trabajo?", "type": "scale_1_10"},
+        {"id": "q8", "question": "Selecciona con un emoji la calidad del clima y camaradería que percibes entre compañeros:", "type": "emoji_scale_5"},
+        {"id": "q9", "question": "¿Recomendarías a un profesional o estudiante incorporarse a esta institución?", "type": "boolean"},
+        {"id": "q10", "question": "Dictado por Voz / Texto Libre: Expresa cualquier sugerencia o vivencia sobre el clima laboral actual.", "type": "text"}
     ]
     t1 = Evaluation(
-        title="[Plantilla] Evaluación Exhaustiva de Clima Laboral y Entorno",
-        description="Encuesta completa para medir comunicación, balance de tiempo, herramientas de trabajo y reconocimiento.",
+        title="[Plantilla] Evaluación Exhaustiva de Clima Laboral y Entorno (10 Preguntas)",
+        description="Encuesta estandarizada de 10 preguntas para medir comunicación, balance de tiempo, herramientas y cultura de equipo.",
         category="Clima Laboral",
         questions_json=json.dumps(q_clima),
         is_active=True,
@@ -144,18 +148,22 @@ with app.app_context():
         institution_id=inst_edu.id
     )
 
-    # Template 2: Ánimo Personal y Salud Emocional
+    # Template 2: Ánimo Personal y Salud Emocional (10 Preguntas)
     q_animo = [
-        {"id": "q1", "question": "¿Con qué frecuencia has experimentado tensión física, rigidez o nerviosismo esta semana?", "type": "scale_1_5"},
-        {"id": "q2", "question": "En una escala del 1 al 10, ¿cómo calificarías tu calidad de descanso y energía matutina?", "type": "scale_1_10"},
-        {"id": "q3", "question": "¿Cómo calificarías tu estado de ánimo emocional general usando los emojis?", "type": "emoji_scale_5"},
-        {"id": "q4", "question": "¿Has sentido momentos de desconexión o desmotivación profunda recientemente?", "type": "boolean"},
-        {"id": "q5", "question": "¿Logras mantener pausas activas durante tus jornadas diarias?", "type": "boolean"},
-        {"id": "q6", "question": "Reflexión Dictada / Escrita: Describe libremente cualquier inquietud o emoción relevante de tu semana.", "type": "text"}
+        {"id": "q1", "question": "¿Con qué frecuencia has experimentado tensión muscular, dolores de cabeza o fatiga esta semana?", "type": "scale_1_5"},
+        {"id": "q2", "question": "En una escala del 1 al 10, ¿cómo calificarías la calidad de tu sueño y descanso nocturno?", "type": "scale_1_10"},
+        {"id": "q3", "question": "Selecciona el emoji que mejor describa tu nivel promedio de energía matutina:", "type": "emoji_scale_5"},
+        {"id": "q4", "question": "¿Logras realizar pausas activas o desconexiones breves durante tus jornadas diarias?", "type": "boolean"},
+        {"id": "q5", "question": "¿Qué tan fácil te resulta concentrarte y mantener la atención en tus tareas cotidianas?", "type": "scale_1_5"},
+        {"id": "q6", "question": "¿Has sentido momentos de desmotivación profunda o aislamiento en los últimos días?", "type": "boolean"},
+        {"id": "q7", "question": "En una escala del 1 al 10, ¿qué tan efectivo consideras tu manejo del estrés ante imprevistos?", "type": "scale_1_10"},
+        {"id": "q8", "question": "Selecciona el emoji que represente tu paz mental e interior hoy:", "type": "emoji_scale_5"},
+        {"id": "q9", "question": "¿Dedicas tiempo suficiente en la semana a actividades recreativas, deportivas o familiares?", "type": "boolean"},
+        {"id": "q10", "question": "Reflexión Dictada / Escrita: Describe libremente tus sensaciones, pensamientos o necesidades emocionales de hoy.", "type": "text"}
     ]
     t2 = Evaluation(
-        title="[Plantilla] Chequeo Integral de Salud Emocional y Ritmo de Vida",
-        description="Diagnóstico estandarizado de niveles de fatiga, calidad del sueño, ansiedad y resiliencia.",
+        title="[Plantilla] Chequeo Integral de Salud Emocional y Ritmo de Vida (10 Preguntas)",
+        description="Diagnóstico estandarizado de 10 preguntas sobre fatiga, calidad del sueño, manejo del estrés y resiliencia.",
         category="Ánimo Personal",
         questions_json=json.dumps(q_animo),
         is_active=True,
@@ -163,18 +171,22 @@ with app.app_context():
         institution_id=inst_edu.id
     )
 
-    # Template 3: Bienestar Multimodal Integral
+    # Template 3: Bienestar Multimodal Integral (10 Preguntas)
     q_integral = [
-        {"id": "q1", "question": "En una escala del 1 al 5, ¿cuál es tu índice general de bienestar y equilibrio personal?", "type": "scale_1_5"},
-        {"id": "q2", "question": "Del 1 al 10, ¿qué tan integrado y valorado te sientes en la comunidad de la institución?", "type": "scale_1_10"},
-        {"id": "q3", "question": "Selecciona el emoji de WhatsApp que mejor represente tu nivel de paz interna:", "type": "emoji_scale_5"},
-        {"id": "q4", "question": "¿Recomendarías a un colega o compañero formar parte de este equipo?", "type": "boolean"},
-        {"id": "q5", "question": "¿Sientes que tus opiniones y sugerencias son escuchadas con seriedad?", "type": "boolean"},
-        {"id": "q6", "question": "Espacio Multimodal Libre: Graba tu voz o redacta tus comentarios para el análisis con IA.", "type": "text"}
+        {"id": "q1", "question": "En una escala del 1 al 5, ¿cuál es tu nivel global de satisfacción con la vida e institución actual?", "type": "scale_1_5"},
+        {"id": "q2", "question": "Del 1 al 10, ¿qué tan integrado, respetado y valorado te sientes en la comunidad institucional?", "type": "scale_1_10"},
+        {"id": "q3", "question": "Selecciona el emoji que mejor represente tu estado emocional general en esta semana:", "type": "emoji_scale_5"},
+        {"id": "q4", "question": "¿Sientes que la institución promueve activamente la salud mental y el bienestar integral?", "type": "boolean"},
+        {"id": "q5", "question": "¿Qué tan alineado(a) te encuentras con los valores, misión y metas de la organización?", "type": "scale_1_5"},
+        {"id": "q6", "question": "¿Recibes retroalimentación constructiva y reconocimientos oportunos por tus logros?", "type": "boolean"},
+        {"id": "q7", "question": "Del 1 al 10, ¿qué tan clara consideras la distribución de funciones y expectativas en tu puesto?", "type": "scale_1_10"},
+        {"id": "q8", "question": "Selecciona con un emoji cómo visualizas tus oportunidades de crecimiento profesional en el equipo:", "type": "emoji_scale_5"},
+        {"id": "q9", "question": "¿Sientes que puedes acudir con confianza a los profesionales de apoyo o psicólogos si lo requieres?", "type": "boolean"},
+        {"id": "q10", "question": "Espacio Multimodal Libre: Graba tu voz o redacta tus comentarios finales para el análisis con Gemini AI.", "type": "text"}
     ]
     t3 = Evaluation(
-        title="[Plantilla] Diagnóstico Multimodal de Bienestar Institucional 360°",
-        description="Cuestionario amplio de adaptación cultural, pertenencia y salud integral procesado por Gemini AI.",
+        title="[Plantilla] Diagnóstico Multimodal de Bienestar Institucional 360° (10 Preguntas)",
+        description="Cuestionario amplio de 10 preguntas sobre pertenencia, cultura institucional y salud emocional procesado por IA.",
         category="Bienestar Integral",
         questions_json=json.dumps(q_integral),
         is_active=True,
@@ -186,14 +198,14 @@ with app.app_context():
     db.session.add(t2)
     db.session.add(t3)
     db.session.commit()
-    print("[Tests Precargados] 3 plantillas estandarizadas ampliadas sembradas correctamente.")
+    print("[Tests Precargados] 3 plantillas estandarizadas ampliadas a 10 preguntas sembradas correctamente.")
 
     # 5b. Crear Evaluaciones Activas Habilitadas en la Institución
     active_eval1 = Evaluation.query.filter_by(title="Chequeo Mensual de Clima y Salud Emocional", institution_id=inst_edu.id).first()
     if not active_eval1:
         active_eval1 = Evaluation(
             title="Chequeo Mensual de Clima y Salud Emocional",
-            description="Evaluación periódica institucional sobre niveles de estrés, comunicación y apoyo de equipo.",
+            description="Evaluación periódica de 10 preguntas sobre niveles de estrés, comunicación y apoyo de equipo.",
             category="Clima Laboral",
             questions_json=json.dumps(q_clima),
             is_active=True,
@@ -256,5 +268,57 @@ with app.app_context():
         k2 = Kudos(sender_id=prof_user.id, institution_id=inst_edu.id, receiver_name="Equipo de Salud", receiver_department="Salud", message="Excelente actitud y empatía demostrada durante los chequeos semanales.", badge_type="Resiliencia", is_anonymous=True, likes_count=7)
         db.session.add_all([k1, k2])
         db.session.commit()
+
+    # 8. Tareas Demostrativas para Colaboradores
+    if Task.query.count() == 0:
+        tk1 = Task(
+            title="Pausa Activa de Respiración Consciente",
+            description="Tómate 10 minutos para practicar ejercicios de respiración diafragmática guiada en tu puesto.",
+            category="Bienestar",
+            priority="Alta",
+            status="pendiente",
+            assigned_type="all",
+            institution_id=inst_edu.id,
+            estimated_minutes=10,
+            created_by=lider_user.id
+        )
+        tk2 = Task(
+            title="Revisión de Informe de Clima y Salud Emocional",
+            description="Analizar las métricas generales de estrés y retroalimentación institucional del equipo.",
+            category="Laboral",
+            priority="Media",
+            status="en_progreso",
+            assigned_type="department",
+            assigned_target="Tecnología",
+            institution_id=inst_edu.id,
+            estimated_minutes=25,
+            created_by=lider_user.id
+        )
+        tk3 = Task(
+            title="Taller Virtual de Ergonometría y Descanso",
+            description="Participar en la sesión interactiva sobre postura corporal y prevención de fatiga física.",
+            category="Bienestar",
+            priority="Baja",
+            status="pendiente",
+            assigned_type="all",
+            institution_id=inst_edu.id,
+            estimated_minutes=15,
+            created_by=prof_user.id
+        )
+        tk4 = Task(
+            title="Cuestionario de Evaluación Mensual",
+            description="Completar la encuesta estandarizada sobre clima y entorno laboral.",
+            category="Académica",
+            priority="Media",
+            status="completada",
+            assigned_type="all",
+            institution_id=inst_edu.id,
+            estimated_minutes=15,
+            completed_at=datetime.utcnow(),
+            created_by=super_admin.id
+        )
+        db.session.add_all([tk1, tk2, tk3, tk4])
+        db.session.commit()
+        print("[Tareas Demo] 4 tareas demostrativas agregadas correctamente.")
 
     print("[ÉXITO] ¡Siembra de base de datos finalizada!")

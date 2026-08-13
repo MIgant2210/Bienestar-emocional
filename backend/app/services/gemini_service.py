@@ -80,6 +80,16 @@ class GeminiService:
             burnout += 45
             stress += 20
             motivation -= 25
+
+        if any(w in text_lower for w in ["dibujo", "canvas", "trazos", "boceto", "garabato", "ilustración"]):
+            if any(w in text_lower for w in ["oscura", "caótico", "negro", "rojo", "desorden", "tormenta"]):
+                stress += 30
+                burnout += 20
+                sentiment = "Negativo"
+            elif any(w in text_lower for w in ["sol", "verde", "flor", "paisaje", "armonía", "corazón", "carita feliz"]):
+                motivation += 30
+                sentiment = "Positivo"
+                stress -= 15
             
         if any(w in text_lower for w in ["estres", "estrés", "presión", "parciales", "exámenes", "entregas", "apurado", "apurada"]):
             stress += 50

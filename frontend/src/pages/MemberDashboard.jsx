@@ -6,14 +6,29 @@ import {
   AlertCircle, CheckCircle2, ClipboardList, Sparkles, MessageSquare, 
   SendHorizontal, Bot, User, Loader, Calendar, ClipboardCheck, Sliders, Check, 
   HelpCircle, Mic, MicOff, ArrowLeft, FileAudio, Volume2, Play, Square, CheckCircle,
-  Flame, Zap, Award, ThumbsUp, ThumbsDown, Palette
+  Flame, Zap, Award, ThumbsUp, ThumbsDown, Palette, Trophy
 } from 'lucide-react';
 import api from '../services/api';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import DrawingCanvas from '../components/DrawingCanvas';
+import CustomSelect from '../components/CustomSelect';
+import CustomDatePicker from '../components/CustomDatePicker';
+import SystemAlert from '../components/SystemAlert';
+import GamificationWidget from '../components/GamificationWidget';
+import MyProgress from './MyProgress';
 
 const MemberDashboard = () => {
   const { user, logout } = useContext(AuthContext);
   const { theme, toggleTheme, colorPalette, changePalette, PALETTES } = useContext(ThemeContext);
+
+  // System Alert Toast State
+  const [systemAlert, setSystemAlert] = useState({ show: false, type: 'info', title: '', message: '' });
+  const showAlert = (type, title, message) => {
+    setSystemAlert({ show: true, type, title, message });
+  };
+
+  // Scroll ref for appointments
+  const apptFormRef = useRef(null);
   
   // State para menú de paletas
   const [showPaletteMenu, setShowPaletteMenu] = useState(false);
@@ -24,11 +39,6 @@ const MemberDashboard = () => {
   // Tab State inside Dashboard: 'bienestar', 'tareas', 'evaluations', 'chat_ia'
   const [activeTab, setActiveTab] = useState('bienestar');
   
-  // Gamificación / Duolingo Style States
-  const [streakDays, setStreakDays] = useState(5);
-  const [xpPoints, setXpPoints] = useState(250);
-  const [showXpReward, setShowXpReward] = useState(false);
-
   // Bienestar States
   const [reflectionText, setReflectionText] = useState('');
   const [history, setHistory] = useState([]);
@@ -40,6 +50,19 @@ const MemberDashboard = () => {
   const [tasks, setTasks] = useState([]);
   const [tasksLoading, setTasksLoading] = useState(false);
   const [taskViewMode, setTaskViewMode] = useState('list'); // 'list' o 'kanban'
+  const [draggedTaskId, setDraggedTaskId] = useState(null);
+  const [dragOverCol, setDragOverCol] = useState(null);
+
+  // Gamificación / Duolingo Style States (Calculados 100% dinámicamente desde la BD)
+  const [streakDays, setStreakDays] = useState(1);
+  const [xpPoints, setXpPoints] = useState(100);
+  const [showXpReward, setShowXpReward] = useState(false);
+
+  useEffect(() => {
+    const calculatedXp = ((history || []).length * 50) + ((tasks || []).filter(t => t.status === 'completada').length * 30);
+    setXpPoints(calculatedXp || 100);
+    setStreakDays(history && history.length > 0 ? Math.min(history.length, 30) : 1);
+  }, [history, tasks]);
 
   // Tienda de Recompensas States
   const [rewards, setRewards] = useState([]);
@@ -184,7 +207,7 @@ const MemberDashboard = () => {
   const handleCreateAppointment = async (e) => {
     e.preventDefault();
     if (!apptDate) {
-      alert('Por favor selecciona una fecha para tu cita.');
+      showAlert('warning', 'Fecha Requerida', 'Por favor selecciona una fecha para tu cita.');
       return;
     }
     setApptLoading(true);
@@ -195,11 +218,12 @@ const MemberDashboard = () => {
         date_time: fullIso,
         reason: apptReason
       });
-      setApptMsg('¡Cita agendada exitosamente con la Psicóloga! 📅');
+      setApptMsg('¡Cita agendada exitosamente con la Psicóloga!');
+      showAlert('success', 'Cita Reservada', '¡Cita agendada exitosamente con la Psicóloga!');
       setApptDate('');
       fetchAppointments();
     } catch (err) {
-      alert('Error al agendar cita: ' + (err.response?.data?.message || err.message));
+      showAlert('danger', 'Error de Cita', err.response?.data?.message || err.message);
     } finally {
       setApptLoading(false);
     }
@@ -208,7 +232,7 @@ const MemberDashboard = () => {
   const handleCreateKudos = async (e) => {
     e.preventDefault();
     if (!kudoReceiver || !kudoMessage) {
-      alert('Por favor ingresa el nombre del compañero y tu mensaje de gratitud.');
+      showAlert('warning', 'Campos Requeridos', 'Por favor ingresa el nombre del compañero y tu mensaje de gratitud.');
       return;
     }
     setKudoLoading(true);
@@ -222,12 +246,13 @@ const MemberDashboard = () => {
         is_anonymous: kudoAnonymous
       });
       setXpPoints(prev => prev + 10);
-      setKudoMsg('¡Kudo publicado exitosamente en el Muro de Gratitud! (+10 XP) 💖');
+      setKudoMsg('¡Kudo publicado exitosamente en el Muro de Gratitud! (+10 XP)');
+      showAlert('success', 'Mensaje Publicado', '¡Kudo publicado exitosamente! (+10 XP)');
       setKudoReceiver('');
       setKudoMessage('');
       fetchKudos();
     } catch (err) {
-      alert('Error al publicar kudo: ' + (err.response?.data?.message || err.message));
+      showAlert('danger', 'Mensaje Bloqueado', err.response?.data?.message || err.message);
     } finally {
       setKudoLoading(false);
     }
@@ -483,13 +508,13 @@ const MemberDashboard = () => {
   const emojiMap10 = ['😫', '😣', '🙁', '😟', '😐', '🙂', '😊', '😄', '😁', '🤩'];
 
   const renderEquiMascot = (progressPercent = 0) => {
-    let speech = "¡Hola! Soy Equi tu Elefante Sabio 🐘. Estoy aquí para acompañarte y brindarte serenidad en tu día.";
+    let speech = "¡Hola! Soy Equi tu Colibrí Orientador. Estoy aquí para acompañarte y brindarte serenidad en tu día.";
     if (progressPercent > 0 && progressPercent < 50) {
-      speech = "¡Excelente comienzo! Mantén la calma y sigue avanzando en tus respuestas 🐘⚡";
+      speech = "¡Excelente comienzo! Mantén la calma y sigue avanzando en tus respuestas ⚡";
     } else if (progressPercent >= 50 && progressPercent < 100) {
-      speech = "¡Vas por más de la mitad! Tu constancia fortalece tu bienestar mental 🐘🔥";
+      speech = "¡Vas por más de la mitad! Tu constancia fortalece tu bienestar mental 🔥";
     } else if (progressPercent >= 100) {
-      speech = "¡Increíble trabajo! Has completado la actividad. Reclama tus puntos XP y mantén el equilibrio 🐘🎉";
+      speech = "¡Increíble trabajo! Has completado la actividad. Reclama tus puntos XP y mantén el equilibrio 🎉";
     }
 
     return (
@@ -513,15 +538,15 @@ const MemberDashboard = () => {
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          fontSize: '32px',
           boxShadow: '0 4px 14px var(--primary-light)',
-          flexShrink: 0
+          flexShrink: 0,
+          overflow: 'hidden'
         }}>
-          🐘
+          <img src="/logo.png" alt="Equi Colibrí" style={{ width: '42px', height: '42px', objectFit: 'contain' }} />
         </div>
         <div>
           <span style={{ fontSize: '11px', fontWeight: '900', color: 'var(--primary)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-            Equi • Tu Elefante Sabio 🐘
+            Equi • Tu Colibrí Orientador (Colaborador)
           </span>
           <p style={{ fontSize: '13.5px', fontWeight: '800', color: 'var(--text-primary)', marginTop: '2px' }}>
             "{speech}"
@@ -745,7 +770,7 @@ const MemberDashboard = () => {
                     </div>
                   )}
 
-                  {/* PREGUNTA ESCALA DE 5 EMOJIS ESTILO WHATSAPP (emoji_scale_5) */}
+                  {/* PREGUNTA ESCALA DE 5 EMOJIS DE ÁNIMO (emoji_scale_5) */}
                   {q.type === 'emoji_scale_5' && (
                     <div style={{ marginTop: '8px' }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px', fontSize: '12px', fontWeight: '800', color: 'var(--text-muted)' }}>
@@ -776,6 +801,16 @@ const MemberDashboard = () => {
                           );
                         })}
                       </div>
+                    </div>
+                  )}
+
+                  {/* PREGUNTA TIPO DIBUJO / CANVAS */}
+                  {q.type === 'drawing' && (
+                    <div style={{ marginTop: '10px' }}>
+                      <DrawingCanvas 
+                        savedImage={testAnswers[q.id] || ''}
+                        onSaveDrawing={(dataUrl) => handleAnswerChange(q.id, dataUrl)}
+                      />
                     </div>
                   )}
 
@@ -850,15 +885,15 @@ const MemberDashboard = () => {
         zIndex: 10
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          <div style={{
-            background: 'linear-gradient(135deg, var(--primary) 0%, var(--accent) 100%)',
-            color: '#ffffff',
-            padding: '8px',
-            borderRadius: 'var(--radius-sm)',
-            boxShadow: 'var(--tech-glow)'
-          }}>
-            <Heart size={18} />
-          </div>
+          <img 
+            src="/logo.png" 
+            alt="EquilibrIA Logo" 
+            style={{ 
+              height: '46px', 
+              objectFit: 'contain',
+              filter: 'drop-shadow(0 2px 8px rgba(99, 102, 241, 0.25))' 
+            }} 
+          />
           <div>
             <h1 style={{ fontSize: '17px', fontWeight: '900', letterSpacing: '-0.5px' }}>EquilibrIA</h1>
             <p style={{ fontSize: '11px', color: 'var(--text-secondary)', fontWeight: '500' }}>Plataforma inteligente de bienestar y orientación</p>
@@ -953,7 +988,7 @@ const MemberDashboard = () => {
           <button className={`tab-btn ${activeTab === 'bienestar' ? 'active' : ''}`} onClick={() => setActiveTab('bienestar')}><Brain size={15} /><span>Mi Bienestar</span></button>
           <button className={`tab-btn ${activeTab === 'tareas' ? 'active' : ''}`} onClick={() => setActiveTab('tareas')}><ClipboardList size={15} /><span>Mis Tareas</span>{tasks.filter(t => t.status === 'pendiente').length > 0 && <span style={{ backgroundColor: 'var(--danger)', color: '#fff', fontSize: '10px', padding: '2px 6px', borderRadius: 'var(--radius-full)', fontWeight: 'bold' }}>{tasks.filter(t => t.status === 'pendiente').length}</span>}</button>
           <button className={`tab-btn ${activeTab === 'evaluations' ? 'active' : ''}`} onClick={() => setActiveTab('evaluations')}><Calendar size={15} /><span>Tests</span>{evaluations.length > 0 && <span style={{ backgroundColor: 'var(--primary)', color: '#fff', fontSize: '10px', padding: '2px 6px', borderRadius: 'var(--radius-full)', fontWeight: 'bold' }}>{evaluations.length}</span>}</button>
-          <button className={`tab-btn ${activeTab === 'rewards' ? 'active' : ''}`} onClick={() => setActiveTab('rewards')}><Award size={15} /><span>Recompensas</span></button>
+          <button className={`tab-btn ${activeTab === 'progress' ? 'active' : ''}`} onClick={() => setActiveTab('progress')}><Trophy size={15} /><span>Mi Progreso</span></button>
           <button className={`tab-btn ${activeTab === 'appointments' ? 'active' : ''}`} onClick={() => setActiveTab('appointments')}><Calendar size={15} /><span>Citas 1 a 1</span></button>
           <button className={`tab-btn ${activeTab === 'kudos' ? 'active' : ''}`} onClick={() => setActiveTab('kudos')}><Heart size={15} /><span>Muro de Gratitud</span></button>
           <button className={`tab-btn ${activeTab === 'chat_ia' ? 'active' : ''}`} onClick={() => setActiveTab('chat_ia')}><Sparkles size={15} /><span>Asistente IA</span></button>
@@ -961,8 +996,10 @@ const MemberDashboard = () => {
 
         {/* TAB 1: MI BIENESTAR */}
         {activeTab === 'bienestar' && (
-          <div className="grid grid-2 animate-fade">
-            <div className="glass-card">
+          <div className="animate-fade" style={{ display: 'grid', gap: '20px' }}>
+            <GamificationWidget onNavigateToFullProgress={() => setActiveTab('progress')} />
+            <div className="grid grid-2">
+              <div className="glass-card">
               {/* Mascota Equi en la Reflexión Diaria */}
               {renderEquiMascot(0)}
 
@@ -1117,6 +1154,7 @@ const MemberDashboard = () => {
               </div>
             </div>
           </div>
+        </div>
         )}
 
         {/* TAB 2: TAREAS (VISTA LISTA Y TABLERO KANBAN INTERACTIVO) */}
@@ -1214,95 +1252,127 @@ const MemberDashboard = () => {
             {tasksLoading ? (
               <div style={{ display: 'flex', justifyContent: 'center', padding: '30px' }}><Loader className="animate-spin" size={20} /></div>
             ) : taskViewMode === 'kanban' ? (
-              /* VISTA TABLERO KANBAN ESTILO JIRA (4 COLUMNAS INTERACTIVAS) */
+              /* VISTA TABLERO KANBAN ESTILO JIRA (4 COLUMNAS INTERACTIVAS DRAG & DROP) */
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(230px, 1fr))', gap: '14px', alignItems: 'start' }}>
-                {/* Columna 1: Por Hacer */}
-                <div style={{ backgroundColor: 'var(--bg-secondary)', borderRadius: '14px', padding: '12px', border: '1px solid var(--border)' }}>
-                  <h4 style={{ fontSize: '12.5px', fontWeight: '900', color: 'var(--primary)', marginBottom: '10px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <span>📌 Por Hacer</span>
-                    <span style={{ fontSize: '10px', backgroundColor: 'var(--primary-light)', padding: '2px 6px', borderRadius: '10px' }}>
-                      {tasks.filter(t => (t.board_column === 'todo' || !t.board_column) && t.status !== 'completada').length}
-                    </span>
-                  </h4>
-                  <div style={{ display: 'grid', gap: '8px' }}>
-                    {tasks.filter(t => (t.board_column === 'todo' || !t.board_column) && t.status !== 'completada').map(task => (
-                      <div key={task.id} className="futuristic-card-item" style={{ padding: '10px' }}>
-                        <h5 style={{ fontSize: '12.5px', fontWeight: '800' }}>{task.title}</h5>
-                        <p style={{ fontSize: '11px', color: 'var(--text-secondary)', margin: '3px 0' }}>{task.description}</p>
-                        <div style={{ display: 'flex', gap: '4px', marginTop: '6px' }}>
-                          <button onClick={() => handleUpdateTaskColumn(task.id, 'in_progress')} className="duo-pill" style={{ flex: 1, justifyContent: 'center', fontSize: '10px', padding: '4px 6px' }}>
-                            ▶ Mover a En Proceso
-                          </button>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
+                
+                {/* Definición de Columnas Kanban */}
+                {[
+                  { key: 'todo', title: '📌 Por Hacer', color: 'var(--primary)', filter: t => (t.board_column === 'todo' || !t.board_column) && t.status !== 'completada' },
+                  { key: 'in_progress', title: '⏳ En Proceso', color: 'var(--warning)', filter: t => t.board_column === 'in_progress' },
+                  { key: 'in_review', title: '📝 En Revisión', color: 'var(--accent)', filter: t => t.board_column === 'in_review' },
+                  { key: 'completed', title: '✅ Completadas', color: 'var(--success)', filter: t => t.board_column === 'completed' || t.status === 'completada' }
+                ].map(col => {
+                  const colTasks = tasks.filter(col.filter);
+                  const isOver = dragOverCol === col.key;
+                  return (
+                    <div 
+                      key={col.key}
+                      onDragOver={(e) => {
+                        e.preventDefault();
+                        e.dataTransfer.dropEffect = 'move';
+                        if (dragOverCol !== col.key) setDragOverCol(col.key);
+                      }}
+                      onDragLeave={() => {
+                        if (dragOverCol === col.key) setDragOverCol(null);
+                      }}
+                      onDrop={(e) => {
+                        e.preventDefault();
+                        setDragOverCol(null);
+                        const taskId = e.dataTransfer.getData('text/plain') || draggedTaskId;
+                        if (taskId) handleUpdateTaskColumn(taskId, col.key);
+                      }}
+                      style={{ 
+                        backgroundColor: isOver ? 'var(--bg-tertiary)' : 'var(--bg-secondary)', 
+                        borderRadius: '16px', 
+                        padding: '14px', 
+                        border: isOver ? '2px dashed var(--primary)' : '1px solid var(--border)',
+                        boxShadow: isOver ? '0 0 15px rgba(99, 102, 241, 0.25)' : 'none',
+                        transition: 'all 0.2s ease',
+                        minHeight: '320px',
+                        display: 'flex',
+                        flexDirection: 'column'
+                      }}
+                    >
+                      <h4 style={{ fontSize: '12.5px', fontWeight: '900', color: col.color, marginBottom: '12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <span>{col.title}</span>
+                        <span style={{ fontSize: '10px', backgroundColor: 'var(--bg-primary)', padding: '2px 8px', borderRadius: '12px', border: '1px solid var(--border)', color: 'var(--text-primary)' }}>
+                          {colTasks.length}
+                        </span>
+                      </h4>
 
-                {/* Columna 2: En Proceso */}
-                <div style={{ backgroundColor: 'var(--bg-secondary)', borderRadius: '14px', padding: '12px', border: '1px solid var(--border)' }}>
-                  <h4 style={{ fontSize: '12.5px', fontWeight: '900', color: 'var(--warning)', marginBottom: '10px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <span>⏳ En Proceso</span>
-                    <span style={{ fontSize: '10px', backgroundColor: 'var(--warning-light)', padding: '2px 6px', borderRadius: '10px' }}>
-                      {tasks.filter(t => t.board_column === 'in_progress').length}
-                    </span>
-                  </h4>
-                  <div style={{ display: 'grid', gap: '8px' }}>
-                    {tasks.filter(t => t.board_column === 'in_progress').map(task => (
-                      <div key={task.id} className="futuristic-card-item" style={{ padding: '10px', borderLeft: '3px solid var(--warning)' }}>
-                        <h5 style={{ fontSize: '12.5px', fontWeight: '800' }}>{task.title}</h5>
-                        <div style={{ display: 'flex', gap: '4px', marginTop: '6px' }}>
-                          <button onClick={() => handleUpdateTaskColumn(task.id, 'todo')} className="duo-pill" style={{ fontSize: '10px', padding: '4px 6px' }}>
-                            ◀ Regresar
-                          </button>
-                          <button onClick={() => handleUpdateTaskColumn(task.id, 'in_review')} className="duo-pill selected" style={{ flex: 1, justifyContent: 'center', fontSize: '10px', padding: '4px 6px' }}>
-                            📝 Enviar a Revisión
-                          </button>
+                      {isOver && (
+                        <div style={{ padding: '8px', marginBottom: '8px', borderRadius: '10px', backgroundColor: 'var(--primary-light)', color: 'var(--primary)', fontSize: '11px', fontWeight: '800', textAlign: 'center', border: '1px dashed var(--primary)' }}>
+                          👇 Soltar tarjeta en {col.title}
                         </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
+                      )}
 
-                {/* Columna 3: En Revisión */}
-                <div style={{ backgroundColor: 'var(--bg-secondary)', borderRadius: '14px', padding: '12px', border: '1px solid var(--border)' }}>
-                  <h4 style={{ fontSize: '12.5px', fontWeight: '900', color: 'var(--accent)', marginBottom: '10px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <span>📝 En Revisión</span>
-                    <span style={{ fontSize: '10px', backgroundColor: 'var(--accent-light)', padding: '2px 6px', borderRadius: '10px' }}>
-                      {tasks.filter(t => t.board_column === 'in_review').length}
-                    </span>
-                  </h4>
-                  <div style={{ display: 'grid', gap: '8px' }}>
-                    {tasks.filter(t => t.board_column === 'in_review').map(task => (
-                      <div key={task.id} className="futuristic-card-item" style={{ padding: '10px', borderLeft: '3px solid var(--accent)' }}>
-                        <h5 style={{ fontSize: '12.5px', fontWeight: '800' }}>{task.title}</h5>
-                        <div style={{ display: 'flex', gap: '4px', marginTop: '6px' }}>
-                          <button onClick={() => setSelectedTaskModal(task)} className="duo-pill selected" style={{ width: '100%', justifyContent: 'center', fontSize: '10px', padding: '4px 6px' }}>
-                            ⚡ Adjuntar / Aprobar (+20 XP)
-                          </button>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
+                      <div style={{ display: 'grid', gap: '8px', flex: 1, alignContent: 'start' }}>
+                        {colTasks.length === 0 && !isOver ? (
+                          <div style={{ textAlign: 'center', padding: '20px', color: 'var(--text-muted)', fontSize: '11px', border: '1px dashed var(--border)', borderRadius: '10px' }}>
+                            Arrastra una tarjeta aquí...
+                          </div>
+                        ) : (
+                          colTasks.map(task => {
+                            const isBeingDragged = draggedTaskId === task.id;
+                            return (
+                              <div 
+                                key={task.id} 
+                                draggable={true}
+                                onDragStart={(e) => {
+                                  e.dataTransfer.setData('text/plain', task.id);
+                                  setDraggedTaskId(task.id);
+                                }}
+                                onDragEnd={() => {
+                                  setDraggedTaskId(null);
+                                  setDragOverCol(null);
+                                }}
+                                className="futuristic-card-item" 
+                                style={{ 
+                                  padding: '12px', 
+                                  borderLeft: `4px solid ${col.color}`,
+                                  cursor: 'grab',
+                                  opacity: isBeingDragged ? 0.4 : 1,
+                                  border: isBeingDragged ? '2px dashed var(--primary)' : undefined,
+                                  transform: isBeingDragged ? 'scale(0.98)' : 'none',
+                                  transition: 'all 0.15s ease'
+                                }}
+                              >
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+                                  <span style={{ fontSize: '9.5px', fontWeight: '800', padding: '2px 6px', borderRadius: '6px', backgroundColor: 'var(--bg-secondary)', color: 'var(--text-secondary)' }}>
+                                    {task.category || 'Bienestar'}
+                                  </span>
+                                  <span style={{ fontSize: '11px' }}>🖐️</span>
+                                </div>
+                                
+                                <h5 style={{ fontSize: '12.5px', fontWeight: '800', textDecoration: col.key === 'completed' ? 'line-through' : 'none' }}>
+                                  {task.title}
+                                </h5>
+                                
+                                {task.description && (
+                                  <p style={{ fontSize: '11px', color: 'var(--text-secondary)', margin: '4px 0', lineHeight: '1.3' }}>
+                                    {task.description}
+                                  </p>
+                                )}
 
-                {/* Columna 4: Completadas */}
-                <div style={{ backgroundColor: 'var(--bg-secondary)', borderRadius: '14px', padding: '12px', border: '1px solid var(--border)' }}>
-                  <h4 style={{ fontSize: '12.5px', fontWeight: '900', color: 'var(--success)', marginBottom: '10px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <span>✅ Completadas</span>
-                    <span style={{ fontSize: '10px', backgroundColor: 'var(--success-light)', padding: '2px 6px', borderRadius: '10px' }}>
-                      {tasks.filter(t => t.board_column === 'completed' || t.status === 'completada').length}
-                    </span>
-                  </h4>
-                  <div style={{ display: 'grid', gap: '8px' }}>
-                    {tasks.filter(t => t.board_column === 'completed' || t.status === 'completada').map(task => (
-                      <div key={task.id} className="futuristic-card-item" style={{ padding: '10px', borderLeft: '3px solid var(--success)' }}>
-                        <h5 style={{ fontSize: '12.5px', fontWeight: '800', textDecoration: 'line-through' }}>{task.title}</h5>
-                        <span style={{ fontSize: '10px', color: 'var(--success)', fontWeight: '800' }}>+20 XP Ganados ⚡</span>
+                                <div style={{ display: 'flex', gap: '4px', marginTop: '8px', alignItems: 'center', justifyContent: 'space-between' }}>
+                                  {col.key === 'completed' ? (
+                                    <span style={{ fontSize: '10px', color: 'var(--success)', fontWeight: '800' }}>+20 XP Ganados ⚡</span>
+                                  ) : col.key === 'in_review' ? (
+                                    <button onClick={() => setSelectedTaskModal(task)} className="duo-pill selected" style={{ width: '100%', justifyContent: 'center', fontSize: '10px', padding: '4px 6px' }}>
+                                      ⚡ Entregar (+20 XP)
+                                    </button>
+                                  ) : (
+                                    <span style={{ fontSize: '9.5px', color: 'var(--text-muted)' }}>Arrastra para mover ➔</span>
+                                  )}
+                                </div>
+                              </div>
+                            );
+                          })
+                        )}
                       </div>
-                    ))}
-                  </div>
-                </div>
+                    </div>
+                  );
+                })}
               </div>
             ) : tasks.length === 0 ? (
               <div style={{ textAlign: 'center', padding: '40px', color: 'var(--text-muted)' }}>No tienes tareas asignadas.</div>
@@ -1340,47 +1410,9 @@ const MemberDashboard = () => {
           </div>
         )}
 
-        {/* NUEVO MÓDULO 1: TIENDA DE RECOMPENSAS Y CANJE XP 🎁 */}
-        {activeTab === 'rewards' && (
-          <div className="glass-card animate-fade">
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', flexWrap: 'wrap', gap: '12px' }}>
-              <div>
-                <h3 style={{ fontSize: '17px', fontWeight: '900', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <Award size={18} style={{ color: 'var(--accent)' }} /> Tienda de Recompensas e Insignias de Bienestar
-                </h3>
-                <p style={{ fontSize: '12.5px', color: 'var(--text-secondary)' }}>Canjea tus puntos XP por reconocimientos institucionales, permisos de flexibilidad e insignias.</p>
-              </div>
-              <div style={{ fontSize: '15px', fontWeight: '900', backgroundColor: 'var(--primary-light)', color: 'var(--primary)', padding: '8px 16px', borderRadius: '12px', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <Zap size={16} /> Saldo XP: {xpPoints} Puntos
-              </div>
-            </div>
-
-            {rewardMsg && <div style={{ backgroundColor: 'var(--success-light)', border: '1px solid var(--success)', color: 'var(--success)', padding: '12px', borderRadius: '10px', fontSize: '13px', marginBottom: '16px' }}>{rewardMsg}</div>}
-
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '16px' }}>
-              {rewards.map(r => (
-                <div key={r.id} className="futuristic-card-item" style={{ padding: '18px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', gap: '14px' }}>
-                  <div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
-                      <span style={{ fontSize: '32px' }}>{r.icon}</span>
-                      <span style={{ fontSize: '10px', fontWeight: '800', padding: '3px 8px', borderRadius: '10px', backgroundColor: 'var(--primary-light)', color: 'var(--primary)' }}>{r.category}</span>
-                    </div>
-                    <h4 style={{ fontSize: '15px', fontWeight: '800' }}>{r.title}</h4>
-                    <p style={{ fontSize: '12px', color: 'var(--text-secondary)', marginTop: '4px' }}>{r.description}</p>
-                  </div>
-
-                  <button
-                    onClick={() => handleRedeemReward(r)}
-                    disabled={rewardLoading || xpPoints < r.cost_xp}
-                    className="btn btn-primary"
-                    style={{ width: '100%', padding: '10px', fontSize: '12.5px', borderRadius: '10px', fontWeight: '900' }}
-                  >
-                    Canjear por {r.cost_xp} XP 🏆
-                  </button>
-                </div>
-              ))}
-            </div>
-          </div>
+        {/* MÓDULO DE GAMIFICACIÓN PROFESIONAL Y MI PROGRESO 🏆 */}
+        {activeTab === 'progress' && (
+          <MyProgress onBack={() => setActiveTab('bienestar')} />
         )}
 
         {/* NUEVO MÓDULO 2: AGENDA DE CITAS Y SESIONES DE ACOMPAÑAMIENTO 1 A 1 📅 */}
@@ -1397,20 +1429,28 @@ const MemberDashboard = () => {
               {apptMsg && <div style={{ backgroundColor: 'var(--success-light)', border: '1px solid var(--success)', color: 'var(--success)', padding: '10px', borderRadius: '8px', fontSize: '12.5px', marginBottom: '14px' }}>{apptMsg}</div>}
 
               <form onSubmit={handleCreateAppointment}>
-                <div className="form-group" style={{ marginBottom: '12px' }}>
-                  <label style={{ fontSize: '11px', fontWeight: '800' }}>SELECCIONAR FECHA:</label>
-                  <input type="date" value={apptDate} onChange={(e) => setApptDate(e.target.value)} required style={{ borderRadius: '8px' }} />
+                <div className="form-group" style={{ marginBottom: '14px' }}>
+                  <label style={{ fontSize: '11px', fontWeight: '800', marginBottom: '6px', display: 'block' }}>SELECCIONAR FECHA:</label>
+                  <CustomDatePicker
+                    value={apptDate}
+                    onChange={(val) => setApptDate(val)}
+                    placeholder="Seleccionar fecha para tu cita..."
+                  />
                 </div>
 
-                <div className="form-group" style={{ marginBottom: '12px' }}>
-                  <label style={{ fontSize: '11px', fontWeight: '800' }}>HORARIO DE DISPONIBILIDAD:</label>
-                  <select value={apptTime} onChange={(e) => setApptTime(e.target.value)} style={{ borderRadius: '8px', width: '100%', padding: '10px', fontSize: '12.5px' }}>
-                    <option value="09:00">09:00 AM</option>
-                    <option value="10:00">10:00 AM</option>
-                    <option value="11:00">11:00 AM</option>
-                    <option value="14:00">02:00 PM</option>
-                    <option value="16:00">04:00 PM</option>
-                  </select>
+                <div className="form-group" style={{ marginBottom: '14px' }}>
+                  <label style={{ fontSize: '11px', fontWeight: '800', marginBottom: '6px', display: 'block' }}>HORARIO DE DISPONIBILIDAD:</label>
+                  <CustomSelect
+                    options={[
+                      { value: '09:00', label: '09:00 AM (Turno Mañana)', icon: '⏰' },
+                      { value: '10:00', label: '10:00 AM (Turno Mañana)', icon: '⏰' },
+                      { value: '11:00', label: '11:00 AM (Turno Mañana)', icon: '⏰' },
+                      { value: '14:00', label: '02:00 PM (Turno Tarde)', icon: '⏰' },
+                      { value: '16:00', label: '04:00 PM (Turno Tarde)', icon: '⏰' }
+                    ]}
+                    value={apptTime}
+                    onChange={(val) => setApptTime(val)}
+                  />
                 </div>
 
                 <div className="form-group" style={{ marginBottom: '16px' }}>
@@ -1695,6 +1735,9 @@ const MemberDashboard = () => {
             </div>
           </div>
         )}
+
+        {/* ALERTA DE SISTEMA FLOTANTE GLASSMORPHIC */}
+        <SystemAlert alert={systemAlert} onClose={() => setSystemAlert({ ...systemAlert, show: false })} />
 
       </main>
     </div>

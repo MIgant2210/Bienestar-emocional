@@ -13,16 +13,19 @@ tasks_bp = Blueprint('tasks', __name__)
 def get_tasks(current_user):
     """
     Retorna las tareas correspondientes según el rol e institución del usuario.
+    - Superadmin ve todas las tareas registradas en la plataforma.
     - Miembros ven tareas dirigidas a todos, a su departamento o a su correo individual.
-    - Administradores ven todas las tareas de su institución.
+    - Administradores ven todas las tareas asociadas.
     """
-    if not current_user.institution_id:
-        return jsonify({'message': 'El usuario no tiene una institución asociada.'}), 400
-        
-    if current_user.role == 'miembro':
+    if current_user.role == 'superadmin':
+        tasks = Task.query.order_by(Task.created_at.desc()).all()
+    elif current_user.role == 'miembro':
         user_dept = current_user.department or 'General'
         tasks = Task.query.filter(
-            Task.institution_id == current_user.institution_id,
+            or_(
+                Task.institution_id == current_user.institution_id,
+                Task.institution_id.is_(None)
+            ),
             or_(
                 Task.assigned_type == 'all',
                 Task.assigned_type.is_(None),
@@ -32,9 +35,15 @@ def get_tasks(current_user):
             )
         ).order_by(Task.created_at.desc()).all()
     else:
-        tasks = Task.query.filter_by(
-            institution_id=current_user.institution_id
-        ).order_by(Task.created_at.desc()).all()
+        if current_user.institution_id:
+            tasks = Task.query.filter(
+                or_(
+                    Task.institution_id == current_user.institution_id,
+                    Task.institution_id.is_(None)
+                )
+            ).order_by(Task.created_at.desc()).all()
+        else:
+            tasks = Task.query.order_by(Task.created_at.desc()).all()
         
     return jsonify([task.to_dict() for task in tasks]), 200
 
@@ -151,9 +160,22 @@ def update_task_status(current_user, task_id):
     
     try:
         db.session.commit()
+        
+        # Si la tarea se completó, otorgar XP por actividad de bienestar
+        gamification_result = None
+        if task.status == 'completada':
+            from app.services.gamification_service import GamificationService
+            gamification_result = GamificationService.award_xp(
+                user_id=current_user.id,
+                action_type='wellness_activity',
+                reference_id=str(task.id),
+                custom_description=f"Actividad completada: {task.title}"
+            )
+            
         return jsonify({
             'message': 'Tarea actualizada exitosamente.',
-            'task': task.to_dict()
+            'task': task.to_dict(),
+            'gamification': gamification_result
         }), 200
     except Exception as e:
         db.session.rollback()

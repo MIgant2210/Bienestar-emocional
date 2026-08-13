@@ -36,6 +36,94 @@
   100% { transform: translateX(140%); }
 }
 
+/* ==========================================================================
+   CIELO ESTRELLADO PERMANENTE CON DESTELLOS DE COLORES DEL SISTEMA
+   ========================================================================== */
+
+.starry-sky-container {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  width: 100vw;
+  height: 100vh;
+  pointer-events: none;
+  z-index: 0;
+  overflow: hidden;
+  opacity: 1 !important;
+  display: block !important;
+}
+
+/* Modo Claro: Destellos elegantes con colores del sistema */
+.star-node {
+  position: absolute;
+  background-color: var(--star-color, var(--primary));
+  border-radius: 50%;
+  box-shadow: 0 0 6px var(--star-color, var(--primary)), 0 0 14px var(--star-color, var(--primary));
+  animation: starTwinklePulse 3s infinite ease-in-out;
+}
+
+/* Estrellas Tipo Destello en Cruz ✨ con Colores del Sistema */
+.star-node.star-sparkle {
+  border-radius: 2px;
+  background: radial-gradient(circle, #ffffff 30%, var(--star-color, var(--primary)) 100%);
+  box-shadow: 0 0 8px var(--star-color, var(--primary)), 0 0 16px var(--star-color, var(--primary));
+}
+
+.star-node.star-sparkle::before,
+.star-node.star-sparkle::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background-color: var(--star-color, var(--primary));
+  box-shadow: 0 0 6px var(--star-color, var(--primary));
+}
+
+.star-node.star-sparkle::before {
+  width: 14px;
+  height: 2px;
+}
+
+.star-node.star-sparkle::after {
+  width: 2px;
+  height: 14px;
+}
+
+/* Modo Oscuro: Destellos Blancos y Neón Violeta */
+[data-theme='dark'] .star-node {
+  background-color: #ffffff;
+  box-shadow: 0 0 10px #ffffff, 0 0 20px rgba(165, 180, 252, 0.9);
+}
+
+[data-theme='dark'] .star-node.star-sparkle {
+  background: radial-gradient(circle, #ffffff 60%, rgba(199, 210, 254, 1) 100%);
+  box-shadow: 0 0 12px #ffffff, 0 0 24px rgba(129, 140, 248, 1);
+}
+
+[data-theme='dark'] .star-node.star-sparkle::before,
+[data-theme='dark'] .star-node.star-sparkle::after {
+  background-color: #ffffff;
+  box-shadow: 0 0 8px #ffffff;
+}
+
+@keyframes starTwinklePulse {
+  0% {
+    opacity: 0.3;
+    transform: scale(0.7) translateY(0px);
+  }
+  50% {
+    opacity: var(--base-opacity, 0.85);
+    transform: scale(1.4) translateY(-3px);
+  }
+  100% {
+    opacity: 0.3;
+    transform: scale(0.7) translateY(-6px);
+  }
+}
+
 .animate-fade {
   animation: fadeIn var(--transition-normal) forwards;
 }
@@ -353,30 +441,7 @@ input:focus, select:focus, textarea:focus {
 .auth-shell::before,
 .auth-shell::after {
   content: '';
-  position: absolute;
-  border-radius: 50%;
-  filter: blur(80px);
-  opacity: 0.34;
-  pointer-events: none;
-  z-index: 0;
-  animation: orbFloat 10s ease-in-out infinite;
-}
-
-.auth-shell::before {
-  width: 320px;
-  height: 320px;
-  top: -80px;
-  left: -70px;
-  background: rgba(109, 99, 255, 0.22);
-}
-
-.auth-shell::after {
-  width: 280px;
-  height: 280px;
-  right: -70px;
-  bottom: -80px;
-  background: rgba(255, 122, 92, 0.18);
-  animation-delay: -4s;
+  display: none !important;
 }
 
 .auth-content {
@@ -1047,5 +1112,103 @@ input:focus, select:focus, textarea:focus {
   color: var(--text-primary) !important;
 }
 
+/* ESTILOS PERSONALIZADOS DE SELECTS Y LISTAS */
+select, .custom-styled-select {
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%233b82f6' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+  background-repeat: no-repeat;
+  background-position: right 14px center;
+  background-size: 16px 16px;
+  padding-right: 40px !important;
+  border-radius: var(--radius-sm);
+  border: 1.5px solid var(--border);
+  transition: all 0.25s ease;
+  font-weight: 600;
+  cursor: pointer;
+}
 
+select:focus, .custom-styled-select:focus {
+  border-color: var(--primary) !important;
+  box-shadow: 0 0 0 3px var(--primary-glow) !important;
+  outline: none;
+}
 
+select option {
+  padding: 12px;
+  font-size: 13px;
+  font-weight: 600;
+  border-radius: 8px;
+}
+
+/* BOTÓN VOLVER AL LOGIN */
+.btn-glass-back:hover {
+  background-color: var(--primary) !important;
+  color: #ffffff !important;
+  border-color: var(--primary) !important;
+  box-shadow: var(--tech-glow) !important;
+  transform: translateY(-2px);
+}
+
+.btn-glass-back:hover svg {
+  color: #ffffff !important;
+  transform: translateX(-3px);
+  transition: transform 0.2s ease;
+}
+
+/* INPUTS DE FECHA Y SELECTORES ESTILIZADOS */
+input[type="date"], input[type="datetime-local"] {
+  padding: 10px 14px;
+  border-radius: var(--radius-sm);
+  border: 1.5px solid var(--border);
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+  font-family: inherit;
+  font-weight: 600;
+  font-size: 13px;
+  transition: all 0.25s ease;
+  cursor: pointer;
+}
+
+input[type="date"]:focus, input[type="datetime-local"]:focus {
+  border-color: var(--primary) !important;
+  box-shadow: 0 0 0 3px var(--primary-glow) !important;
+  outline: none;
+}
+
+/* CALENDARIO DE CITAS CLÍNICAS INTERACTIVO CON SCROLL AUTOMÁTICO */
+.calendar-day-box {
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  cursor: pointer;
+  user-select: none;
+}
+
+.calendar-day-box:hover {
+  border-color: var(--primary) !important;
+  transform: translateY(-2px) scale(1.02);
+  box-shadow: 0 6px 16px rgba(37, 99, 235, 0.15);
+  z-index: 2;
+}
+
+.calendar-day-box.selected-day {
+  border: 2px solid var(--primary) !important;
+  background-color: var(--primary-light) !important;
+  box-shadow: 0 0 0 3px var(--primary-glow) !important;
+}
+
+/* CHAT DE BIENESTAR ENTRE COLEGAS */
+.chat-bubble-sender {
+  background: linear-gradient(135deg, var(--primary) 0%, #1d4ed8 100%);
+  color: #ffffff;
+  border-radius: 18px 18px 2px 18px;
+  box-shadow: 0 3px 10px rgba(37, 99, 235, 0.2);
+}
+
+.chat-bubble-receiver {
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  border: 1px solid var(--border);
+  border-radius: 18px 18px 18px 2px;
+  box-shadow: var(--shadow-sm);
+}

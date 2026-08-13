@@ -11,12 +11,121 @@ evaluations_bp = Blueprint('evaluations', __name__)
 
 @evaluations_bp.route('/templates', methods=['GET'])
 @token_required
-@roles_accepted('admin_institucion', 'superadmin')
+@roles_accepted('admin_institucion', 'superadmin', 'profesional_apoyo', 'lider_depto')
 def get_templates(current_user):
     """
-    Retorna el banco de plantillas de tests precargados (Clima Laboral, Ánimo Personal, Bienestar Integral).
+    Retorna el banco de plantillas de tests precargados con 10 preguntas variadas (incluyendo dibujo canvas).
     """
     templates = Evaluation.query.filter_by(is_template=True).all()
+    if not templates or len(templates) < 6:
+        # Sembrar o actualizar plantillas (3 completas de 10 preguntas + 3 express de 5 preguntas)
+        rich_templates_data = [
+            {
+                "title": "[Plantilla] Chequeo Integral de Clima Laboral y Estrés",
+                "description": "Evaluación multidimensional de 10 preguntas para medir clima, sobrecarga laboral, resiliencia y expresión gráfica.",
+                "category": "Clima Laboral",
+                "questions": [
+                    {"id": "q1", "question": "¿Cómo calificarías tu nivel general de carga laboral durante esta semana?", "type": "scale_1_5"},
+                    {"id": "q2", "question": "Selecciona el emoji que mejor describe tu estado de ánimo dominante en tu jornada.", "type": "emoji_scale_5"},
+                    {"id": "q3", "question": "En una escala de 1 a 10, ¿qué tan respaldado te sientes por tu equipo de trabajo?", "type": "scale_1_10"},
+                    {"id": "q4", "question": "¿Sientes que tus metas individuales están alineadas con los objetivos del equipo?", "type": "boolean"},
+                    {"id": "q5", "question": "Describe en tus palabras qué factores han generado mayor tensión o cansancio recientemente.", "type": "text"},
+                    {"id": "q6", "question": "Dibuja en el lienzo tu nivel de energía o un símbolo gráfico que represente tu estado actual.", "type": "drawing"},
+                    {"id": "q7", "question": "¿Qué tan frecuentemente logras hacer pausas activas para descansar tu mente durante el día?", "type": "scale_1_5"},
+                    {"id": "q8", "question": "¿Has podido desconectarte laboralmente fuera de tu horario de trabajo?", "type": "boolean"},
+                    {"id": "q9", "question": "De 1 a 10, ¿cuál es tu nivel de satisfacción con las herramientas y espacios de trabajo?", "type": "scale_1_10"},
+                    {"id": "q10", "question": "¿Tienes alguna sugerencia o idea para mejorar el clima y bienestar de tu área?", "type": "text"}
+                ]
+            },
+            {
+                "title": "[Plantilla Express] Chequeo Rápido de Clima Laboral (5 Preguntas)",
+                "description": "Evaluación veloz de 5 ítems para medir tensión semanal, emoji de ánimo, voz, dibujo de estado y respaldo.",
+                "category": "Clima Laboral",
+                "questions": [
+                    {"id": "q1", "question": "¿Qué tan manejable ha sido tu nivel de carga laboral durante esta semana?", "type": "scale_1_5"},
+                    {"id": "q2", "question": "Selecciona el emoji que mejor describe tu estado de ánimo dominanate hoy.", "type": "emoji_scale_5"},
+                    {"id": "q3", "question": "Describe en pocas palabras el principal desafío o factor de tensión en tu jornada.", "type": "text"},
+                    {"id": "q4", "question": "Dibuja en el lienzo gráfico un boceto o símbolo de tu estado de ánimo actual.", "type": "drawing"},
+                    {"id": "q5", "question": "¿Te sientes respaldado por tu equipo de trabajo para resolver imprevistos?", "type": "boolean"}
+                ]
+            },
+            {
+                "title": "[Plantilla] Diagnóstico Semanal de Ánimo y Resiliencia",
+                "description": "Cuestionario de 10 ítems para explorar bienestar personal, motivación futura y expresión gráfica emocional.",
+                "category": "Ánimo Personal",
+                "questions": [
+                    {"id": "q1", "question": "¿Cómo te has sentido emocionalmente al iniciar tu jornada hoy?", "type": "emoji_scale_5"},
+                    {"id": "q2", "question": "¿Con qué frecuencia te has sentido agotado física o mentalmente esta semana?", "type": "scale_1_5"},
+                    {"id": "q3", "question": "¿Sientes que tienes la energía suficiente para completar tus proyectos encomendados?", "type": "boolean"},
+                    {"id": "q4", "question": "En una escala de 1 a 10, ¿qué tan satisfecho te sientes con tu equilibrio vida-trabajo?", "type": "scale_1_10"},
+                    {"id": "q5", "question": "Dicta por voz o escribe qué logro personal o grupal te ha producido mayor satisfacción.", "type": "text"},
+                    {"id": "q6", "question": "Expresa gráficamente mediante un dibujo qué emoción o concepto representa tu momento actual.", "type": "drawing"},
+                    {"id": "q7", "question": "¿Cómo evalúas la claridad con la que se comunican las prioridades en tu equipo?", "type": "scale_1_5"},
+                    {"id": "q8", "question": "¿Identificas señales de sobrecarga o tensión excesiva en tus actividades?", "type": "boolean"},
+                    {"id": "q9", "question": "De 1 a 10, ¿qué tan motivado te sientes respecto a tu desarrollo futuro?", "type": "scale_1_10"},
+                    {"id": "q10", "question": "¿De qué manera la institución o la Psicóloga podría brindarte mejor acompañamiento?", "type": "text"}
+                ]
+            },
+            {
+                "title": "[Plantilla Express] Diagnóstico Rápido de Ánimo (5 Preguntas)",
+                "description": "Cuestionario exprés de 5 ítems sobre energía personal, satisfacción, expresión gráfica y motivación futura.",
+                "category": "Ánimo Personal",
+                "questions": [
+                    {"id": "q1", "question": "Del 1 al 10, ¿cuál es tu nivel de energía para afrontar tus labores de hoy?", "type": "scale_1_10"},
+                    {"id": "q2", "question": "Selecciona el emoji que refleja tu nivel de calma ante los retos diarios.", "type": "emoji_scale_5"},
+                    {"id": "q3", "question": "Dicta por voz o escribe qué factor te ha brindado mayor motivación hoy.", "type": "text"},
+                    {"id": "q4", "question": "Expresa con un dibujo en el lienzo gráfico cómo visualizas tu equilibrio personal.", "type": "drawing"},
+                    {"id": "q5", "question": "¿Lograste desconectarte y descansar adecuadamente durante tu último receso?", "type": "boolean"}
+                ]
+            },
+            {
+                "title": "[Plantilla] Evaluación de Bienestar Integral y Prevención de Burnout",
+                "description": "Test de prevención de sobrecarga crónica de 10 preguntas con diagnósticos cuantitativos y lienzo interactivo.",
+                "category": "Bienestar Integral",
+                "questions": [
+                    {"id": "q1", "question": "¿Qué nivel de cansancio físico o mental acumulas al cierre de la semana?", "type": "scale_1_10"},
+                    {"id": "q2", "question": "Selecciona el emoji que refleja tu nivel de calma ante imprevistos cotidianos.", "type": "emoji_scale_5"},
+                    {"id": "q3", "question": "¿Has experimentado dificultad para concentrarte o conciliar el sueño por estrés?", "type": "boolean"},
+                    {"id": "q4", "question": "¿Con qué frecuencia te sientes reconocido y valorado en tus labores?", "type": "scale_1_5"},
+                    {"id": "q5", "question": "Describe las principales fuentes de satisfacción o desafío en tus responsabilidades.", "type": "text"},
+                    {"id": "q6", "question": "Dibuja un boceto o símbolo de tu lugar ideal para relajarte o recargar energía.", "type": "drawing"},
+                    {"id": "q7", "question": "¿Cuentas con canales de comunicación abiertos para manifestar tus necesidades?", "type": "boolean"},
+                    {"id": "q8", "question": "¿Qué tan efectivas consideras las actividades de integración y pausas activas?", "type": "scale_1_5"},
+                    {"id": "q9", "question": "Del 1 al 10, ¿qué tan seguro y positivo te sientes en tu entorno actual?", "type": "scale_1_10"},
+                    {"id": "q10", "question": "Ingresa cualquier observación adicional sobre tu salud emocional que desees compartir.", "type": "text"}
+                ]
+            },
+            {
+                "title": "[Plantilla Express] Chequeo Rápido de Prevención de Burnout (5 Preguntas)",
+                "description": "Test veloz de 5 preguntas de prevención de sobrecarga crónica con dibujo lienzo y escala cuantitativa.",
+                "category": "Bienestar Integral",
+                "questions": [
+                    {"id": "q1", "question": "¿Qué nivel de cansancio físico o mental acumulas al día de hoy?", "type": "scale_1_10"},
+                    {"id": "q2", "question": "¿Con qué frecuencia logras realizar pausas de respiración o descanso?", "type": "scale_1_5"},
+                    {"id": "q3", "question": "Escribe brevemente qué cambios te ayudarían a reducir la fatiga en tu jornada.", "type": "text"},
+                    {"id": "q4", "question": "Dibuja un boceto o garabato que represente tu espacio ideal para relajarte.", "type": "drawing"},
+                    {"id": "q5", "question": "¿Cuentas con la claridad y herramientas necesarias para cumplir tus funciones?", "type": "boolean"}
+                ]
+            }
+        ]
+
+        # Eliminar antiguas plantillas para re-sembrar las 6 completas
+        Evaluation.query.filter_by(is_template=True).delete()
+        db.session.commit()
+
+        for tdata in rich_templates_data:
+            tpl = Evaluation(
+                title=tdata["title"],
+                description=tdata["description"],
+                category=tdata["category"],
+                questions_json=json.dumps(tdata["questions"]),
+                is_active=True,
+                is_template=True
+            )
+            db.session.add(tpl)
+        db.session.commit()
+        templates = Evaluation.query.filter_by(is_template=True).all()
+
     return jsonify([t.to_dict() for t in templates]), 200
 
 @evaluations_bp.route('/activate-template', methods=['POST'])

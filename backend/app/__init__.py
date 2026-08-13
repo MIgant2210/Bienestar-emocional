@@ -18,8 +18,10 @@ def create_app(config_class=Config):
     db.init_app(app)
     migrate.init_app(app, db)
 
+    from app.utils.db_schema import ensure_task_schema, ensure_gamification_schema
     with app.app_context():
         ensure_task_schema(db)
+        ensure_gamification_schema(db)
     
     # Registrar los Blueprints (rutas de la API)
     from app.api.auth import auth_bp
@@ -33,6 +35,7 @@ def create_app(config_class=Config):
     from app.api.rewards import rewards_bp
     from app.api.appointments import appointments_bp
     from app.api.kudos import kudos_bp
+    from app.api.gamification import gamification_bp
     
     app.register_blueprint(auth_bp, url_prefix='/api/auth')
     app.register_blueprint(analysis_bp, url_prefix='/api/analysis')
@@ -45,6 +48,7 @@ def create_app(config_class=Config):
     app.register_blueprint(rewards_bp, url_prefix='/api/rewards')
     app.register_blueprint(appointments_bp, url_prefix='/api/appointments')
     app.register_blueprint(kudos_bp, url_prefix='/api/kudos')
+    app.register_blueprint(gamification_bp, url_prefix='/api/gamification')
     
     @app.teardown_appcontext
     def shutdown_session(exception=None):

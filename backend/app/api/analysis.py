@@ -58,9 +58,18 @@ def submit_reflection(current_user):
             db.session.add(new_alert)
             db.session.commit()
             
+        # Otorgar XP por completar reflexión/evaluación de bienestar
+        from app.services.gamification_service import GamificationService
+        gamification_result = GamificationService.award_xp(
+            user_id=current_user.id, 
+            action_type='reflection_completed', 
+            reference_id=str(new_reflection.id)
+        )
+            
         return jsonify({
             'message': 'Reflexión analizada y registrada exitosamente.',
-            'analysis': new_reflection.to_dict()
+            'analysis': new_reflection.to_dict(),
+            'gamification': gamification_result
         }), 201
     except Exception as e:
         db.session.rollback()

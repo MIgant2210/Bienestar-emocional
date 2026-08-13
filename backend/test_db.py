@@ -20,7 +20,7 @@ try:
     cur = conn.cursor()
     cur.execute("SELECT version();")
     db_version = cur.fetchone()
-    print("\n[ÉXITO] ¡Conexión a la base de datos de Clever Cloud establecida correctamente!")
+    print("\n[ÉXITO] ¡Conexión a la base de datos de Supabase establecida correctamente!")
     print(f"Versión de PostgreSQL: {db_version[0]}")
     cur.close()
     conn.close()

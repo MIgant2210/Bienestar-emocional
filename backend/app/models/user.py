@@ -16,6 +16,13 @@ class User(db.Model):
     institution_id = db.Column(db.UUID(as_uuid=True), db.ForeignKey('institutions.id', ondelete='CASCADE'), nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     
+    # Campos de Gamificación Profesional
+    total_xp = db.Column(db.Integer, default=0, nullable=False)
+    current_level = db.Column(db.Integer, default=1, nullable=False)
+    current_streak = db.Column(db.Integer, default=0, nullable=False)
+    longest_streak = db.Column(db.Integer, default=0, nullable=False)
+    last_activity_date = db.Column(db.Date, nullable=True)
+    
     # Relación con Reflexiones
     reflections = db.relationship(
         'Reflection',
@@ -41,5 +48,10 @@ class User(db.Model):
             'role': self.role,
             'department': self.department or 'General',
             'institution_id': str(self.institution_id) if self.institution_id else None,
+            'total_xp': self.total_xp or 0,
+            'current_level': self.current_level or 1,
+            'current_streak': self.current_streak or 0,
+            'longest_streak': self.longest_streak or 0,
+            'last_activity_date': self.last_activity_date.strftime('%Y-%m-%d') if self.last_activity_date else None,
             'created_at': self.created_at.isoformat()
         }

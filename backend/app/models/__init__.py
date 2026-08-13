@@ -8,3 +8,4 @@ from app.models.evaluation import Evaluation
 from app.models.reward import Reward, RewardRedemption
 from app.models.appointment import Appointment
 from app.models.kudos import Kudos
+from app.models.gamification import XpTransaction, UserActivityDay, Badge, UserBadge, XpRule

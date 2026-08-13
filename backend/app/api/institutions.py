@@ -27,6 +27,12 @@ def get_dashboard_data(current_user):
             
     if current_user.role != 'superadmin' and not institution_id:
         return jsonify({'message': 'Se requiere una institución vinculada.'}), 400
+
+    # Si la institución filtrada no tiene reflexiones registradas aún, mostrar los datos generales de la base de datos
+    if institution_id:
+        has_data = Reflection.query.filter(Reflection.institution_id == institution_id).count() > 0
+        if not has_data and current_user.role in ['superadmin', 'profesional_apoyo', 'admin_institucion']:
+            institution_id = None
         
     # 1. Métricas Generales (Promedios)
     averages_query = db.session.query(
@@ -145,6 +151,8 @@ def get_institution_members(current_user):
         inst_param = request.args.get('institution_id')
         if inst_param:
             institution_id = inst_param
+        else:
+            institution_id = None
 
     query = User.query
     if institution_id:
@@ -155,7 +163,7 @@ def get_institution_members(current_user):
 
 @institutions_bp.route('/members/<uuid:user_id>', methods=['PUT'])
 @token_required
-@roles_accepted('admin_institucion', 'superadmin')
+@roles_accepted('admin_institucion', 'superadmin', 'lider_depto')
 def update_institution_member(current_user, user_id):
     """
     Actualiza el rol, departamento o restablece la contraseña de un usuario.
@@ -194,4 +202,56 @@ def update_institution_member(current_user, user_id):
         'message': f'Usuario {target_user.first_name} {target_user.last_name} actualizado exitosamente.',
         'user': target_user.to_dict()
     }), 200
+
+@institutions_bp.route('/all', methods=['GET'])
+@token_required
+@roles_accepted('admin_institucion', 'superadmin', 'profesional_apoyo', 'lider_depto')
+def get_all_institutions(current_user):
+    """
+    Retorna todas las instituciones registradas con su lista de departamentos y miembros.
+    """
+    from app.models.institution import Institution
+    institutions = Institution.query.order_by(Institution.created_at.desc()).all()
+    result = []
+    for inst in institutions:
+        inst_users = User.query.filter_by(institution_id=inst.id).all()
+        departments = list(set([u.department for u in inst_users if u.department]))
+        if not departments:
+            departments = ['General', 'Tecnología', 'Salud', 'Educación']
+            
+        inst_data = inst.to_dict()
+        inst_data['total_members'] = len(inst_users)
+        inst_data['departments'] = departments
+        result.append(inst_data)
+        
+    return jsonify(result), 200
+
+@institutions_bp.route('', methods=['POST'])
+@token_required
+@roles_accepted('superadmin', 'admin_institucion')
+def create_institution(current_user):
+    """
+    Crea una nueva institución en la base de datos.
+    """
+    from app.models.institution import Institution
+    data = request.get_json() or {}
+    name = data.get('name')
+    inst_type = data.get('type', 'educativa')
+    
+    if not name:
+        return jsonify({'message': 'El nombre de la institución es requerido.'}), 400
+        
+    existing = Institution.query.filter_by(name=name).first()
+    if existing:
+        return jsonify({'message': 'Ya existe una institución con este nombre.'}), 400
+        
+    inst = Institution(name=name, type=inst_type)
+    db.session.add(inst)
+    db.session.commit()
+    
+    return jsonify({
+        'message': f'¡Institución "{inst.name}" creada exitosamente en Supabase!',
+        'institution': inst.to_dict()
+    }), 201
+
 

@@ -2,6 +2,7 @@ import React, { useState, useContext, useEffect, useRef } from 'react';
 import { AuthContext } from '../contexts/AuthContext';
 import { ThemeContext } from '../contexts/ThemeContext';
 import { Sun, Moon, Lock, Mail, Loader, BrainCircuit, Sparkles, ShieldCheck, HeartHandshake, ArrowRight, Eye, EyeOff } from 'lucide-react';
+import StarryBackground from '../components/StarryBackground';
 
 const Login = ({ onNavigate }) => {
   const { login } = useContext(AuthContext);
@@ -67,10 +68,12 @@ const Login = ({ onNavigate }) => {
         position: 'relative',
         overflow: 'hidden',
         perspective: '1200px',
-        backgroundColor: 'var(--bg-primary)', // Usar el color beige cálido de variables.css
-        background: 'var(--page-bg)' // El gradiente warm beige establecido
+        backgroundColor: 'var(--bg-primary)',
+        background: 'var(--page-bg)'
       }}
     >
+      {/* Cielo Estrellado con Destellos Continuos */}
+      <StarryBackground isLogin={true} />
       {/* Orbe luminoso dinámico que sigue al mouse */}
       <div 
         style={{
@@ -139,10 +142,17 @@ const Login = ({ onNavigate }) => {
             padding: '36px'
           }}
         >
-          <div className="auth-card__header" style={{ transform: 'translateZ(20px)' }}>
-            <div className="auth-card__eyebrow animate-float">
-              <BrainCircuit size={26} />
-            </div>
+          <div className="auth-card__header" style={{ transform: 'translateZ(20px)', textAlign: 'center' }}>
+            <img 
+              src="/logo.png" 
+              alt="EquilibrIA Logo" 
+              style={{ 
+                height: '75px', 
+                objectFit: 'contain', 
+                marginBottom: '12px',
+                filter: 'drop-shadow(0 4px 12px rgba(99, 102, 241, 0.25))'
+              }} 
+            />
             <h2 className="auth-card__title">Inicia sesión</h2>
             <p className="auth-card__subtitle">Accede a tu espacio de bienestar y organización.</p>
           </div>

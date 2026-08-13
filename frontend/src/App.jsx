@@ -5,6 +5,7 @@ import Login from './pages/Login';
 import Register from './pages/Register';
 import MemberDashboard from './pages/MemberDashboard';
 import AdminDashboard from './pages/AdminDashboard';
+import StarryBackground from './components/StarryBackground';
 import './styles/global.css';
 
 const NavigationHandler = () => {
@@ -47,6 +48,7 @@ function App() {
   return (
     <ThemeProvider>
       <AuthProvider>
+        <StarryBackground />
         <NavigationHandler />
       </AuthProvider>
     </ThemeProvider>
