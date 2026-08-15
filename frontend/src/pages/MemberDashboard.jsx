@@ -6,7 +6,8 @@ import {
   AlertCircle, CheckCircle2, ClipboardList, Sparkles, MessageSquare, 
   SendHorizontal, Bot, User, Loader, Calendar, ClipboardCheck, Sliders, Check, 
   HelpCircle, Mic, MicOff, ArrowLeft, FileAudio, Volume2, Play, Square, CheckCircle,
-  Flame, Zap, Award, ThumbsUp, ThumbsDown, Palette, Trophy
+  Flame, Zap, Award, ThumbsUp, ThumbsDown, Palette, Trophy, Bell, Settings as SettingsIcon,
+  UserPlus, X
 } from 'lucide-react';
 import api from '../services/api';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
@@ -15,11 +16,45 @@ import CustomSelect from '../components/CustomSelect';
 import CustomDatePicker from '../components/CustomDatePicker';
 import SystemAlert from '../components/SystemAlert';
 import GamificationWidget from '../components/GamificationWidget';
+import NotificationCenter from '../components/NotificationCenter';
+import TestResponseViewer from '../components/TestResponseViewer';
 import MyProgress from './MyProgress';
+import MyWellbeing from './MyWellbeing';
+import { useNavigate } from 'react-router-dom';
 
-const MemberDashboard = () => {
+const TAB_TO_URL = {
+  bienestar: '/mi-bienestar',
+  tasks: '/tareas',
+  tareas: '/tareas',
+  evaluations: '/tests',
+  clinical_appointments: '/agenda',
+  appointments: '/agenda',
+  progress: '/mi-progreso',
+  kudos: '/kudos',
+  chat_ia: '/chatbot-ia'
+};
+
+const MemberDashboard = ({ initialTab }) => {
   const { user, logout } = useContext(AuthContext);
   const { theme, toggleTheme, colorPalette, changePalette, PALETTES } = useContext(ThemeContext);
+  const navigate = useNavigate();
+
+  // Tab State inside Dashboard
+  const [activeTab, setActiveTab] = useState(initialTab || 'progress');
+
+  useEffect(() => {
+    if (initialTab) {
+      setActiveTab(initialTab);
+    }
+  }, [initialTab]);
+
+  const handleTabChange = (tabKey) => {
+    setActiveTab(tabKey);
+    const targetUrl = TAB_TO_URL[tabKey];
+    if (targetUrl) {
+      navigate(targetUrl);
+    }
+  };
 
   // System Alert Toast State
   const [systemAlert, setSystemAlert] = useState({ show: false, type: 'info', title: '', message: '' });
@@ -30,14 +65,12 @@ const MemberDashboard = () => {
   // Scroll ref for appointments
   const apptFormRef = useRef(null);
   
-  // State para menú de paletas
+  // State para menú de paletas y notificaciones
   const [showPaletteMenu, setShowPaletteMenu] = useState(false);
+  const [showNotifications, setShowNotifications] = useState(false);
 
   // View state: 'dashboard' o 'fill_test'
   const [activeView, setActiveView] = useState('dashboard');
-  
-  // Tab State inside Dashboard: 'bienestar', 'tareas', 'evaluations', 'chat_ia'
-  const [activeTab, setActiveTab] = useState('bienestar');
   
   // Bienestar States
   const [reflectionText, setReflectionText] = useState('');
@@ -78,16 +111,55 @@ const MemberDashboard = () => {
   const [apptLoading, setApptLoading] = useState(false);
   const [apptMsg, setApptMsg] = useState('');
 
-  // Muro de Gratitud y Kudos States
+  // Chat & Grupos de Trabajo States
   const [members, setMembers] = useState([]);
   const [kudosList, setKudosList] = useState([]);
-  const [kudoReceiver, setKudoReceiver] = useState('');
+  const [chatChannel, setChatChannel] = useState('general'); // 'general', 'kudos', 'group', 'direct'
+  const [kudoReceiverName, setKudoReceiverName] = useState('');
   const [kudoDept, setKudoDept] = useState('General');
   const [kudoMessage, setKudoMessage] = useState('');
   const [kudoBadge, setKudoBadge] = useState('Gratitud');
   const [kudoAnonymous, setKudoAnonymous] = useState(false);
   const [kudoLoading, setKudoLoading] = useState(false);
   const [kudoMsg, setKudoMsg] = useState('');
+  const [groupsList, setGroupsList] = useState(() => {
+    try {
+      const saved = localStorage.getItem('equilibrIA_groups');
+      return saved ? JSON.parse(saved) : [
+        { id: 'g_1', name: 'Comité de Clima y Bienestar', members: ['Todos'] },
+        { id: 'g_2', name: 'Equipo de Proyectos e Innovación', members: ['Equipo'] }
+      ];
+    } catch(e) {
+      return [{ id: 'g_1', name: 'Comité de Clima y Bienestar', members: ['Todos'] }];
+    }
+  });
+  const [selectedGroup, setSelectedGroup] = useState(null);
+  const [showCreateGroupModal, setShowCreateGroupModal] = useState(false);
+  const [newGroupName, setNewGroupName] = useState('');
+  const [newGroupMembers, setNewGroupMembers] = useState([]);
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+  const modernEmojis = ['😊', '🚀', '👍', '❤️', '💡', '🔥', '🙏', '🎉', '⭐', '💪', '👏', '😄', '🌟', '✨', '🧠', '💬', '💯', '🤝', '🙌', '🎯', '🍀', '🌈', '☕', '🎁'];
+
+  const handleCreateGroup = (e) => {
+    e.preventDefault();
+    if (!newGroupName.trim()) return;
+    const newG = {
+      id: `g_${Date.now()}`,
+      name: newGroupName.trim(),
+      members: newGroupMembers
+    };
+    setGroupsList(prev => {
+      const updated = [...prev, newG];
+      try { localStorage.setItem('equilibrIA_groups', JSON.stringify(updated)); } catch(err){}
+      return updated;
+    });
+    setNewGroupName('');
+    setNewGroupMembers([]);
+    setShowCreateGroupModal(false);
+    setSelectedGroup(newG);
+    setChatChannel('group');
+    showAlert('success', 'Grupo Creado', `¡Grupo "${newG.name}" creado exitosamente!`);
+  };
 
   // Evaluaciones / Tests Guiados (Módulo 4 Multimodal)
   const [evaluations, setEvaluations] = useState([]);
@@ -177,9 +249,10 @@ const MemberDashboard = () => {
   };
 
   const fetchMembers = async () => {
+    if (!user) return;
     try {
       const response = await api.get('/institutions/members');
-      setMembers(response.data);
+      setMembers(response.data || []);
     } catch (err) {
       console.error('Error al cargar lista de miembros:', err);
     }
@@ -231,28 +304,37 @@ const MemberDashboard = () => {
 
   const handleCreateKudos = async (e) => {
     e.preventDefault();
-    if (!kudoReceiver || !kudoMessage) {
-      showAlert('warning', 'Campos Requeridos', 'Por favor ingresa el nombre del compañero y tu mensaje de gratitud.');
+    if (!kudoMessage.trim()) {
+      showAlert('warning', 'Mensaje Requerido', 'Por favor ingresa un mensaje para enviar.');
       return;
     }
     setKudoLoading(true);
     setKudoMsg('');
+
+    let targetReceiver = kudoReceiverName;
+    if (chatChannel === 'general') {
+      targetReceiver = 'Canal General EquilibrIA';
+    } else if (chatChannel === 'kudos') {
+      targetReceiver = 'Muro de Gratitud e Insignias';
+    } else if (chatChannel === 'group' && selectedGroup) {
+      targetReceiver = selectedGroup.name;
+    }
+
     try {
       await api.post('/kudos', {
-        receiver_name: kudoReceiver,
-        receiver_department: kudoDept,
+        receiver_name: targetReceiver || 'Canal General',
+        receiver_department: kudoDept || 'General',
         message: kudoMessage,
         badge_type: kudoBadge,
         is_anonymous: kudoAnonymous
       });
       setXpPoints(prev => prev + 10);
-      setKudoMsg('¡Kudo publicado exitosamente en el Muro de Gratitud! (+10 XP)');
-      showAlert('success', 'Mensaje Publicado', '¡Kudo publicado exitosamente! (+10 XP)');
-      setKudoReceiver('');
+      setKudoMsg('¡Mensaje publicado exitosamente! (+10 XP)');
+      showAlert('success', 'Mensaje Enviado', '¡Mensaje compartido exitosamente! (+10 XP)');
       setKudoMessage('');
       fetchKudos();
     } catch (err) {
-      showAlert('danger', 'Mensaje Bloqueado', err.response?.data?.message || err.message);
+      showAlert('danger', 'Error al Enviar', err.response?.data?.message || err.message);
     } finally {
       setKudoLoading(false);
     }
@@ -912,10 +994,23 @@ const MemberDashboard = () => {
             <span>{xpPoints} XP</span>
           </span>
 
+          {/* Centro de Notificaciones */}
+          <div style={{ position: 'relative' }}>
+            <button 
+              onClick={() => { setShowNotifications(!showNotifications); setShowPaletteMenu(false); }}
+              className="theme-toggle"
+              style={{ border: '1px solid var(--border)', width: '36px', height: '36px', borderRadius: '50%', position: 'relative' }}
+              title="Centro de Notificaciones"
+            >
+              <Bell size={16} style={{ color: 'var(--primary)' }} />
+            </button>
+            <NotificationCenter isOpen={showNotifications} onClose={() => setShowNotifications(false)} />
+          </div>
+
           {/* Botón Selector de Paletas de Colores 🎨 */}
           <div style={{ position: 'relative' }}>
             <button 
-              onClick={() => setShowPaletteMenu(!showPaletteMenu)}
+              onClick={() => { setShowPaletteMenu(!showPaletteMenu); setShowNotifications(false); }}
               className="theme-toggle"
               style={{ border: '1px solid var(--border)', width: '36px', height: '36px', borderRadius: '50%' }}
               title="Personalizar Paleta de Colores del Sistema"
@@ -968,6 +1063,16 @@ const MemberDashboard = () => {
           <button onClick={toggleTheme} className="theme-toggle" style={{ border: '1px solid var(--border)', width: '36px', height: '36px', borderRadius: '50%' }} title="Cambiar Modo Claro/Oscuro">
             {theme === 'light' ? <Moon size={15} /> : <Sun size={15} />}
           </button>
+
+          {/* Botón Acceso a Configuración */}
+          <button 
+            onClick={() => navigate('/configuracion')} 
+            className="theme-toggle" 
+            style={{ border: '1px solid var(--border)', width: '36px', height: '36px', borderRadius: '50%' }} 
+            title="Configuración de la Cuenta y Privacidad"
+          >
+            <SettingsIcon size={15} style={{ color: 'var(--text-primary)' }} />
+          </button>
           
           <div style={{ textAlign: 'right', fontSize: '12.5px' }}>
             <span style={{ fontWeight: '800', display: 'block' }}>{user?.first_name} {user?.last_name}</span>
@@ -985,180 +1090,22 @@ const MemberDashboard = () => {
         
         {/* Pestañas de Navegación Profesional (Sin Emojis en Menú) */}
         <div className="tab-container" style={{ width: '100%', overflowX: 'auto', flexWrap: 'nowrap' }}>
-          <button className={`tab-btn ${activeTab === 'bienestar' ? 'active' : ''}`} onClick={() => setActiveTab('bienestar')}><Brain size={15} /><span>Mi Bienestar</span></button>
-          <button className={`tab-btn ${activeTab === 'tareas' ? 'active' : ''}`} onClick={() => setActiveTab('tareas')}><ClipboardList size={15} /><span>Mis Tareas</span>{tasks.filter(t => t.status === 'pendiente').length > 0 && <span style={{ backgroundColor: 'var(--danger)', color: '#fff', fontSize: '10px', padding: '2px 6px', borderRadius: 'var(--radius-full)', fontWeight: 'bold' }}>{tasks.filter(t => t.status === 'pendiente').length}</span>}</button>
-          <button className={`tab-btn ${activeTab === 'evaluations' ? 'active' : ''}`} onClick={() => setActiveTab('evaluations')}><Calendar size={15} /><span>Tests</span>{evaluations.length > 0 && <span style={{ backgroundColor: 'var(--primary)', color: '#fff', fontSize: '10px', padding: '2px 6px', borderRadius: 'var(--radius-full)', fontWeight: 'bold' }}>{evaluations.length}</span>}</button>
-          <button className={`tab-btn ${activeTab === 'progress' ? 'active' : ''}`} onClick={() => setActiveTab('progress')}><Trophy size={15} /><span>Mi Progreso</span></button>
-          <button className={`tab-btn ${activeTab === 'appointments' ? 'active' : ''}`} onClick={() => setActiveTab('appointments')}><Calendar size={15} /><span>Citas 1 a 1</span></button>
-          <button className={`tab-btn ${activeTab === 'kudos' ? 'active' : ''}`} onClick={() => setActiveTab('kudos')}><Heart size={15} /><span>Muro de Gratitud</span></button>
-          <button className={`tab-btn ${activeTab === 'chat_ia' ? 'active' : ''}`} onClick={() => setActiveTab('chat_ia')}><Sparkles size={15} /><span>Asistente IA</span></button>
+          <button className={`tab-btn ${activeTab === 'bienestar' ? 'active' : ''}`} onClick={() => handleTabChange('bienestar')}><Brain size={15} /><span>Mi Bienestar</span></button>
+          <button className={`tab-btn ${activeTab === 'tareas' || activeTab === 'tasks' ? 'active' : ''}`} onClick={() => handleTabChange('tasks')}><ClipboardList size={15} /><span>Mis Tareas</span>{tasks.filter(t => t.status === 'pendiente').length > 0 && <span style={{ backgroundColor: 'var(--danger)', color: '#fff', fontSize: '10px', padding: '2px 6px', borderRadius: 'var(--radius-full)', fontWeight: 'bold' }}>{tasks.filter(t => t.status === 'pendiente').length}</span>}</button>
+          <button className={`tab-btn ${activeTab === 'evaluations' ? 'active' : ''}`} onClick={() => handleTabChange('evaluations')}><Calendar size={15} /><span>Tests</span>{evaluations.length > 0 && <span style={{ backgroundColor: 'var(--primary)', color: '#fff', fontSize: '10px', padding: '2px 6px', borderRadius: 'var(--radius-full)', fontWeight: 'bold' }}>{evaluations.length}</span>}</button>
+          <button className={`tab-btn ${activeTab === 'progress' ? 'active' : ''}`} onClick={() => handleTabChange('progress')}><Trophy size={15} /><span>Mi Progreso</span></button>
+          <button className={`tab-btn ${activeTab === 'appointments' || activeTab === 'clinical_appointments' ? 'active' : ''}`} onClick={() => handleTabChange('clinical_appointments')}><Calendar size={15} /><span>Citas 1 a 1</span></button>
+          <button className={`tab-btn ${activeTab === 'kudos' ? 'active' : ''}`} onClick={() => handleTabChange('kudos')}><MessageSquare size={15} /><span>Chat & Grupos</span></button>
+          <button className={`tab-btn ${activeTab === 'chat_ia' ? 'active' : ''}`} onClick={() => handleTabChange('chat_ia')}><Sparkles size={15} /><span>Asistente IA</span></button>
         </div>
 
-        {/* TAB 1: MI BIENESTAR */}
+        {/* TAB 1: MI BIENESTAR INTEGRAL */}
         {activeTab === 'bienestar' && (
-          <div className="animate-fade" style={{ display: 'grid', gap: '20px' }}>
-            <GamificationWidget onNavigateToFullProgress={() => setActiveTab('progress')} />
-            <div className="grid grid-2">
-              <div className="glass-card">
-              {/* Mascota Equi en la Reflexión Diaria */}
-              {renderEquiMascot(0)}
-
-              <h3 style={{ fontSize: '17px', fontWeight: '900', marginTop: '14px', marginBottom: '6px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <Brain size={18} style={{ color: 'var(--primary)' }} /> Reflexión Abierta Diaria
-              </h3>
-              <p style={{ fontSize: '12.5px', color: 'var(--text-secondary)', marginBottom: '14px', lineHeight: '1.5' }}>
-                Selecciona tu estado de ánimo con emojis, dicta por voz o escribe cómo te sientes hoy.
-              </p>
-
-              {/* Selector Rápido de Estado de Ánimo con Emojis */}
-              <div style={{ marginBottom: '14px' }}>
-                <label style={{ fontSize: '11px', fontWeight: '800', color: 'var(--text-secondary)', display: 'block', marginBottom: '6px' }}>
-                  ¿CÓMO TE SIENTES HOY? (SELECCIÓN RÁPIDA CON EMOJIS):
-                </label>
-                <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-                  {[
-                    { emoji: '😫', label: 'Estresado' },
-                    { emoji: '🙁', label: 'Agotado' },
-                    { emoji: '😐', label: 'Neutral' },
-                    { emoji: '🙂', label: 'Tranquilo' },
-                    { emoji: '😁', label: 'Excelente' }
-                  ].map((mood, mIdx) => (
-                    <button
-                      key={mIdx}
-                      type="button"
-                      onClick={() => setReflectionText(prev => prev ? `${prev} Me siento ${mood.label.toLowerCase()} ${mood.emoji}.` : `Hoy me siento ${mood.label.toLowerCase()} ${mood.emoji}.`)}
-                      className="duo-pill"
-                      style={{ padding: '6px 12px', fontSize: '12px' }}
-                    >
-                      <span style={{ fontSize: '16px' }}>{mood.emoji}</span>
-                      <span>{mood.label}</span>
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {reflectionError && (
-                <div style={{ backgroundColor: 'var(--danger-light)', border: '1px solid var(--danger)', color: 'var(--danger)', padding: '10px', borderRadius: 'var(--radius-sm)', fontSize: '12.5px', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <AlertCircle size={15} />
-                  <span>{reflectionError}</span>
-                </div>
-              )}
-
-              <form onSubmit={handleSubmitReflection}>
-                <div className="form-group" style={{ marginBottom: '14px' }}>
-                  <textarea 
-                    rows="4" 
-                    placeholder="Platica sobre tu día... Ej. Me sentí un poco saturado por la tarde pero logré resolver mis actividades." 
-                    value={reflectionText} 
-                    onChange={(e) => setReflectionText(e.target.value)} 
-                    required 
-                    style={{ resize: 'vertical' }} 
-                  />
-                </div>
-
-                <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', marginBottom: '10px' }}>
-                  {/* Botón de Dictado por Voz en Tiempo Real */}
-                  {isRecording && activeRecordingQId === 'daily_ref' ? (
-                    <button
-                      type="button"
-                      onClick={stopRecordingSim}
-                      className="btn"
-                      style={{ backgroundColor: 'var(--danger)', color: '#fff', fontSize: '12.5px', padding: '10px 16px', borderRadius: '12px', flex: 1 }}
-                    >
-                      <Square size={14} />
-                      <span>Detener Micrófono ({recordingSeconds}s)</span>
-                    </button>
-                  ) : (
-                    <button
-                      type="button"
-                      onClick={() => startRecordingSim('daily_ref')}
-                      className="duo-pill"
-                      style={{ flex: 1, justifyContent: 'center', padding: '10px 16px', fontSize: '12.5px' }}
-                    >
-                      <Mic size={16} style={{ color: 'var(--primary)' }} />
-                      <span>Hablar por Micrófono (Voz a Texto)</span>
-                    </button>
-                  )}
-
-                  <button type="submit" className="btn btn-primary" disabled={reflectionLoading} style={{ flex: 1.2, padding: '10px 16px', borderRadius: '12px' }}>
-                    {reflectionLoading ? <Loader className="animate-spin" size={16} /> : <><Send size={15} /><span>Analizar Bienestar (+20 XP)</span></>}
-                  </button>
-                </div>
-              </form>
-
-              {latestAnalysis && (
-                <div style={{ marginTop: '24px', padding: '18px', borderRadius: 'var(--radius-md)', backgroundColor: 'var(--bg-tertiary)', border: '1px solid var(--border)' }}>
-                  <h4 style={{ fontSize: '13px', fontWeight: '800', marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '6px', textTransform: 'uppercase' }}>
-                    <Smile size={16} style={{ color: 'var(--accent)' }} /> Métricas de Análisis Reciente
-                  </h4>
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px', marginBottom: '12px' }}>
-                    <div style={{ padding: '10px', backgroundColor: 'var(--bg-secondary)', borderRadius: 'var(--radius-sm)', textAlign: 'center' }}>
-                      <span style={{ fontSize: '10px', color: 'var(--text-secondary)', fontWeight: '700' }}>ESTRÉS</span>
-                      <span style={{ fontSize: '18px', fontWeight: '900', display: 'block', color: latestAnalysis.stress_score > 60 ? 'var(--danger)' : 'var(--success)' }}>{latestAnalysis.stress_score}%</span>
-                    </div>
-                    <div style={{ padding: '10px', backgroundColor: 'var(--bg-secondary)', borderRadius: 'var(--radius-sm)', textAlign: 'center' }}>
-                      <span style={{ fontSize: '10px', color: 'var(--text-secondary)', fontWeight: '700' }}>MOTIVACIÓN</span>
-                      <span style={{ fontSize: '18px', fontWeight: '900', display: 'block', color: latestAnalysis.motivation_score > 55 ? 'var(--success)' : 'var(--warning)' }}>{latestAnalysis.motivation_score}%</span>
-                    </div>
-                    <div style={{ padding: '10px', backgroundColor: 'var(--bg-secondary)', borderRadius: 'var(--radius-sm)', textAlign: 'center' }}>
-                      <span style={{ fontSize: '10px', color: 'var(--text-secondary)', fontWeight: '700' }}>AGOTAMIENTO</span>
-                      <span style={{ fontSize: '18px', fontWeight: '900', display: 'block', color: latestAnalysis.burnout_score > 60 ? 'var(--warning)' : 'var(--success)' }}>{latestAnalysis.burnout_score}%</span>
-                    </div>
-                  </div>
-                </div>
-              )}
-            </div>
-
-            <div style={{ display: 'grid', gap: '20px' }}>
-              <div className="glass-card">
-                <h3 style={{ fontSize: '15px', fontWeight: '900', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <Activity size={17} style={{ color: 'var(--accent)' }} /> Curva de Ánimo Histórica
-                </h3>
-                {chartData.length === 0 ? (
-                  <div style={{ height: '200px', display: 'flex', justifyContent: 'center', alignItems: 'center', color: 'var(--text-muted)', fontSize: '12.5px' }}>Registra una reflexión para ver tu evolución.</div>
-                ) : (
-                  <div style={{ width: '100%', height: '200px' }}>
-                    <ResponsiveContainer width="100%" height="100%">
-                      <LineChart data={chartData}>
-                        <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
-                        <XAxis dataKey="fecha" stroke="var(--text-muted)" fontSize={10} />
-                        <YAxis stroke="var(--text-muted)" fontSize={10} domain={[0, 100]} />
-                        <Tooltip contentStyle={{ backgroundColor: 'var(--bg-secondary)', borderColor: 'var(--border)', borderRadius: '8px', fontSize: '12px' }} />
-                        <Line type="monotone" dataKey="Estrés" stroke="var(--danger)" strokeWidth={2.5} dot={{ r: 3 }} />
-                        <Line type="monotone" dataKey="Motivación" stroke="var(--success)" strokeWidth={2.5} dot={{ r: 3 }} />
-                      </LineChart>
-                    </ResponsiveContainer>
-                  </div>
-                )}
-              </div>
-
-              <div className="glass-card">
-                <h3 style={{ fontSize: '15px', fontWeight: '900', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <History size={17} /> Historial de Reflexiones y Tests
-                </h3>
-                <div style={{ display: 'grid', gap: '10px', maxHeight: '220px', overflowY: 'auto' }}>
-                  {history.length === 0 ? (
-                    <p style={{ color: 'var(--text-muted)', fontSize: '12px', textAlign: 'center' }}>No hay reflexiones previas.</p>
-                  ) : (
-                    history.map((ref) => (
-                      <div key={ref.id} className="futuristic-card-item">
-                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px', fontSize: '10.5px' }}>
-                          <span style={{ color: 'var(--text-muted)' }}>{new Date(ref.created_at).toLocaleDateString()}</span>
-                          <span style={{ fontWeight: '800', color: ref.dominant_sentiment === 'Positivo' ? 'var(--success)' : 'var(--danger)' }}>{ref.dominant_sentiment}</span>
-                        </div>
-                        <p style={{ fontSize: '12px', fontStyle: 'italic' }}>"{ref.original_text}"</p>
-                      </div>
-                    ))
-                  )}
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
+          <MyWellbeing onNavigateToTab={(tab) => handleTabChange(tab)} />
         )}
 
         {/* TAB 2: TAREAS (VISTA LISTA Y TABLERO KANBAN INTERACTIVO) */}
-        {activeTab === 'tareas' && (
+        {(activeTab === 'tareas' || activeTab === 'tasks') && (
           <div className="glass-card animate-fade">
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', flexWrap: 'wrap', gap: '12px' }}>
               <div>
@@ -1416,7 +1363,7 @@ const MemberDashboard = () => {
         )}
 
         {/* NUEVO MÓDULO 2: AGENDA DE CITAS Y SESIONES DE ACOMPAÑAMIENTO 1 A 1 📅 */}
-        {activeTab === 'appointments' && (
+        {(activeTab === 'appointments' || activeTab === 'clinical_appointments') && (
           <div className="grid grid-2 animate-fade" style={{ alignItems: 'start' }}>
             <div className="glass-card">
               <h3 style={{ fontSize: '16px', fontWeight: '900', marginBottom: '14px', display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -1475,7 +1422,7 @@ const MemberDashboard = () => {
                   appointments.map(a => (
                     <div key={a.id} className="futuristic-card-item" style={{ padding: '14px', borderLeft: '4px solid var(--primary)' }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
-                        <span style={{ fontSize: '13px', fontWeight: '800' }}>{a.professional_name}</span>
+                        <span style={{ fontSize: '13px', fontWeight: '800' }}>{a.professional_name || 'Psicóloga Institucional'}</span>
                         <span style={{ fontSize: '10px', fontWeight: '800', padding: '2px 6px', borderRadius: '8px', backgroundColor: 'var(--success-light)', color: 'var(--success)' }}>{a.status}</span>
                       </div>
                       <p style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>{a.reason}</p>
@@ -1490,93 +1437,270 @@ const MemberDashboard = () => {
           </div>
         )}
 
-        {/* NUEVO MÓDULO 3: MURO DE RECONOCIMIENTO Y KUDOS 💖 */}
+        {/* NUEVO MÓDULO 3: CHAT DE EQUIPO, SALAS Y GRUPOS DE TRABAJO 💬 */}
         {activeTab === 'kudos' && (
-          <div className="grid grid-2 animate-fade" style={{ alignItems: 'start' }}>
-            <div className="glass-card">
-              <h3 style={{ fontSize: '16px', fontWeight: '900', marginBottom: '14px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <Heart size={18} style={{ color: 'var(--danger)' }} /> Publicar un Kudo de Gratitud
-              </h3>
-              <p style={{ fontSize: '12.5px', color: 'var(--text-secondary)', marginBottom: '14px' }}>
-                Reconoce públicamente o de forma anónima el esfuerzo de un compañero de equipo. (+10 XP)
-              </p>
+          <div className="glass-card animate-fade" style={{ padding: '0', overflow: 'hidden', borderRadius: '24px', border: '1px solid var(--border)', height: '650px', display: 'flex' }}>
+            
+            {/* Panel Izquierdo: Directorio de Canales, Grupos y Colegas */}
+            <div style={{ width: '300px', backgroundColor: 'var(--bg-secondary)', borderRight: '1px solid var(--border)', display: 'flex', flexDirection: 'column' }}>
+              <div style={{ padding: '16px', borderBottom: '1px solid var(--border)', backgroundColor: 'var(--bg-tertiary)' }}>
+                <h4 style={{ fontSize: '14px', fontWeight: '900', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <MessageSquare size={16} style={{ color: 'var(--primary)' }} /> Chat & Grupos de Equipo
+                </h4>
+                <span style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>Canales de interacción y bienestar</span>
 
-              {kudoMsg && <div style={{ backgroundColor: 'var(--success-light)', border: '1px solid var(--success)', color: 'var(--success)', padding: '10px', borderRadius: '8px', fontSize: '12.5px', marginBottom: '14px' }}>{kudoMsg}</div>}
-
-              <form onSubmit={handleCreateKudos}>
-                <div className="form-group" style={{ marginBottom: '12px' }}>
-                  <label style={{ fontSize: '11px', fontWeight: '800' }}>SELECCIONAR COMPAÑERO / DEPARTAMENTO:</label>
-                  <select 
-                    value={kudoReceiver}
-                    onChange={(e) => {
-                      setKudoReceiver(e.target.value);
-                      const targetMem = members.find(m => `${m.first_name} ${m.last_name}` === e.target.value);
-                      if (targetMem) setKudoDept(targetMem.department || 'General');
-                    }}
-                    required
-                    style={{ width: '100%', padding: '10px', borderRadius: '8px', fontSize: '12.5px', backgroundColor: 'var(--bg-secondary)', color: 'var(--text-primary)', border: '1px solid var(--border)' }}
-                  >
-                    <option value="">-- Seleccionar Compañero de la Lista --</option>
-                    {members.map(m => (
-                      <option key={m.id} value={`${m.first_name} ${m.last_name}`}>{m.first_name} {m.last_name} ({m.department || 'General'})</option>
-                    ))}
-                    <option value="Equipo General">Toda la Institución / Equipo</option>
-                  </select>
-                </div>
-
-                <div className="form-group" style={{ marginBottom: '12px' }}>
-                  <label style={{ fontSize: '11px', fontWeight: '800' }}>TIPO DE INSIGNIA / RECONOCIMIENTO:</label>
-                  <select value={kudoBadge} onChange={(e) => setKudoBadge(e.target.value)} style={{ borderRadius: '8px', width: '100%', padding: '10px', fontSize: '12.5px' }}>
-                    <option value="Gratitud">💖 Gratitud & Agradecimiento</option>
-                    <option value="Compañerismo">🤝 Compañerismo & Empatía</option>
-                    <option value="Resiliencia">🌿 Resiliencia & Apoyo</option>
-                    <option value="Liderazgo">⭐ Liderazgo Inspirador</option>
-                  </select>
-                </div>
-
-                <div className="form-group" style={{ marginBottom: '12px' }}>
-                  <label style={{ fontSize: '11px', fontWeight: '800' }}>MENSAJE DE RECONOCIMIENTO:</label>
-                  <textarea rows="3" placeholder="Escribe tus palabras de gratitud..." value={kudoMessage} onChange={(e) => setKudoMessage(e.target.value)} required style={{ borderRadius: '8px' }} />
-                </div>
-
-                <div style={{ marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <input type="checkbox" id="anon" checked={kudoAnonymous} onChange={(e) => setKudoAnonymous(e.target.checked)} />
-                  <label htmlFor="anon" style={{ fontSize: '12px', cursor: 'pointer' }}>Enviar de forma anónima 🕵️‍♂️</label>
-                </div>
-
-                <button type="submit" className="btn btn-primary" disabled={kudoLoading} style={{ width: '100%', padding: '12px', borderRadius: '10px', fontWeight: '900' }}>
-                  {kudoLoading ? <Loader className="animate-spin" size={16} /> : '💖 Publicar Kudo en el Muro (+10 XP)'}
+                <button 
+                  type="button"
+                  onClick={() => setShowCreateGroupModal(true)} 
+                  className="btn btn-primary" 
+                  style={{ width: '100%', marginTop: '10px', padding: '8px 12px', fontSize: '11.5px', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', fontWeight: '800' }}
+                >
+                  <UserPlus size={14} /> ＋ Crear Grupo de Trabajo
                 </button>
-              </form>
+              </div>
+
+              <div style={{ flex: 1, overflowY: 'auto', padding: '10px', display: 'grid', gap: '6px' }}>
+                <button 
+                  type="button"
+                  onClick={() => { setChatChannel('general'); setSelectedGroup(null); }}
+                  className={`duo-card ${chatChannel === 'general' ? 'selected' : ''}`}
+                  style={{ justifyContent: 'flex-start', padding: '10px 12px', gap: '10px' }}
+                >
+                  <span style={{ fontSize: '20px' }}>💬</span>
+                  <div style={{ textAlign: 'left' }}>
+                    <h5 style={{ fontSize: '13px', fontWeight: '800' }}>Canal General EquilibrIA</h5>
+                    <span style={{ fontSize: '10.5px', color: 'var(--text-muted)' }}>Comunidad Institucional</span>
+                  </div>
+                </button>
+
+                <button 
+                  type="button"
+                  onClick={() => { setChatChannel('kudos'); setSelectedGroup(null); }}
+                  className={`duo-card ${chatChannel === 'kudos' ? 'selected' : ''}`}
+                  style={{ justifyContent: 'flex-start', padding: '10px 12px', gap: '10px' }}
+                >
+                  <span style={{ fontSize: '20px' }}>💖</span>
+                  <div style={{ textAlign: 'left' }}>
+                    <h5 style={{ fontSize: '13px', fontWeight: '800' }}>Muro de Gratitud e Insignias</h5>
+                    <span style={{ fontSize: '10.5px', color: 'var(--text-muted)' }}>Reconocimientos comunitarios</span>
+                  </div>
+                </button>
+
+                {/* Sección de Grupos de Trabajo */}
+                <div style={{ fontSize: '10.5px', fontWeight: '900', color: 'var(--text-muted)', textTransform: 'uppercase', marginTop: '12px', padding: '0 6px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span>GRUPOS DE TRABAJO ({groupsList.length})</span>
+                </div>
+                {groupsList.map(g => (
+                  <button
+                    key={g.id}
+                    type="button"
+                    onClick={() => {
+                      setSelectedGroup(g);
+                      setChatChannel('group');
+                    }}
+                    className={`duo-card ${selectedGroup?.id === g.id && chatChannel === 'group' ? 'selected' : ''}`}
+                    style={{ justifyContent: 'flex-start', padding: '8px 10px', gap: '10px' }}
+                  >
+                    <div style={{ width: '32px', height: '32px', borderRadius: '50%', backgroundColor: 'var(--accent-light)', color: 'var(--accent)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '900', fontSize: '14px' }}>
+                      👥
+                    </div>
+                    <div style={{ textAlign: 'left', flex: 1, overflow: 'hidden' }}>
+                      <h5 style={{ fontSize: '12.5px', fontWeight: '800', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{g.name}</h5>
+                      <span style={{ fontSize: '10px', color: 'var(--text-muted)' }}>{g.members?.length || 0} integrantes</span>
+                    </div>
+                  </button>
+                ))}
+
+                {/* Sección del Directorio de Compañeros */}
+                <div style={{ fontSize: '10.5px', fontWeight: '900', color: 'var(--text-muted)', textTransform: 'uppercase', marginTop: '12px', padding: '0 6px' }}>
+                  DIRECTORIO DE COMPAÑEROS ({members.length})
+                </div>
+
+                {members.map(m => (
+                  <button 
+                    key={m.id}
+                    type="button"
+                    onClick={() => {
+                      setKudoReceiverName(`${m.first_name} ${m.last_name}`);
+                      setChatChannel('direct');
+                      setSelectedGroup(null);
+                    }}
+                    className={`duo-card ${kudoReceiverName === `${m.first_name} ${m.last_name}` && chatChannel === 'direct' ? 'selected' : ''}`}
+                    style={{ justifyContent: 'flex-start', padding: '8px 10px', gap: '10px' }}
+                  >
+                    <div style={{ width: '32px', height: '32px', borderRadius: '50%', backgroundColor: 'var(--primary-light)', color: 'var(--primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '900', fontSize: '12px' }}>
+                      {m.first_name?.[0]}{m.last_name?.[0]}
+                    </div>
+                    <div style={{ textAlign: 'left', flex: 1, overflow: 'hidden' }}>
+                      <h5 style={{ fontSize: '12.5px', fontWeight: '800', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{m.first_name} {m.last_name}</h5>
+                      <span style={{ fontSize: '10px', color: 'var(--text-muted)' }}>{m.department || 'General'}</span>
+                    </div>
+                  </button>
+                ))}
+              </div>
             </div>
 
-            <div className="glass-card">
-              <h3 style={{ fontSize: '16px', fontWeight: '900', marginBottom: '14px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <Sparkles size={18} style={{ color: 'var(--accent)' }} /> Muro de Gratitud Comunitario
-              </h3>
-              <div style={{ display: 'grid', gap: '12px', maxHeight: '420px', overflowY: 'auto' }}>
-                {kudosList.length === 0 ? (
-                  <p style={{ color: 'var(--text-muted)', fontSize: '12.5px', textAlign: 'center' }}>Sé el primero en enviar un Kudo de gratitud.</p>
-                ) : (
-                  kudosList.map(k => (
-                    <div key={k.id} className="futuristic-card-item" style={{ padding: '14px', borderLeft: '4px solid var(--accent)' }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px' }}>
-                        <span style={{ fontSize: '12.5px', fontWeight: '900', color: 'var(--primary)' }}>
-                          {k.sender_name} ➔ <span style={{ color: 'var(--text-primary)' }}>{k.receiver_name}</span>
-                        </span>
-                        <span style={{ fontSize: '10px', fontWeight: '800', padding: '2px 6px', borderRadius: '8px', backgroundColor: 'var(--accent-light)', color: 'var(--accent)' }}>
-                          {k.badge_type}
-                        </span>
-                      </div>
-                      <p style={{ fontSize: '12px', color: 'var(--text-primary)', fontStyle: 'italic', margin: '4px 0' }}>"{k.message}"</p>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '10.5px', color: 'var(--text-muted)', marginTop: '6px' }}>
-                        <span>{new Date(k.created_at).toLocaleDateString()}</span>
-                        <span>❤️ {k.likes_count} Reacciones</span>
-                      </div>
-                    </div>
-                  ))
-                )}
+            {/* Panel Derecho: Sala de Chat Stream de Bienestar con Entrada Fija */}
+            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', backgroundColor: 'var(--bg-primary)', height: '100%' }}>
+              
+              {/* Cabecera de la Sala Activa */}
+              <div style={{ padding: '14px 20px', borderBottom: '1px solid var(--border)', backgroundColor: 'var(--bg-secondary)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  <div style={{ width: '38px', height: '38px', borderRadius: '50%', backgroundColor: 'var(--primary)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '900', fontSize: '16px' }}>
+                    {chatChannel === 'general' ? '💬' : chatChannel === 'kudos' ? '💖' : chatChannel === 'group' ? '👥' : '👤'}
+                  </div>
+                  <div>
+                    <h4 style={{ fontSize: '14.5px', fontWeight: '900' }}>
+                      {chatChannel === 'general' ? 'Canal General EquilibrIA' : chatChannel === 'kudos' ? 'Muro de Gratitud e Insignias' : chatChannel === 'group' ? selectedGroup?.name || 'Grupo de Trabajo' : `Chat Directo con ${kudoReceiverName || 'Compañero'}`}
+                    </h4>
+                    <span style={{ fontSize: '11px', color: 'var(--success)', fontWeight: '700' }}>● En línea • Mensajería Cifrada de Equipo</span>
+                  </div>
+                </div>
               </div>
+
+              {/* Historial de Mensajes con Scroll Interno Aislado por Sala */}
+              <div style={{ flex: 1, padding: '20px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '14px', backgroundColor: 'var(--bg-primary)' }}>
+                {(() => {
+                  const currentRoomMessages = (kudosList || []).filter((k) => {
+                    if (chatChannel === 'general') {
+                      return k.receiver_name === 'Canal General EquilibrIA' || k.receiver_name === 'Comunidad General' || !k.receiver_name;
+                    }
+                    if (chatChannel === 'kudos') {
+                      return k.receiver_name === 'Muro de Gratitud e Insignias' || k.badge_type === 'Gratitud' || k.receiver_name === 'Muro de Gratitud';
+                    }
+                    if (chatChannel === 'group') {
+                      return selectedGroup && (k.receiver_name === selectedGroup.name || k.receiver_name === `Grupo: ${selectedGroup.name}`);
+                    }
+                    if (chatChannel === 'direct') {
+                      return (
+                        (k.sender_name === `${user?.first_name} ${user?.last_name}` && k.receiver_name === kudoReceiverName) ||
+                        (k.sender_name === kudoReceiverName && (k.receiver_name === `${user?.first_name} ${user?.last_name}` || k.receiver_name === user?.email)) ||
+                        k.receiver_name === kudoReceiverName
+                      );
+                    }
+                    return true;
+                  });
+
+                  if (currentRoomMessages.length === 0) {
+                    return (
+                      <div style={{ textAlign: 'center', padding: '40px', color: 'var(--text-muted)', fontSize: '13px' }}>
+                        No hay mensajes en esta sala de chat. ¡Sé el primero en escribir un mensaje a tus compañeros!
+                      </div>
+                    );
+                  }
+
+                  return currentRoomMessages.map((k) => {
+                    const isMe = k.sender_id === user?.id || k.sender_name === `${user?.first_name} ${user?.last_name}`;
+                    return (
+                      <div key={k.id} style={{ display: 'flex', justifyContent: isMe ? 'flex-end' : 'flex-start' }}>
+                        <div className={isMe ? 'chat-bubble-sender' : 'chat-bubble-receiver'} style={{ maxWidth: '75%', padding: '12px 16px', borderRadius: '16px' }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px', marginBottom: '4px' }}>
+                            <span style={{ fontSize: '11.5px', fontWeight: '900', opacity: 0.9 }}>
+                              {isMe ? 'Tú' : k.sender_name} ➔ <span style={{ textDecoration: 'underline' }}>{k.receiver_name}</span>
+                            </span>
+                            <span style={{ fontSize: '9.5px', padding: '2px 6px', borderRadius: '6px', backgroundColor: 'rgba(255,255,255,0.2)', fontWeight: '800' }}>
+                              {k.badge_type}
+                            </span>
+                          </div>
+                          <p style={{ fontSize: '13px', lineHeight: '1.45', margin: '4px 0', whiteSpace: 'pre-wrap' }}>{k.message}</p>
+                          <span style={{ fontSize: '9.5px', opacity: 0.7, display: 'block', textAlign: 'right', marginTop: '4px' }}>
+                            {new Date(k.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                          </span>
+                        </div>
+                      </div>
+                    );
+                  });
+                })()}
+              </div>
+
+              {/* Entrada Fija al Pie de Bienestar con Selector de Emojis */}
+              <form onSubmit={handleCreateKudos} style={{ padding: '14px 20px', backgroundColor: 'var(--bg-secondary)', borderTop: '1px solid var(--border)', display: 'flex', flexDirection: 'column', gap: '10px', position: 'relative' }}>
+                
+                {/* Paleta Emergente de Emojis Modernos */}
+                {showEmojiPicker && (
+                  <div style={{
+                    position: 'absolute',
+                    bottom: '100%',
+                    left: '20px',
+                    marginBottom: '10px',
+                    backgroundColor: 'var(--bg-secondary)',
+                    border: '1.5px solid var(--border)',
+                    borderRadius: '18px',
+                    padding: '12px',
+                    boxShadow: '0 10px 30px rgba(0,0,0,0.3)',
+                    zIndex: 9999,
+                    width: '300px',
+                    display: 'grid',
+                    gridTemplateColumns: 'repeat(6, 1fr)',
+                    gap: '8px'
+                  }}>
+                    {modernEmojis.map(emoji => (
+                      <button
+                        key={emoji}
+                        type="button"
+                        onClick={() => {
+                          setKudoMessage(prev => prev + emoji);
+                          setShowEmojiPicker(false);
+                        }}
+                        style={{
+                          fontSize: '22px',
+                          border: 'none',
+                          background: 'transparent',
+                          cursor: 'pointer',
+                          borderRadius: '8px',
+                          padding: '4px',
+                          transition: 'transform 0.15s ease'
+                        }}
+                        className="calendar-day-box"
+                      >
+                        {emoji}
+                      </button>
+                    ))}
+                  </div>
+                )}
+
+                <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
+                  <span style={{ fontSize: '11px', fontWeight: '800', color: 'var(--text-secondary)' }}>Insignia / Categoría:</span>
+                  {['Gratitud', 'Compañerismo', 'Resiliencia', 'Liderazgo'].map(b => (
+                    <button
+                      key={b}
+                      type="button"
+                      onClick={() => setKudoBadge(b)}
+                      className={`duo-pill ${kudoBadge === b ? 'selected' : ''}`}
+                      style={{ fontSize: '11px', padding: '3px 8px' }}
+                    >
+                      {b}
+                    </button>
+                  ))}
+                </div>
+
+                <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+                  {/* Botón Emergente de Emojis */}
+                  <button
+                    type="button"
+                    onClick={() => setShowEmojiPicker(!showEmojiPicker)}
+                    className="theme-toggle"
+                    style={{ width: '40px', height: '40px', borderRadius: '50%', border: '1px solid var(--border)', fontSize: '18px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                    title="Insertar Emojis"
+                  >
+                    <Smile size={20} style={{ color: 'var(--primary)' }} />
+                  </button>
+
+                  <input 
+                    type="text" 
+                    placeholder={chatChannel === 'direct' ? `Escribe un mensaje para ${kudoReceiverName}...` : chatChannel === 'group' ? `Mensaje para el grupo ${selectedGroup?.name}...` : "Escribe un mensaje para el equipo..."}
+                    value={kudoMessage} 
+                    onChange={(e) => setKudoMessage(e.target.value)} 
+                    required 
+                    style={{ flex: 1, borderRadius: '24px', padding: '12px 20px', fontSize: '13px', backgroundColor: 'var(--bg-primary)' }}
+                  />
+                  
+                  <button type="submit" className="btn btn-primary" disabled={kudoLoading} style={{ borderRadius: '24px', padding: '10px 24px', fontWeight: '900', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    {kudoLoading ? <Loader className="animate-spin" size={16} /> : <SendHorizontal size={16} />}
+                    <span>Enviar</span>
+                  </button>
+                </div>
+              </form>
             </div>
           </div>
         )}
@@ -1688,8 +1812,8 @@ const MemberDashboard = () => {
                           </div>
                         </div>
                         <div style={{ padding: '12px', backgroundColor: 'var(--bg-tertiary)', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border)', marginBottom: '12px' }}>
-                          <h5 style={{ fontSize: '11px', fontWeight: '800', color: 'var(--primary)', textTransform: 'uppercase', marginBottom: '6px' }}>Tu Respuesta Multimodal Estructurada:</h5>
-                          {formatMultimodalText(matchedRef.original_text)}
+                          <h5 style={{ fontSize: '11px', fontWeight: '800', color: 'var(--primary)', textTransform: 'uppercase', marginBottom: '6px' }}>Tu Respuesta del Test y Boceto:</h5>
+                          <TestResponseViewer rawText={matchedRef.original_text} userName="Mi Evaluación" date={matchedRef.created_at} />
                         </div>
                         <div style={{ padding: '12px', backgroundColor: 'var(--bg-tertiary)', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border)' }}>
                           <h5 style={{ fontSize: '11px', fontWeight: '800', color: 'var(--text-secondary)', textTransform: 'uppercase', marginBottom: '6px' }}>Consejo Orientador de IA:</h5>
@@ -1705,15 +1829,17 @@ const MemberDashboard = () => {
           </div>
         )}
 
-        {/* TAB 4: CHAT CON IA */}
+        {/* TAB 4: CHAT CON IA (ESTÁTICO SIN ANIMACIONES MOLESTAS) */}
         {activeTab === 'chat_ia' && (
           <div className="animate-fade" style={{ maxWidth: '800px', margin: '0 auto' }}>
-            <div className="glow-card" style={{ marginBottom: '20px', padding: '18px' }}>
+            <div className="glass-card" style={{ marginBottom: '20px', padding: '18px', border: '1px solid var(--border)' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                <Bot size={24} style={{ color: 'var(--primary)' }} />
+                <div style={{ width: '40px', height: '40px', borderRadius: '12px', backgroundColor: 'var(--primary-light)', color: 'var(--primary)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <Bot size={22} />
+                </div>
                 <div>
-                  <h3 style={{ fontSize: '15px', fontWeight: '900' }}>Orientador de Bienestar IA</h3>
-                  <p style={{ fontSize: '11.5px', color: 'var(--text-secondary)' }}>Soporte conversacional de Gemini basado en tu historial.</p>
+                  <h3 style={{ fontSize: '15px', fontWeight: '900', margin: 0 }}>Orientador de Bienestar IA</h3>
+                  <p style={{ fontSize: '11.5px', color: 'var(--text-secondary)', margin: '2px 0 0 0' }}>Soporte conversacional de Gemini basado en tu historial.</p>
                 </div>
               </div>
             </div>
@@ -1731,6 +1857,79 @@ const MemberDashboard = () => {
               <form onSubmit={handleSendChatMessage} className="chat-input-area">
                 <input type="text" placeholder="Conversa con la IA sobre tus sensaciones de hoy..." value={userInput} onChange={(e) => setUserInput(e.target.value)} disabled={chatLoading} />
                 <button type="submit" className="btn btn-primary" disabled={chatLoading || !userInput.trim()} style={{ padding: '0 16px' }}><SendHorizontal size={16} /></button>
+              </form>
+            </div>
+          </div>
+        )}
+
+        {/* MODAL CREAR GRUPO DE TRABAJO */}
+        {showCreateGroupModal && (
+          <div style={{
+            position: 'fixed',
+            inset: 0,
+            backgroundColor: 'rgba(0, 0, 0, 0.75)',
+            backdropFilter: 'blur(8px)',
+            zIndex: 99999,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '24px'
+          }}>
+            <div className="glass-card animate-scale" style={{ maxWidth: '480px', width: '100%', padding: '24px', borderRadius: '20px', border: '2px solid var(--primary)', backgroundColor: 'var(--bg-secondary)' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
+                <h3 style={{ fontSize: '16px', fontWeight: '900', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <UserPlus size={18} style={{ color: 'var(--primary)' }} /> Crear Grupo de Trabajo
+                </h3>
+                <button
+                  type="button"
+                  onClick={() => setShowCreateGroupModal(false)}
+                  style={{ border: 'none', background: 'none', color: 'var(--text-muted)', cursor: 'pointer', fontSize: '20px', fontWeight: 'bold' }}
+                >
+                  ×
+                </button>
+              </div>
+              <p style={{ fontSize: '12px', color: 'var(--text-secondary)', marginBottom: '16px' }}>
+                Crea un espacio de comunicación e interacción con tus colegas de equipo.
+              </p>
+              <form onSubmit={handleCreateGroup}>
+                <div className="form-group" style={{ marginBottom: '14px' }}>
+                  <label style={{ fontSize: '11px', fontWeight: '800' }}>NOMBRE DEL GRUPO:</label>
+                  <input
+                    type="text"
+                    placeholder="Ej. Equipo de Proyecto Alpha, Comité de Bienestar..."
+                    value={newGroupName}
+                    onChange={(e) => setNewGroupName(e.target.value)}
+                    required
+                    style={{ borderRadius: '10px' }}
+                  />
+                </div>
+                <div className="form-group" style={{ marginBottom: '16px' }}>
+                  <label style={{ fontSize: '11px', fontWeight: '800' }}>SELECCIONAR INTEGRANTES:</label>
+                  <div style={{ maxHeight: '160px', overflowY: 'auto', border: '1px solid var(--border)', borderRadius: '10px', padding: '8px', display: 'grid', gap: '6px' }}>
+                    {members.map(m => (
+                      <label key={m.id} style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12px', cursor: 'pointer', padding: '4px 6px', borderRadius: '6px' }}>
+                        <input
+                          type="checkbox"
+                          checked={newGroupMembers.includes(`${m.first_name} ${m.last_name}`)}
+                          onChange={(e) => {
+                            const name = `${m.first_name} ${m.last_name}`;
+                            if (e.target.checked) setNewGroupMembers(prev => [...prev, name]);
+                            else setNewGroupMembers(prev => prev.filter(n => n !== name));
+                          }}
+                        />
+                        <span>{m.first_name} {m.last_name} ({m.department || 'General'})</span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+                <div style={{ display: 'flex', gap: '10px' }}>
+                  <button type="button" onClick={() => setShowCreateGroupModal(false)} className="btn btn-secondary" style={{ flex: 1, padding: '10px', borderRadius: '10px' }}>
+                    Cancelar
+                  </button>
+                  <button type="submit" className="btn btn-primary" style={{ flex: 1, padding: '10px', borderRadius: '10px', fontWeight: '900' }}>
+                    Crear Grupo
+                  </button>
+                </div>
               </form>
             </div>
           </div>

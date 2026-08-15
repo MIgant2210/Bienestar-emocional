@@ -319,28 +319,50 @@ def get_evaluation_responses(current_user, eval_id):
         ((Reflection.original_text.like(search_pattern)) & (Reflection.evaluation_id == None))
     ).order_by(Reflection.created_at.desc()).all()
     
+    # Filtrar por departamento si el rol es líder de departamento
+    if current_user.role == 'lider_depto':
+        user_dept = current_user.department or 'General'
+        reflections = [r for r in reflections if r.user and (r.user.department or 'General') == user_dept]
+        
     total_responses = len(reflections)
     avg_stress = round(sum(r.stress_score for r in reflections) / total_responses, 1) if total_responses > 0 else 0
     avg_motivation = round(sum(r.motivation_score for r in reflections) / total_responses, 1) if total_responses > 0 else 0
     avg_burnout = round(sum(r.burnout_score for r in reflections) / total_responses, 1) if total_responses > 0 else 0
+    
+    # Calcular porcentaje de indicadores de estrés elevado
+    high_stress_count = sum(1 for r in reflections if r.stress_score >= 70)
+    high_stress_pct = round((high_stress_count / total_responses) * 100, 1) if total_responses > 0 else 0
     
     sentiments = {'Positivo': 0, 'Neutro': 0, 'Negativo': 0}
     for r in reflections:
         if r.dominant_sentiment in sentiments:
             sentiments[r.dominant_sentiment] += 1
             
+    # Anonimización estricta para roles administrativos (Líder y Admin)
+    # Solo Profesional de Apoyo (Psicóloga) y Superadmin tienen acceso nominal
+    formatted_responses = []
+    for r in reflections:
+        d = r.to_dict()
+        if current_user.role in ['lider_depto', 'admin_institucion']:
+            d['user_name'] = 'Participante Confidencial'
+            d['user_email'] = None
+            d['original_text'] = '[Texto confidencial protegido por políticas de privacidad]'
+            d['clinical_notes'] = None
+        formatted_responses.append(d)
+            
     return jsonify({
         'test_id': str(evaluation.id),
         'title': evaluation.title,
         'category': evaluation.category,
         'total_responses': total_responses,
+        'high_stress_percentage': high_stress_pct,
         'averages': {
             'stress': avg_stress,
             'motivation': avg_motivation,
             'burnout': avg_burnout
         },
         'sentiments': sentiments,
-        'responses': [r.to_dict() for r in reflections]
+        'responses': formatted_responses
     }), 200
 
 @evaluations_bp.route('/response/<uuid:reflection_id>/clinical-notes', methods=['PUT'])

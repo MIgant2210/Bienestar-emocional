@@ -3,21 +3,25 @@ from sqlalchemy import func
 from app import db
 from app.models.reflection import Reflection
 from app.models.user import User
-from app.utils.decorators import token_required, roles_accepted
+from app.models.institution import Institution
+from app.utils.decorators import token_required, roles_accepted, permission_required
+from app.utils.rbac import can_manage_roles
 
 institutions_bp = Blueprint('institutions', __name__)
 
 @institutions_bp.route('/dashboard', methods=['GET'])
 @token_required
-@roles_accepted('admin_institucion', 'superadmin', 'profesional_apoyo', 'lider_depto')
+@permission_required('analytics')
 def get_dashboard_data(current_user):
     """
-    Obtiene datos agregados e históricos del bienestar emocional para la institución.
-    IMPORTANTE: Respeta la privacidad anonimizando las respuestas (no se ligan a nombres).
+    Obtiene datos agregados e históricos del bienestar emocional.
+    Alcance:
+    - Superadmin: Global o filtrado.
+    - Admin Institucional / Profesional de Apoyo: Su institución.
+    - Líder de Depto: Su departamento exclusivo dentro de su institución.
     """
     institution_id = current_user.institution_id
     
-    # Permitir que un superadmin filtre por otra institución en la query param
     if current_user.role == 'superadmin':
         inst_param = request.args.get('institution_id')
         if inst_param:
@@ -28,12 +32,12 @@ def get_dashboard_data(current_user):
     if current_user.role != 'superadmin' and not institution_id:
         return jsonify({'message': 'Se requiere una institución vinculada.'}), 400
 
-    # Si la institución filtrada no tiene reflexiones registradas aún, mostrar los datos generales de la base de datos
-    if institution_id:
-        has_data = Reflection.query.filter(Reflection.institution_id == institution_id).count() > 0
-        if not has_data and current_user.role in ['superadmin', 'profesional_apoyo', 'admin_institucion']:
-            institution_id = None
-        
+    # Construir subconsulta de usuarios permitidos si es Líder de Depto
+    dept_user_ids = None
+    if current_user.role == 'lider_depto':
+        user_dept = current_user.department or 'General'
+        dept_user_ids = [u.id for u in User.query.filter_by(institution_id=institution_id, department=user_dept).all()]
+
     # 1. Métricas Generales (Promedios)
     averages_query = db.session.query(
         func.avg(Reflection.stress_score).label('avg_stress'),
@@ -43,15 +47,19 @@ def get_dashboard_data(current_user):
     )
     if institution_id:
         averages_query = averages_query.filter(Reflection.institution_id == institution_id)
+    if dept_user_ids is not None:
+        averages_query = averages_query.filter(Reflection.user_id.in_(dept_user_ids))
     averages = averages_query.first()
     
-    # 2. Distribución de Sentimientos (para gráfico de pastel/pie chart)
+    # 2. Distribución de Sentimientos
     sentiment_query = db.session.query(
         Reflection.dominant_sentiment,
         func.count(Reflection.id).label('count')
     )
     if institution_id:
         sentiment_query = sentiment_query.filter(Reflection.institution_id == institution_id)
+    if dept_user_ids is not None:
+        sentiment_query = sentiment_query.filter(Reflection.user_id.in_(dept_user_ids))
     sentiment_distribution = sentiment_query.group_by(Reflection.dominant_sentiment).all()
     
     sentiment_data = {
@@ -62,8 +70,7 @@ def get_dashboard_data(current_user):
     for item in sentiment_distribution:
         sentiment_data[item.dominant_sentiment] = item.count
         
-    # 3. Tendencia Histórica (Promedios agrupados por fecha de creación)
-    # Agrupamos por la fecha (sin la hora)
+    # 3. Tendencia Histórica
     trends_query = db.session.query(
         func.date(Reflection.created_at).label('date'),
         func.avg(Reflection.stress_score).label('avg_stress'),
@@ -73,6 +80,8 @@ def get_dashboard_data(current_user):
     )
     if institution_id:
         trends_query = trends_query.filter(Reflection.institution_id == institution_id)
+    if dept_user_ids is not None:
+        trends_query = trends_query.filter(Reflection.user_id.in_(dept_user_ids))
     historical_trends = trends_query.group_by(func.date(Reflection.created_at))\
         .order_by(func.date(Reflection.created_at).asc()).all()
      
@@ -90,6 +99,8 @@ def get_dashboard_data(current_user):
     members_query = User.query.filter_by(role='miembro')
     if institution_id:
         members_query = members_query.filter_by(institution_id=institution_id)
+    if current_user.role == 'lider_depto':
+        members_query = members_query.filter_by(department=current_user.department or 'General')
     total_members = members_query.count()
     
     return jsonify({
@@ -141,10 +152,14 @@ def get_suggestions(current_user):
 
 @institutions_bp.route('/members', methods=['GET'])
 @token_required
-@roles_accepted('admin_institucion', 'superadmin', 'profesional_apoyo', 'lider_depto')
+@permission_required('members')
 def get_institution_members(current_user):
     """
-    Retorna el directorio de todos los usuarios de la institución.
+    Retorna el directorio de usuarios según el alcance del rol:
+    - Superadmin: Global o filtrado.
+    - Admin Institucional: Su institución.
+    - Líder de Depto: Directorio exclusivo de su departamento.
+    - Otros roles: Denegado.
     """
     institution_id = current_user.institution_id
     if current_user.role == 'superadmin':
@@ -156,32 +171,44 @@ def get_institution_members(current_user):
 
     query = User.query
     if institution_id:
-        query = query.filter_by(institution_id=institution_id)
+        query = query.filter(User.institution_id == str(institution_id))
+        
+    if current_user.role == 'lider_depto':
+        dept = current_user.department or 'General'
+        query = query.filter(User.department == dept)
         
     members = query.order_by(User.created_at.desc()).all()
     return jsonify([m.to_dict() for m in members]), 200
 
 @institutions_bp.route('/members/<uuid:user_id>', methods=['PUT'])
 @token_required
-@roles_accepted('admin_institucion', 'superadmin', 'lider_depto')
+@permission_required('members')
 def update_institution_member(current_user, user_id):
     """
-    Actualiza el rol, departamento o restablece la contraseña de un usuario.
+    Actualiza el rol, departamento o contraseña de un usuario.
+    RESTRICCIÓN: Solo SuperAdmin y Admin Institucional pueden modificar usuarios/roles.
+    Líderes de Depto, Profesionales de Apoyo y Miembros NO tienen permiso.
     """
+    if not can_manage_roles(current_user.role):
+        return jsonify({'message': 'Acceso denegado: Su rol no tiene autorización para modificar usuarios o cambiar roles.'}), 403
+
     target_user = User.query.get(user_id)
     if not target_user:
         return jsonify({'message': 'Usuario no encontrado.'}), 404
         
-    # Verificar que pertenezca a la misma institución si no es superadmin global
+    # Verificar aislamiento institucional si no es superadmin global
     if current_user.role != 'superadmin' and target_user.institution_id != current_user.institution_id:
-        return jsonify({'message': 'No tiene permisos para modificar este usuario.'}), 403
+        return jsonify({'message': 'No tiene permisos para modificar usuarios de otra institución.'}), 403
 
     data = request.get_json() or {}
     
     if 'role' in data:
+        new_role = data['role']
         valid_roles = ['superadmin', 'admin_institucion', 'profesional_apoyo', 'lider_depto', 'miembro']
-        if data['role'] in valid_roles:
-            target_user.role = data['role']
+        if new_role in valid_roles:
+            if current_user.role == 'admin_institucion' and new_role == 'superadmin':
+                return jsonify({'message': 'Un Administrador Institucional no puede promover usuarios a SuperAdmin.'}), 403
+            target_user.role = new_role
 
     if 'department' in data:
         target_user.department = data['department']
@@ -225,6 +252,15 @@ def get_all_institutions(current_user):
         result.append(inst_data)
         
     return jsonify(result), 200
+
+@institutions_bp.route('', methods=['GET'])
+def list_public_institutions():
+    """
+    Ruta pública para listar instituciones en el formulario de registro.
+    """
+    from app.models.institution import Institution
+    institutions = Institution.query.order_by(Institution.name.asc()).all()
+    return jsonify([inst.to_dict() for inst in institutions]), 200
 
 @institutions_bp.route('', methods=['POST'])
 @token_required

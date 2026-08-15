@@ -10,7 +10,7 @@ from app.models.audit_log import AuditLog
 from app.models.kudos import Kudos
 from app.models.reward import Reward
 from app.models.appointment import Appointment
-from app.utils.decorators import token_required, roles_accepted
+from app.utils.decorators import token_required, roles_accepted, permission_required
 from datetime import datetime
 
 reports_bp = Blueprint('reports', __name__)
@@ -18,7 +18,7 @@ reports_bp = Blueprint('reports', __name__)
 @reports_bp.route('/export', methods=['GET'])
 @reports_bp.route('/all', methods=['GET'])
 @token_required
-@roles_accepted('admin_institucion', 'superadmin', 'profesional_apoyo', 'lider_depto')
+@permission_required('reports')
 def get_all_system_reports(current_user):
     """
     Retorna la suite completa de los 10 Reportes del Sistema consolidados en tiempo real.

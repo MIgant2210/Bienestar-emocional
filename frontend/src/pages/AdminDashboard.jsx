@@ -6,7 +6,7 @@ import {
   PlusCircle, Trash2, Calendar, ClipboardList, Sparkles, Loader, CheckCircle2,
   AlertTriangle, CheckSquare, Settings, Activity, ShieldCheck, Download,
   UserCheck, Lock, FileSpreadsheet, RefreshCw, RotateCcw, Zap, Layers, HelpCircle, Eye, Sliders,
-  Target, ChevronRight, Check, ArrowLeft, Volume2, Mic, Bell, UserX, Key, Palette, Edit3, KeyRound, Heart, Bot, SendHorizontal, Building, MessageSquare, Smile, UserPlus, Plus, X, Printer, Trophy
+  Target, ChevronRight, Check, ArrowLeft, Volume2, Mic, Bell, UserX, Key, Palette, Edit3, KeyRound, Heart, Bot, SendHorizontal, Building, MessageSquare, Smile, UserPlus, Plus, X, Printer, Trophy, Brain
 } from 'lucide-react';
 import api from '../services/api';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
@@ -15,11 +15,34 @@ import CustomSelect from '../components/CustomSelect';
 import CustomDatePicker from '../components/CustomDatePicker';
 import SystemAlert from '../components/SystemAlert';
 import GamificationWidget from '../components/GamificationWidget';
+import NotificationCenter from '../components/NotificationCenter';
+import TestResponseViewer from '../components/TestResponseViewer';
 import MyProgress from './MyProgress';
+import MyWellbeing from './MyWellbeing';
+import { useNavigate } from 'react-router-dom';
+import { hasModuleAccess } from '../components/ProtectedRoute';
 
-const AdminDashboard = () => {
+const TAB_TO_URL = {
+  bienestar: '/mi-bienestar',
+  analytics: '/analiticas',
+  tasks: '/tareas',
+  alerts: '/alertas',
+  evaluations: '/tests',
+  clinical_appointments: '/agenda',
+  members: '/usuarios',
+  institutions: '/instituciones',
+  progress: '/mi-progreso',
+  kudos: '/kudos',
+  reports: '/reportes',
+  audit: '/auditoria',
+  ai_plans: '/sugerencias-ia',
+  chat_ia: '/chatbot-ia'
+};
+
+const AdminDashboard = ({ initialTab = 'analytics' }) => {
   const { user, logout } = useContext(AuthContext);
   const { theme, toggleTheme, colorPalette, changePalette, PALETTES } = useContext(ThemeContext);
+  const navigate = useNavigate();
 
   // System Alert Toast State
   const [systemAlert, setSystemAlert] = useState({ show: false, type: 'info', title: '', message: '' });
@@ -33,8 +56,22 @@ const AdminDashboard = () => {
   // Reference for Appointment Form Scroll
   const apptFormRef = useRef(null);
 
-  // Tab State: 'analytics', 'tasks', 'alerts', 'evaluations', 'members', 'audit', 'reports', 'ai_plans'
-  const [activeTab, setActiveTab] = useState('analytics');
+  // Tab State sincronizado con la URL
+  const [activeTab, setActiveTab] = useState(initialTab);
+
+  useEffect(() => {
+    if (initialTab) {
+      setActiveTab(initialTab);
+    }
+  }, [initialTab]);
+
+  const handleTabChange = (tabKey) => {
+    setActiveTab(tabKey);
+    const targetUrl = TAB_TO_URL[tabKey];
+    if (targetUrl) {
+      navigate(targetUrl);
+    }
+  };
 
   // Sub-Tab State for Evaluations: 'active_tests', 'templates', 'create_custom'
   const [evalSubTab, setEvalSubTab] = useState('active_tests');
@@ -1461,64 +1498,8 @@ const AdminDashboard = () => {
               title="Centro de Notificaciones"
             >
               <Bell size={16} style={{ color: 'var(--primary)' }} />
-              {unreadNotificationsCount > 0 && (
-                <span style={{
-                  position: 'absolute',
-                  top: '-4px',
-                  right: '-4px',
-                  backgroundColor: 'var(--danger)',
-                  color: '#fff',
-                  fontSize: '9px',
-                  fontWeight: '900',
-                  width: '16px',
-                  height: '16px',
-                  borderRadius: '50%',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center'
-                }}>
-                  {unreadNotificationsCount}
-                </span>
-              )}
             </button>
-
-            {/* Popover Drawer de Notificaciones */}
-            {showNotifications && (
-              <div className="notification-popover">
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px', borderBottom: '1px solid var(--border)', paddingBottom: '8px' }}>
-                  <h4 style={{ fontSize: '13px', fontWeight: '900', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                    <Bell size={14} style={{ color: 'var(--primary)' }} /> Centro de Notificaciones
-                  </h4>
-                  <button onClick={() => setNotifications(prev => prev.map(n => ({ ...n, unread: false })))} style={{ border: 'none', background: 'none', fontSize: '10.5px', color: 'var(--primary)', cursor: 'pointer', fontWeight: '800' }}>
-                    Marcar leídas
-                  </button>
-                </div>
-                <div>
-                  {notifications.map(n => (
-                    <div 
-                      key={n.id} 
-                      onClick={() => handleNotificationClick(n)}
-                      className="notification-item" 
-                      style={{ 
-                        borderLeft: n.unread ? '4px solid var(--primary)' : '1px solid var(--border)',
-                        cursor: 'pointer',
-                        transition: 'background-color 0.2s ease',
-                        backgroundColor: n.unread ? 'var(--primary-light)' : 'transparent',
-                        padding: '10px',
-                        borderRadius: '8px',
-                        marginBottom: '6px'
-                      }}
-                      title="Haz clic para ir al módulo relacionado"
-                    >
-                      <p style={{ fontSize: '11.5px', color: 'var(--text-primary)', fontWeight: n.unread ? '800' : '500' }}>{n.text}</p>
-                      <span style={{ fontSize: '10px', color: 'var(--primary)', fontWeight: '800', display: 'block', marginTop: '4px' }}>
-                        {n.time} • Ir al módulo ➔
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
+            <NotificationCenter isOpen={showNotifications} onClose={() => setShowNotifications(false)} />
           </div>
 
           {/* Botón Selector de Paletas de Colores 🎨 */}
@@ -1577,6 +1558,16 @@ const AdminDashboard = () => {
           <button onClick={toggleTheme} className="theme-toggle" style={{ border: '1px solid var(--border)', width: '36px', height: '36px', borderRadius: '50%' }} title="Cambiar Modo Claro/Oscuro">
             {theme === 'light' ? <Moon size={15} /> : <Sun size={15} />}
           </button>
+
+          {/* Botón Acceso a Configuración */}
+          <button 
+            onClick={() => navigate('/configuracion')} 
+            className="theme-toggle" 
+            style={{ border: '1px solid var(--border)', width: '36px', height: '36px', borderRadius: '50%' }} 
+            title="Configuración de la Cuenta y Privacidad"
+          >
+            <Settings size={15} style={{ color: 'var(--text-primary)' }} />
+          </button>
           
           <div style={{ textAlign: 'right', fontSize: '12.5px' }}>
             <span style={{ fontWeight: '800', display: 'block' }}>{user?.first_name} {user?.last_name}</span>
@@ -1626,51 +1617,77 @@ const AdminDashboard = () => {
           </div>
         )}
 
-        {/* Pestañas de Navegación Adaptativas por Rol (Menú Multimódulo Ampliado en 2 Filas para SuperAdmin) */}
+        {/* Pestañas de Navegación Adaptativas por Rol */}
         <div className="tab-container" style={{ width: '100%', flexWrap: 'wrap', gap: '8px', justifyContent: 'flex-start' }}>
-          <button className={`tab-btn ${activeTab === 'analytics' ? 'active' : ''}`} onClick={() => setActiveTab('analytics')}><BarChart3 size={15} /><span>Analíticas</span></button>
-          <button className={`tab-btn ${activeTab === 'tasks' ? 'active' : ''}`} onClick={() => setActiveTab('tasks')}><ClipboardList size={15} /><span>Tareas</span></button>
+          {hasModuleAccess(user?.role, 'wellbeing') && (
+            <button className={`tab-btn ${activeTab === 'bienestar' ? 'active' : ''}`} onClick={() => handleTabChange('bienestar')}><Brain size={15} /><span>Mi Bienestar</span></button>
+          )}
+
+          {hasModuleAccess(user?.role, 'analytics') && (
+            <button className={`tab-btn ${activeTab === 'analytics' ? 'active' : ''}`} onClick={() => handleTabChange('analytics')}><BarChart3 size={15} /><span>Analíticas</span></button>
+          )}
           
-          {(user?.role !== 'lider_depto') && (
-            <button className={`tab-btn ${activeTab === 'alerts' ? 'active' : ''}`} onClick={() => setActiveTab('alerts')}>
+          {hasModuleAccess(user?.role, 'tasks') && (
+            <button className={`tab-btn ${activeTab === 'tasks' ? 'active' : ''}`} onClick={() => handleTabChange('tasks')}><ClipboardList size={15} /><span>Tareas</span></button>
+          )}
+          
+          {hasModuleAccess(user?.role, 'alerts') && (
+            <button className={`tab-btn ${activeTab === 'alerts' ? 'active' : ''}`} onClick={() => handleTabChange('alerts')}>
               <AlertTriangle size={15} /><span>Alertas</span>
               {alerts.length > 0 && <span style={{ backgroundColor: 'var(--danger)', color: '#fff', fontSize: '10px', padding: '2px 6px', borderRadius: 'var(--radius-full)', fontWeight: 'bold' }}>{alerts.length}</span>}
             </button>
           )}
 
-          <button className={`tab-btn ${activeTab === 'evaluations' ? 'active' : ''}`} onClick={() => setActiveTab('evaluations')}><Calendar size={15} /><span>Tests</span></button>
+          {hasModuleAccess(user?.role, 'evaluations') && (
+            <button className={`tab-btn ${activeTab === 'evaluations' ? 'active' : ''}`} onClick={() => handleTabChange('evaluations')}><Calendar size={15} /><span>Tests</span></button>
+          )}
 
-          {/* Agenda de Citas Clínicas 1 a 1 (Psicóloga, Superadmin, Admin) */}
-          {(user?.role === 'superadmin' || user?.role === 'admin_institucion' || user?.role === 'profesional_apoyo') && (
-            <button className={`tab-btn ${activeTab === 'clinical_appointments' ? 'active' : ''}`} onClick={() => setActiveTab('clinical_appointments')}>
+          {hasModuleAccess(user?.role, 'clinical_appointments') && (
+            <button className={`tab-btn ${activeTab === 'clinical_appointments' ? 'active' : ''}`} onClick={() => handleTabChange('clinical_appointments')}>
               <Calendar size={15} /><span>Agenda de Citas</span>
             </button>
           )}
 
-          {/* Módulos de Gestión de Integrantes (Superadmin, Admin e Líder) */}
-          {(user?.role === 'superadmin' || user?.role === 'admin_institucion' || user?.role === 'lider_depto') && (
-            <button className={`tab-btn ${activeTab === 'members' ? 'active' : ''}`} onClick={() => setActiveTab('members')}><Users size={15} /><span>Roles y Usuarios</span></button>
+          {hasModuleAccess(user?.role, 'members') && (
+            <button className={`tab-btn ${activeTab === 'members' ? 'active' : ''}`} onClick={() => handleTabChange('members')}>
+              <Users size={15} />
+              <span>{user?.role === 'lider_depto' ? 'Directorio Depto' : 'Roles y Usuarios'}</span>
+            </button>
           )}
 
-          {/* Módulos Adicionales para SuperAdmin y Admins */}
-          {(user?.role === 'superadmin' || user?.role === 'admin_institucion') && (
-            <>
-              <button className={`tab-btn ${activeTab === 'institutions' ? 'active' : ''}`} onClick={() => setActiveTab('institutions')}><Building size={15} /><span>Instituciones y Deptos</span></button>
-              <button className={`tab-btn ${activeTab === 'progress' ? 'active' : ''}`} onClick={() => setActiveTab('progress')}><Trophy size={15} /><span>Mi Progreso / Gamificación</span></button>
-              <button className={`tab-btn ${activeTab === 'kudos' ? 'active' : ''}`} onClick={() => setActiveTab('kudos')}><MessageSquare size={15} /><span>Chat & Grupos</span></button>
-              <button className={`tab-btn ${activeTab === 'reports' ? 'active' : ''}`} onClick={() => setActiveTab('reports')}><FileSpreadsheet size={15} /><span>Reportes</span></button>
-              <button className={`tab-btn ${activeTab === 'audit' ? 'active' : ''}`} onClick={() => setActiveTab('audit')}><ShieldCheck size={15} /><span>Auditoría</span></button>
-            </>
+          {hasModuleAccess(user?.role, 'institutions') && (
+            <button className={`tab-btn ${activeTab === 'institutions' ? 'active' : ''}`} onClick={() => handleTabChange('institutions')}><Building size={15} /><span>Instituciones y Deptos</span></button>
           )}
 
-          {(user?.role !== 'lider_depto') && (
-            <button className={`tab-btn ${activeTab === 'ai_plans' ? 'active' : ''}`} onClick={() => setActiveTab('ai_plans')}><Sparkles size={15} /><span>Sugerencias IA</span></button>
+          {hasModuleAccess(user?.role, 'progress') && (
+            <button className={`tab-btn ${activeTab === 'progress' ? 'active' : ''}`} onClick={() => handleTabChange('progress')}><Trophy size={15} /><span>Mi Progreso / Gamificación</span></button>
           )}
 
-          {user?.role === 'superadmin' && (
-            <button className={`tab-btn ${activeTab === 'chat_ia' ? 'active' : ''}`} onClick={() => setActiveTab('chat_ia')}><Bot size={15} /><span>Chatbot IA</span></button>
+          {hasModuleAccess(user?.role, 'kudos') && (
+            <button className={`tab-btn ${activeTab === 'kudos' ? 'active' : ''}`} onClick={() => handleTabChange('kudos')}><MessageSquare size={15} /><span>Chat & Grupos</span></button>
+          )}
+
+          {hasModuleAccess(user?.role, 'reports') && (
+            <button className={`tab-btn ${activeTab === 'reports' ? 'active' : ''}`} onClick={() => handleTabChange('reports')}><FileSpreadsheet size={15} /><span>Reportes</span></button>
+          )}
+
+          {hasModuleAccess(user?.role, 'audit') && (
+            <button className={`tab-btn ${activeTab === 'audit' ? 'active' : ''}`} onClick={() => handleTabChange('audit')}><ShieldCheck size={15} /><span>Auditoría</span></button>
+          )}
+
+          {hasModuleAccess(user?.role, 'ai_plans') && (
+            <button className={`tab-btn ${activeTab === 'ai_plans' ? 'active' : ''}`} onClick={() => handleTabChange('ai_plans')}><Sparkles size={15} /><span>Sugerencias IA</span></button>
+          )}
+
+          {hasModuleAccess(user?.role, 'chat_ia') && (
+            <button className={`tab-btn ${activeTab === 'chat_ia' ? 'active' : ''}`} onClick={() => handleTabChange('chat_ia')}><Bot size={15} /><span>Chatbot IA</span></button>
           )}
         </div>
+
+        {/* TAB 0: MI BIENESTAR PERSONAL */}
+        {activeTab === 'bienestar' && (
+          <MyWellbeing onNavigateToTab={(tab) => handleTabChange(tab)} />
+        )}
 
         {/* TAB 1: ANALÍTICAS Y CLIMA EMOCIONAL */}
         {activeTab === 'analytics' && (
@@ -2151,8 +2168,8 @@ const AdminDashboard = () => {
                       <span style={{ fontSize: '13.5px', fontWeight: '800' }}>{al.user_name}</span>
                       <span style={{ fontSize: '10px', fontWeight: '800', padding: '2px 8px', borderRadius: 'var(--radius-full)', backgroundColor: al.priority === 'Alta' ? 'var(--danger-light)' : 'var(--warning-light)', color: al.priority === 'Alta' ? 'var(--danger)' : 'var(--warning)' }}>Riesgo {al.priority}</span>
                     </div>
-                    <p style={{ fontSize: '12.5px', fontStyle: 'italic', marginBottom: '12px' }}>"{al.reflection_text}"</p>
-                    <div style={{ display: 'flex', gap: '10px' }}>
+                    <TestResponseViewer rawText={al.reflection_text} userName={al.user_name} date={al.created_at} />
+                    <div style={{ display: 'flex', gap: '10px', marginTop: '10px' }}>
                       <input type="text" placeholder="Ingresar notas de atención..." value={resolutionNotes[al.id] || ''} onChange={(e) => setResolutionNotes(prev => ({ ...prev, [al.id]: e.target.value }))} style={{ flex: 1, padding: '8px 12px', fontSize: '12px', borderRadius: '8px' }} />
                       <button onClick={() => handleAttendAlert(al.id)} className="btn btn-primary" disabled={resolvingId === al.id} style={{ padding: '8px 14px', fontSize: '12px', borderRadius: '8px' }}>Atender Alerta</button>
                     </div>
@@ -3831,12 +3848,14 @@ const AdminDashboard = () => {
         {/* TAB 11: ASISTENTE E INSPIRADOR DE BIENESTAR CON IA (GEMINI) UNIFICADO */}
         {activeTab === 'chat_ia' && (
           <div className="animate-fade" style={{ maxWidth: '800px', margin: '0 auto' }}>
-            <div className="glow-card" style={{ marginBottom: '20px', padding: '18px' }}>
+            <div className="glass-card" style={{ marginBottom: '20px', padding: '18px', border: '1px solid var(--border)' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                <Bot size={24} style={{ color: 'var(--primary)' }} />
+                <div style={{ width: '40px', height: '40px', borderRadius: '12px', backgroundColor: 'var(--primary-light)', color: 'var(--primary)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <Bot size={22} />
+                </div>
                 <div>
-                  <h3 style={{ fontSize: '15px', fontWeight: '900' }}>Orientador de Bienestar IA</h3>
-                  <p style={{ fontSize: '11.5px', color: 'var(--text-secondary)' }}>Soporte conversacional de Gemini basado en tu historial e indicadores institucionales.</p>
+                  <h3 style={{ fontSize: '15px', fontWeight: '900', margin: 0 }}>Orientador de Bienestar IA</h3>
+                  <p style={{ fontSize: '11.5px', color: 'var(--text-secondary)', margin: '2px 0 0 0' }}>Soporte conversacional de Gemini basado en tu historial e indicadores institucionales.</p>
                 </div>
               </div>
             </div>
@@ -4011,14 +4030,16 @@ const AdminDashboard = () => {
                 </div>
               </div>
 
-              {/* Contenido de Respuestas */}
+              {/* Contenido de Respuestas Estructurado */}
               <div style={{ marginBottom: '18px' }}>
                 <h4 style={{ fontSize: '13px', fontWeight: '800', color: 'var(--primary)', marginBottom: '8px' }}>
-                  Respuestas de las Preguntas del Test:
+                  Respuestas de las Preguntas del Test y Boceto:
                 </h4>
-                <div style={{ backgroundColor: 'var(--bg-primary)', padding: '16px', borderRadius: '14px', border: '1px solid var(--border)', fontSize: '13px', lineHeight: '1.6', whiteSpace: 'pre-wrap', color: 'var(--text-primary)' }}>
-                  {selectedSubmission.original_text}
-                </div>
+                <TestResponseViewer 
+                  rawText={selectedSubmission.original_text} 
+                  userName={selectedSubmission.user_name} 
+                  date={selectedSubmission.created_at} 
+                />
               </div>
 
               {/* Notas Diagnósticas Manuales */}

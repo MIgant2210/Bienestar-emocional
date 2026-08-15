@@ -91,6 +91,13 @@ def login():
     
     token = jwt.encode(payload, current_app.config['JWT_SECRET_KEY'], algorithm='HS256')
     
+    # Registrar inicio de sesión en auditoría
+    try:
+        from app.services.audit_service import AuditService
+        AuditService.log_action(user.id, "INICIO_SESION", f"Inicio de sesión exitoso (Rol: {user.role})", user.institution_id)
+    except Exception:
+        pass
+
     return jsonify({
         'token': token,
         'user': user.to_dict()
@@ -107,3 +114,73 @@ def get_institutions():
 def get_me(current_user):
     """Ruta protegida para obtener el perfil del usuario actual"""
     return jsonify(current_user.to_dict()), 200
+
+@auth_bp.route('/profile', methods=['PUT'])
+@token_required
+def update_profile(current_user):
+    """
+    Permite al usuario modificar sus datos personales permitidos (nombre, apellido).
+    No permite modificar rol, institución ni permisos.
+    """
+    data = request.get_json() or {}
+    first_name = data.get('first_name')
+    last_name = data.get('last_name')
+    
+    if not first_name or not last_name:
+        return jsonify({'message': 'Nombre y apellido son requeridos.'}), 400
+        
+    current_user.first_name = first_name.strip()
+    current_user.last_name = last_name.strip()
+    
+    try:
+        db.session.commit()
+        from app.services.audit_service import AuditService
+        AuditService.log_action(
+            user_id=current_user.id,
+            action="PERFIL_ACTUALIZADO",
+            details=f"Perfil personal actualizado ({current_user.first_name} {current_user.last_name})",
+            ip_address=request.remote_addr
+        )
+        return jsonify({
+            'message': 'Perfil actualizado exitosamente.',
+            'user': current_user.to_dict()
+        }), 200
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'message': f'Error al actualizar el perfil: {str(e)}'}), 500
+
+@auth_bp.route('/change-password', methods=['POST'])
+@token_required
+def change_password(current_user):
+    """
+    Permite al usuario cambiar su contraseña validando la contraseña actual.
+    """
+    data = request.get_json() or {}
+    current_password = data.get('current_password')
+    new_password = data.get('new_password')
+    
+    if not current_password or not new_password:
+        return jsonify({'message': 'La contraseña actual y la nueva contraseña son requeridas.'}), 400
+        
+    if len(new_password) < 6:
+        return jsonify({'message': 'La nueva contraseña debe tener al menos 6 caracteres.'}), 400
+        
+    if not current_user.check_password(current_password):
+        return jsonify({'message': 'La contraseña actual ingresada es incorrecta.'}), 400
+        
+    current_user.set_password(new_password)
+    
+    try:
+        db.session.commit()
+        from app.services.audit_service import AuditService
+        AuditService.log_action(
+            user_id=current_user.id,
+            action="CAMBIO_CONTRASENA",
+            details="Contraseña de cuenta modificada exitosamente.",
+            ip_address=request.remote_addr
+        )
+        return jsonify({'message': 'Contraseña modificada exitosamente.'}), 200
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'message': f'Error al cambiar la contraseña: {str(e)}'}), 500
+

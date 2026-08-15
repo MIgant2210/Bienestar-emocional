@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useContext } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { AuthContext } from '../contexts/AuthContext';
 import { ThemeContext } from '../contexts/ThemeContext';
 import { Sun, Moon, ArrowLeft, UserPlus, Mail, Lock, User, Building, Loader, BrainCircuit } from 'lucide-react';
@@ -7,6 +8,7 @@ import CustomSelect from '../components/CustomSelect';
 import StarryBackground from '../components/StarryBackground';
 
 const Register = ({ onNavigate }) => {
+  const navigate = useNavigate();
   const { register } = useContext(AuthContext);
   const { theme, toggleTheme } = useContext(ThemeContext);
   
@@ -28,10 +30,18 @@ const Register = ({ onNavigate }) => {
     // Cargar la lista de instituciones disponibles para colaboradores
     const fetchInsts = async () => {
       try {
-        const res = await api.get('/institutions');
-        setInstitutions(res.data);
-        if (res.data.length > 0) {
-          setSelectedInstId(res.data[0].id);
+        let instList = [];
+        try {
+          const res = await api.get('/institutions');
+          if (Array.isArray(res.data)) instList = res.data;
+        } catch (e) {
+          const resAuth = await api.get('/auth/institutions');
+          if (Array.isArray(resAuth.data)) instList = resAuth.data;
+        }
+
+        setInstitutions(instList);
+        if (instList.length > 0) {
+          setSelectedInstId(instList[0].id);
         }
       } catch (err) {
         console.error('Error al obtener instituciones:', err);
@@ -67,8 +77,9 @@ const Register = ({ onNavigate }) => {
     if (result.success) {
       setSuccessMsg('Registro exitoso. Redirigiendo al inicio de sesión...');
       setTimeout(() => {
-        onNavigate('login');
-      }, 2000);
+        if (typeof onNavigate === 'function') onNavigate('login');
+        else navigate('/login');
+      }, 1500);
     } else {
       setErrorMsg(result.message);
     }
@@ -93,7 +104,11 @@ const Register = ({ onNavigate }) => {
       {/* Botones de navegación superior */}
       <div style={{ position: 'absolute', top: '24px', left: '24px', zIndex: 10 }}>
         <button 
-          onClick={() => onNavigate('login')} 
+          type="button"
+          onClick={() => {
+            if (typeof onNavigate === 'function') onNavigate('login');
+            else navigate('/login');
+          }} 
           style={{
             boxShadow: 'var(--shadow-sm)',
             border: '1.5px solid var(--primary)',

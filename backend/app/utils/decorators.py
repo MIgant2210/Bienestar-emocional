@@ -38,17 +38,52 @@ def roles_accepted(*roles):
     """
     Decorador para restringir el acceso a ciertos roles.
     Debe usarse DESPUÉS de @token_required.
-    Ejemplo:
-        @token_required
-        @roles_accepted('superadmin', 'admin_institucion')
-        def mi_ruta(current_user):
-            ...
     """
     def decorator(f):
         @wraps(f)
         def decorated(current_user, *args, **kwargs):
             if current_user.role not in roles:
-                return jsonify({'message': 'No tiene permisos para realizar esta acción.'}), 403
+                _log_denied_access(current_user, f"Intento no autorizado a {request.path} (requiere roles {roles})")
+                return jsonify({'message': 'Acceso denegado: No cuenta con el rol requerido.'}), 403
             return f(current_user, *args, **kwargs)
         return decorated
     return decorator
+
+def permission_required(module):
+    """
+    Decorador que valida el acceso a un módulo específico del sistema según la Matriz RBAC.
+    Debe usarse DESPUÉS de @token_required.
+    Ejemplo:
+        @token_required
+        @permission_required('reports')
+        def mi_reporte(current_user):
+            ...
+    """
+    def decorator(f):
+        @wraps(f)
+        def decorated(current_user, *args, **kwargs):
+            from app.utils.rbac import has_module_access
+            if not has_module_access(current_user.role, module):
+                _log_denied_access(current_user, f"Intento no autorizado al módulo '{module}' en {request.path}")
+                return jsonify({'message': f"Acceso denegado: Su rol no tiene permisos para el módulo '{module}'."}), 403
+            return f(current_user, *args, **kwargs)
+        return decorated
+    return decorator
+
+def _log_denied_access(user, details):
+    """
+    Registra intentos de acceso no autorizados (403) en la bitácora de auditoría.
+    """
+    try:
+        from app import db
+        from app.models.audit_log import AuditLog
+        log = AuditLog(
+            user_id=user.id,
+            action="ACCESO_DENEGADO_403",
+            details=details,
+            institution_id=user.institution_id
+        )
+        db.session.add(log)
+        db.session.commit()
+    except Exception as e:
+        pass

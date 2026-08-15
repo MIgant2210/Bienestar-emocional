@@ -2,7 +2,7 @@ from flask import Blueprint, request, jsonify
 from app import db
 from app.models.reflection import Reflection
 from app.services.gemini_service import GeminiService
-from app.utils.decorators import token_required, roles_accepted
+from app.utils.decorators import token_required, roles_accepted, permission_required
 
 analysis_bp = Blueprint('analysis', __name__)
 

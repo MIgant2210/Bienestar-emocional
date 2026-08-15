@@ -334,11 +334,10 @@
   background: var(--bg-glass);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
-  border: 1px solid var(--border-focus);
+  border: 1px solid var(--border);
   border-radius: var(--radius-md);
-  box-shadow: var(--tech-glow);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
   padding: 22px;
-  animation: pulseGlow 5s infinite;
 }
 
 input, select, textarea {

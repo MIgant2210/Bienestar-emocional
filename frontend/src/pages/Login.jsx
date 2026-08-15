@@ -1,10 +1,12 @@
 import React, { useState, useContext, useEffect, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { AuthContext } from '../contexts/AuthContext';
 import { ThemeContext } from '../contexts/ThemeContext';
 import { Sun, Moon, Lock, Mail, Loader, BrainCircuit, Sparkles, ShieldCheck, HeartHandshake, ArrowRight, Eye, EyeOff } from 'lucide-react';
 import StarryBackground from '../components/StarryBackground';
 
 const Login = ({ onNavigate }) => {
+  const navigate = useNavigate();
   const { login } = useContext(AuthContext);
   const { theme, toggleTheme } = useContext(ThemeContext);
 
@@ -52,7 +54,11 @@ const Login = ({ onNavigate }) => {
     setLoading(false);
 
     if (result.success) {
-      onNavigate();
+      if (typeof onNavigate === 'function') {
+        onNavigate();
+      } else {
+        navigate('/');
+      }
     } else {
       setErrorMsg(result.message);
     }
@@ -246,7 +252,14 @@ const Login = ({ onNavigate }) => {
 
           <div className="auth-link-row" style={{ transform: 'translateZ(5px)', fontSize: '13px', marginTop: '20px', paddingTop: '16px' }}>
             ¿No tienes una cuenta aún?{' '}
-            <button onClick={() => onNavigate('register')} style={{ color: 'var(--primary)', fontWeight: '800' }}>
+            <button 
+              type="button"
+              onClick={() => {
+                if (typeof onNavigate === 'function') onNavigate('register');
+                else navigate('/registro');
+              }} 
+              style={{ color: 'var(--primary)', fontWeight: '800', background: 'none', border: 'none', cursor: 'pointer' }}
+            >
               Regístrate aquí
             </button>
           </div>
