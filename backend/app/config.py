@@ -16,12 +16,13 @@ class Config:
         
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     
-    # Configuración de pool de conexiones para reducir latencia con Clever Cloud
+    # Configuración optimizada de pool de conexiones para PostgreSQL Cloud
     SQLALCHEMY_ENGINE_OPTIONS = {
-        'pool_size': 3,
-        'max_overflow': 2,
+        'pool_size': 10,
+        'max_overflow': 10,
         'pool_recycle': 280,
-        'pool_pre_ping': True
+        'pool_pre_ping': True,
+        'pool_timeout': 15
     }
     
     # Gemini API Config

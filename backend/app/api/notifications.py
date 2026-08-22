@@ -31,57 +31,48 @@ def create_system_notification(user_id, title, message, category='sistema', link
     db.session.commit()
     return notif
 
+@notifications_bp.route('/unread-count', methods=['GET'])
+@token_required
+def get_unread_count(current_user):
+    """
+    Endpoint ultra-rápido de 1 sola consulta SQL para la campana de notificaciones.
+    """
+    count = Notification.query.filter_by(user_id=current_user.id, is_read=False).count()
+    return jsonify({'unread_count': count}), 200
+
 @notifications_bp.route('', methods=['GET'])
 @token_required
 def get_notifications(current_user):
     """
-    Retorna la lista de notificaciones del usuario autenticado con soporte de filtrado por categoría.
+    Retorna la lista de notificaciones del usuario autenticado con soporte de filtrado por categoría y paginación.
     """
     category_filter = request.args.get('category')
+    unread_only = request.args.get('unread_only', default='false').lower() == 'true'
+    page = request.args.get('page', type=int)
+    per_page = request.args.get('per_page', default=30, type=int)
     
     query = Notification.query.filter_by(user_id=current_user.id)
     
     if category_filter and category_filter != 'all':
         query = query.filter_by(category=category_filter)
-        
-    notifications = query.order_by(Notification.created_at.desc()).limit(50).all()
-    
-    # Si el usuario no tiene notificaciones, inicializar con notificaciones de bienvenida respetuosas
-    if not notifications and not category_filter:
-        welcome_notifs = [
-            Notification(
-                user_id=current_user.id,
-                institution_id=current_user.institution_id,
-                title="Bienvenido a EquilibrIA",
-                message="Tu espacio personal de bienestar y acompañamiento institucional está listo.",
-                category="sistema",
-                link_url="/mi-bienestar",
-                is_read=False
-            ),
-            Notification(
-                user_id=current_user.id,
-                institution_id=current_user.institution_id,
-                title="Nuevo módulo Mi Bienestar",
-                message="Hay nueva información y recursos disponibles en tu espacio personal.",
-                category="bienestar",
-                link_url="/mi-bienestar",
-                is_read=False
-            ),
-            Notification(
-                user_id=current_user.id,
-                institution_id=current_user.institution_id,
-                title="Centro de Recursos activo",
-                message="Explora artículos, guías y ejercicios prácticos de autocuidado y descanso.",
-                category="bienestar",
-                link_url="/mi-bienestar",
-                is_read=False
-            )
-        ]
-        for wn in welcome_notifs:
-            db.session.add(wn)
-        db.session.commit()
-        notifications = Notification.query.filter_by(user_id=current_user.id).order_by(Notification.created_at.desc()).all()
 
+    if unread_only:
+        query = query.filter_by(is_read=False)
+        
+    query = query.order_by(Notification.created_at.desc())
+
+    if page:
+        paginated = query.paginate(page=page, per_page=per_page, error_out=False)
+        unread_count = Notification.query.filter_by(user_id=current_user.id, is_read=False).count()
+        return jsonify({
+            'notifications': [n.to_dict() for n in paginated.items],
+            'unread_count': unread_count,
+            'total': paginated.total,
+            'page': paginated.page,
+            'pages': paginated.pages
+        }), 200
+
+    notifications = query.limit(50).all()
     unread_count = Notification.query.filter_by(user_id=current_user.id, is_read=False).count()
     
     return jsonify({
@@ -107,7 +98,7 @@ def mark_notification_read(current_user, notif_id):
 @token_required
 def mark_all_read(current_user):
     """
-    Marca todas las notificaciones del usuario como leídas.
+    Marca todas las notificaciones del usuario como leídas en una sola operación UPDATE.
     """
     Notification.query.filter_by(user_id=current_user.id, is_read=False).update({'is_read': True})
     db.session.commit()

@@ -818,6 +818,16 @@ input:focus, select:focus, textarea:focus {
   grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
 }
 
+.grid-4 {
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+}
+
+@media (min-width: 1024px) {
+  .grid-4 {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+
 @media (max-width: 1100px) {
   .dashboard-hero {
     grid-template-columns: 1fr;

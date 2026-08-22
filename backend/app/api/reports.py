@@ -13,7 +13,106 @@ from app.models.appointment import Appointment
 from app.utils.decorators import token_required, roles_accepted, permission_required
 from datetime import datetime
 
+from sqlalchemy.orm import joinedload
+from app.models.department import Department
+
 reports_bp = Blueprint('reports', __name__)
+
+@reports_bp.route('/dashboard-bundle', methods=['GET'])
+@token_required
+def get_admin_dashboard_bundle(current_user):
+    """
+    Endpoint Agregado de Alto Rendimiento para Panel Administrativo y de Apoyo:
+    Consolida métricas de clima emocional, conteo de alertas pendientes, miembros activos y departamentos
+    en 1 sola llamada HTTP.
+    """
+    inst_id = current_user.institution_id
+    if current_user.role == 'superadmin' and not inst_id:
+        inst_id = None
+
+    # 1. Clima emocional (Promedios en 1 sola consulta SQL)
+    avg_query = db.session.query(
+        func.avg(Reflection.stress_score).label('avg_stress'),
+        func.avg(Reflection.motivation_score).label('avg_motivation'),
+        func.avg(Reflection.burnout_score).label('avg_burnout'),
+        func.count(Reflection.id).label('total')
+    )
+    if inst_id:
+        avg_query = avg_query.filter(Reflection.institution_id == inst_id)
+    averages = avg_query.first()
+
+    # 2. Distribución de Sentimientos
+    sentiment_query = db.session.query(
+        Reflection.dominant_sentiment,
+        func.count(Reflection.id).label('count')
+    )
+    if inst_id:
+        sentiment_query = sentiment_query.filter(Reflection.institution_id == inst_id)
+    sentiment_distribution = sentiment_query.group_by(Reflection.dominant_sentiment).all()
+    sentiment_data = {'Positivo': 0, 'Neutro': 0, 'Negativo': 0}
+    for item in sentiment_distribution:
+        if item.dominant_sentiment in sentiment_data:
+            sentiment_data[item.dominant_sentiment] = item.count
+
+    # 3. Tendencia Histórica (Evolución del Clima)
+    trends_query = db.session.query(
+        func.date(Reflection.created_at).label('date'),
+        func.avg(Reflection.stress_score).label('avg_stress'),
+        func.avg(Reflection.motivation_score).label('avg_motivation'),
+        func.avg(Reflection.burnout_score).label('avg_burnout'),
+        func.count(Reflection.id).label('reflections_count')
+    )
+    if inst_id:
+        trends_query = trends_query.filter(Reflection.institution_id == inst_id)
+    historical_trends = trends_query.group_by(func.date(Reflection.created_at))\
+        .order_by(func.date(Reflection.created_at).asc()).limit(30).all()
+    trends_list = [{
+        'date': str(trend.date),
+        'stress': round(float(trend.avg_stress or 0), 1),
+        'motivation': round(float(trend.avg_motivation or 0), 1),
+        'burnout': round(float(trend.avg_burnout or 0), 1),
+        'count': trend.reflections_count
+    } for trend in historical_trends]
+
+    # 4. Alertas pendientes con eager loading (1 sola consulta)
+    alert_query = Alert.query.options(
+        joinedload(Alert.user),
+        joinedload(Alert.reflection),
+        joinedload(Alert.resolver)
+    ).filter_by(status='pendiente')
+    if inst_id:
+        alert_query = alert_query.filter(Alert.institution_id == inst_id)
+    pending_alerts = alert_query.order_by(Alert.created_at.desc()).limit(15).all()
+
+    # 5. Departamentos
+    dept_query = Department.query
+    if inst_id:
+        dept_query = dept_query.filter_by(institution_id=inst_id)
+    departments = dept_query.all()
+
+    # 6. Total Miembros Activos
+    user_query = User.query.filter(User.status.in_(['ACTIVE', 'ACTIVO']))
+    if inst_id:
+        user_query = user_query.filter_by(institution_id=inst_id)
+    active_users_count = user_query.count()
+
+    pending_alerts_count = len(pending_alerts)
+
+    return jsonify({
+        'averages': {
+            'stress': round(float(averages.avg_stress or 0), 1),
+            'motivation': round(float(averages.avg_motivation or 0), 1),
+            'burnout': round(float(averages.avg_burnout or 0), 1),
+            'total_reflections': averages.total or 0
+        },
+        'sentiment_distribution': sentiment_data,
+        'historical_trends': trends_list,
+        'total_members': active_users_count,
+        'pending_alerts': [a.to_dict() for a in pending_alerts],
+        'pending_alerts_count': pending_alerts_count,
+        'active_users_count': active_users_count,
+        'departments': [d.to_dict() for d in departments]
+    }), 200
 
 @reports_bp.route('/export', methods=['GET'])
 @reports_bp.route('/all', methods=['GET'])

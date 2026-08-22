@@ -1,5 +1,5 @@
 import React, { useState, useContext, useEffect, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { AuthContext } from '../contexts/AuthContext';
 import { ThemeContext } from '../contexts/ThemeContext';
 import { Sun, Moon, Lock, Mail, Loader, BrainCircuit, Sparkles, ShieldCheck, HeartHandshake, ArrowRight, Eye, EyeOff } from 'lucide-react';
@@ -238,6 +238,23 @@ const Login = ({ onNavigate }) => {
                   {showPassword ? <EyeOff size={15} /> : <Eye size={15} />}
                 </button>
               </div>
+            </div>
+
+            <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '-12px', marginBottom: '18px', transform: 'translateZ(5px)' }}>
+              <Link 
+                to="/recuperar-contrasena" 
+                style={{ 
+                  fontSize: '12px', 
+                  color: 'var(--primary)', 
+                  textDecoration: 'none', 
+                  fontWeight: '700',
+                  transition: 'opacity 0.2s ease'
+                }}
+                onMouseEnter={(e) => e.currentTarget.style.opacity = '0.8'}
+                onMouseLeave={(e) => e.currentTarget.style.opacity = '1'}
+              >
+                ¿Olvidaste tu contraseña?
+              </Link>
             </div>
 
             <button

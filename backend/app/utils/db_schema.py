@@ -181,3 +181,37 @@ def ensure_wellbeing_and_consents_schema(db):
         return False
 
 
+def ensure_ai_knowledge_and_culture_schema(db):
+    """Crea las tablas cultural_expressions y knowledge_documents, agrega columnas a users y siembra los datos iniciales."""
+    try:
+        db.create_all()
+        inspector = inspect(db.engine)
+
+        # 1. Agregar columnas a la tabla users si no existen
+        if inspector.has_table('users'):
+            existing_columns = {column['name'] for column in inspector.get_columns('users')}
+            statements = []
+            if 'ai_communication_style' not in existing_columns:
+                statements.append("ALTER TABLE users ADD COLUMN ai_communication_style VARCHAR(30) DEFAULT 'guatemalteco' NOT NULL")
+            if 'use_guatemalan_expressions' not in existing_columns:
+                statements.append("ALTER TABLE users ADD COLUMN use_guatemalan_expressions BOOLEAN DEFAULT TRUE NOT NULL")
+
+            if statements:
+                with db.engine.begin() as conn:
+                    for statement in statements:
+                        conn.execute(text(statement))
+
+        # 2. Sembrar Diccionario Cultural Guatemalteco
+        from app.services.cultural_dictionary_service import CulturalDictionaryService
+        CulturalDictionaryService.seed_initial_expressions()
+
+        # 3. Sembrar Base de Conocimiento RAG
+        from app.services.knowledge_base_service import KnowledgeBaseService
+        KnowledgeBaseService.seed_initial_knowledge()
+
+        return True
+    except Exception as e:
+        print(f"Error ensuring AI knowledge and culture schema: {e}")
+        return False
+
+

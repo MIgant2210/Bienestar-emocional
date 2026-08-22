@@ -9,6 +9,7 @@ from app.models.alert import Alert
 from app.models.audit_log import AuditLog
 from app.models.reward import Reward
 from app.models.kudos import Kudos
+from app.models.invitation import InvitationCode
 from app.utils.db_schema import ensure_task_schema
 from datetime import datetime, timedelta
 
@@ -58,6 +59,32 @@ with app.app_context():
         db.session.add(inst_lab)
         db.session.commit()
 
+    # 2.1 Códigos de Invitación Institucional
+    inst_central = Institution.query.filter_by(name="Institución Central EquilibrIA").first()
+    if not inst_central:
+        inst_central = Institution(name="Institución Central EquilibrIA", type="laboral")
+        db.session.add(inst_central)
+        db.session.commit()
+
+    codes_data = [
+        {"code": "EQUILIBRIA-2026", "inst_id": inst_central.id, "dept": "General"},
+        {"code": "UNIV-NACIONAL-2026", "inst_id": inst_edu.id, "dept": "Educación"},
+        {"code": "TECH-FUTURO-2026", "inst_id": inst_lab.id, "dept": "Tecnología"}
+    ]
+    for cd in codes_data:
+        c_obj = InvitationCode.query.filter_by(code=cd["code"]).first()
+        if not c_obj:
+            c_obj = InvitationCode(
+                code=cd["code"],
+                institution_id=cd["inst_id"],
+                department=cd["dept"],
+                role="miembro",
+                max_uses=None,
+                is_active=True
+            )
+            db.session.add(c_obj)
+    db.session.commit()
+
     # 3. Superadmin
     admin_email = "superadmin@bienestar.com"
     super_admin = User.query.filter_by(email=admin_email).first()
@@ -70,6 +97,8 @@ with app.app_context():
             institution_id=inst_edu.id
         )
         db.session.add(super_admin)
+    super_admin.status = 'ACTIVE'
+    super_admin.email_verified = True
     super_admin.set_password("AdminBienestar2026*")
     db.session.commit()
 
@@ -86,6 +115,8 @@ with app.app_context():
             institution_id=inst_edu.id
         )
         db.session.add(prof_user)
+    prof_user.status = 'ACTIVE'
+    prof_user.email_verified = True
     prof_user.set_password("ProfBienestar2026*")
     db.session.commit()
 
@@ -102,6 +133,8 @@ with app.app_context():
             institution_id=inst_edu.id
         )
         db.session.add(lider_user)
+    lider_user.status = 'ACTIVE'
+    lider_user.email_verified = True
     lider_user.set_password("LiderBienestar2026*")
     db.session.commit()
 
@@ -118,6 +151,8 @@ with app.app_context():
             institution_id=inst_edu.id
         )
         db.session.add(member_user)
+    member_user.status = 'ACTIVE'
+    member_user.email_verified = True
     member_user.set_password("MiembroBienestar2026*")
     db.session.commit()
 

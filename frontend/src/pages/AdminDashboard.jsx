@@ -6,7 +6,9 @@ import {
   PlusCircle, Trash2, Calendar, ClipboardList, Sparkles, Loader, CheckCircle2,
   AlertTriangle, CheckSquare, Settings, Activity, ShieldCheck, Download,
   UserCheck, Lock, FileSpreadsheet, RefreshCw, RotateCcw, Zap, Layers, HelpCircle, Eye, Sliders,
-  Target, ChevronRight, Check, ArrowLeft, Volume2, Mic, Bell, UserX, Key, Palette, Edit3, KeyRound, Heart, Bot, SendHorizontal, Building, MessageSquare, Smile, UserPlus, Plus, X, Printer, Trophy, Brain
+  Target, ChevronRight, Check, ArrowLeft, Volume2, Mic, Bell, UserX, Key, Palette, Edit3, KeyRound, Heart, Bot, SendHorizontal, Building, MessageSquare, Smile, UserPlus, Plus, X, Printer, Trophy, Brain,
+  Search, Filter, Copy, CheckCircle, ExternalLink, Shield, ToggleLeft, ToggleRight, ChevronLeft,
+  ThumbsUp, ThumbsDown, BookOpen, Globe, Tag
 } from 'lucide-react';
 import api from '../services/api';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
@@ -17,6 +19,8 @@ import SystemAlert from '../components/SystemAlert';
 import GamificationWidget from '../components/GamificationWidget';
 import NotificationCenter from '../components/NotificationCenter';
 import TestResponseViewer from '../components/TestResponseViewer';
+import ColibriMascot from '../components/ColibriMascot';
+import StarryBackground from '../components/StarryBackground';
 import MyProgress from './MyProgress';
 import MyWellbeing from './MyWellbeing';
 import { useNavigate } from 'react-router-dom';
@@ -36,7 +40,8 @@ const TAB_TO_URL = {
   reports: '/reportes',
   audit: '/auditoria',
   ai_plans: '/sugerencias-ia',
-  chat_ia: '/chatbot-ia'
+  chat_ia: '/chatbot-ia',
+  culture: '/cultura'
 };
 
 const AdminDashboard = ({ initialTab = 'analytics' }) => {
@@ -131,23 +136,69 @@ const AdminDashboard = ({ initialTab = 'analytics' }) => {
   // Paletas & Edición de Usuario
   const [showPaletteMenu, setShowPaletteMenu] = useState(false);
   const [editingUser, setEditingUser] = useState(null);
+  const [editFirstName, setEditFirstName] = useState('');
+  const [editLastName, setEditLastName] = useState('');
   const [editRole, setEditRole] = useState('miembro');
   const [editDept, setEditDept] = useState('General');
+  const [editDeptId, setEditDeptId] = useState('');
+  const [editStatus, setEditStatus] = useState('ACTIVE');
   const [editPassword, setEditPassword] = useState('');
   const [userUpdateLoading, setUserUpdateLoading] = useState(false);
   const [userUpdateMsg, setUserUpdateMsg] = useState('');
 
-  // Notification Drawer State (Generado 100% en vivo desde la base de datos Supabase)
+  // Filtros Avanzados de Miembros
+  const [memberSearchText, setMemberSearchText] = useState('');
+  const [memberRoleFilter, setMemberRoleFilter] = useState('todos');
+  const [memberDeptFilter, setMemberDeptFilter] = useState('todos');
+  const [memberStatusFilter, setMemberStatusFilter] = useState('todos');
+  const [memberInstFilter, setMemberInstFilter] = useState('todos');
+
+  // Reseteo de Contraseña y Transferencia Institucional
+  const [resetPassModalData, setResetPassModalData] = useState(null);
+  const [resetPassLoading, setResetPassLoading] = useState(false);
+  const [showTransferModal, setShowTransferModal] = useState(false);
+  const [transferTargetUser, setTransferTargetUser] = useState(null);
+  const [transferTargetInstId, setTransferTargetInstId] = useState('');
+  const [transferTargetDeptId, setTransferTargetDeptId] = useState('');
+  const [transferLoading, setTransferLoading] = useState(false);
+
+  // Notification Drawer State (Generado 100% en vivo desde la base de datos)
   const [showNotifications, setShowNotifications] = useState(false);
   const [notifications, setNotifications] = useState([]);
 
   // Módulo de Gestión de Instituciones y Departamentos States (Superadmin / Admins)
+  const [instSubTab, setInstSubTab] = useState('institutions'); // 'institutions', 'departments', 'invitations'
   const [allInstitutions, setAllInstitutions] = useState([]);
+  const [selectedInstForDepts, setSelectedInstForDepts] = useState('');
+  const [instCreateLoading, setInstCreateLoading] = useState(false);
   const [newInstName, setNewInstName] = useState('');
   const [newInstType, setNewInstType] = useState('educativa');
+  const [newInstDesc, setNewInstDesc] = useState('');
+  const [newInstEmail, setNewInstEmail] = useState('');
+  const [newInstPhone, setNewInstPhone] = useState('');
+  const [newInstCountry, setNewInstCountry] = useState('Guatemala');
+  const [newInstCity, setNewInstCity] = useState('');
+  const [newInstDomains, setNewInstDomains] = useState('');
+  const [newInstRequireDomain, setNewInstRequireDomain] = useState(false);
+
+  // Departamentos States
+  const [departmentsList, setDepartmentsList] = useState([]);
+  const [deptsLoading, setDeptsLoading] = useState(false);
   const [newDeptName, setNewDeptName] = useState('');
-  const [selectedInstForDept, setSelectedInstForDept] = useState('');
-  const [instCreateLoading, setInstCreateLoading] = useState(false);
+  const [newDeptCode, setNewDeptCode] = useState('');
+  const [newDeptDesc, setNewDeptDesc] = useState('');
+  const [newDeptLeaderId, setNewDeptLeaderId] = useState('');
+  const [deptCreateLoading, setDeptCreateLoading] = useState(false);
+
+  // Invitaciones States
+  const [invitationsList, setInvitationsList] = useState([]);
+  const [invLoading, setInvLoading] = useState(false);
+  const [newInvRole, setNewInvRole] = useState('miembro');
+  const [newInvDeptId, setNewInvDeptId] = useState('');
+  const [newInvMaxUses, setNewInvMaxUses] = useState('');
+  const [newInvExpiresDays, setNewInvExpiresDays] = useState('30');
+  const [invCreateLoading, setInvCreateLoading] = useState(false);
+  const [copiedInvCode, setCopiedInvCode] = useState(null);
 
   const handleNotificationClick = (notif) => {
     if (notif.targetTab) {
@@ -287,6 +338,29 @@ const AdminDashboard = ({ initialTab = 'analytics' }) => {
   const [previewAnswers, setPreviewAnswers] = useState({});
   const [previewSubmitLoading, setPreviewSubmitLoading] = useState(false);
   const [previewSuccess, setPreviewSuccess] = useState('');
+  const [adminTestStep, setAdminTestStep] = useState('intro'); // 'intro' | 'question'
+  const [adminTestCurrentQIndex, setAdminTestCurrentQIndex] = useState(0);
+  const [adminTestMascotMood, setAdminTestMascotMood] = useState('welcome');
+  const [showAdminConfirmModal, setShowAdminConfirmModal] = useState(false);
+
+  // Estado para Diccionario Cultural Guatemalteco 🇬🇹 (SuperAdmin)
+  const [culturalExpressions, setCulturalExpressions] = useState([]);
+  const [culturalCounts, setCulturalCounts] = useState({ total: 0, allowed: 0, explainable: 0, restricted: 0 });
+  const [cultureSafetyFilter, setCultureSafetyFilter] = useState('ALL');
+  const [cultureSearch, setCultureSearch] = useState('');
+  const [cultureLoading, setCultureLoading] = useState(false);
+  const [showExprModal, setShowExprModal] = useState(false);
+  const [editingExpr, setEditingExpr] = useState(null);
+  const [exprForm, setExprForm] = useState({
+    term: '',
+    meaning: '',
+    example: '',
+    category: 'GUATEMALTEQUISMO',
+    safety_level: 'ALLOWED',
+    can_use: true,
+    can_explain: true,
+    context_notes: ''
+  });
 
   // Form States: Alert Resolution
   const [resolutionNotes, setResolutionNotes] = useState({});
@@ -351,72 +425,99 @@ const AdminDashboard = ({ initialTab = 'analytics' }) => {
   };
 
   const fetchDashboardData = async () => {
-    setLoading(true);
     try {
-      const [statsRes, sugRes, tasksRes, alertsRes, evalsRes, templatesRes, membersRes, auditRes, reportRes, apptsRes, rewardsRes, kudosRes] = await Promise.allSettled([
-        api.get('/institutions/dashboard'),
-        api.get('/institutions/suggestions'),
+      // 1. Cargar paquete agregado de alto rendimiento
+      const [bundleRes, tasksRes, membersRes] = await Promise.allSettled([
+        api.get('/reports/dashboard-bundle'),
         api.get('/tasks'),
-        api.get('/alerts?status=pendiente'),
-        api.get('/evaluations'),
-        api.get('/evaluations/templates'),
-        api.get('/institutions/members'),
-        api.get('/audit/logs'),
-        api.get('/reports/export'),
-        api.get('/appointments'),
-        api.get('/rewards'),
-        api.get('/kudos')
+        api.get('/institutions/members')
       ]);
 
-      if (statsRes.status === 'fulfilled' && statsRes.value.data) setStats(statsRes.value.data);
-      if (sugRes.status === 'fulfilled' && sugRes.value.data) setSuggestions(sugRes.value.data);
-      if (tasksRes.status === 'fulfilled' && tasksRes.value.data) setTasks(tasksRes.value.data);
-      if (alertsRes.status === 'fulfilled' && alertsRes.value.data) setAlerts(alertsRes.value.data);
-      if (evalsRes.status === 'fulfilled' && evalsRes.value.data) setEvaluations(evalsRes.value.data);
-      if (templatesRes.status === 'fulfilled' && templatesRes.value.data) setTemplates(templatesRes.value.data);
-      if (membersRes.status === 'fulfilled' && membersRes.value.data) setMembers(membersRes.value.data);
-      if (auditRes.status === 'fulfilled' && auditRes.value.data) setAuditLogs(auditRes.value.data);
-      if (reportRes.status === 'fulfilled' && reportRes.value.data) setAllReportsData(reportRes.value.data);
-      if (apptsRes.status === 'fulfilled' && apptsRes.value.data) setAppointments(apptsRes.value.data);
-      if (rewardsRes.status === 'fulfilled' && rewardsRes.value.data) setRewards(rewardsRes.value.data);
-      if (kudosRes.status === 'fulfilled' && kudosRes.value.data) setKudosList(kudosRes.value.data);
-      fetchInstitutionsAll();
+      if (bundleRes.status === 'fulfilled' && bundleRes.value?.data) {
+        const bundle = bundleRes.value.data;
+        setStats({
+          averages: bundle.averages || { stress: 0, motivation: 0, burnout: 0, total_reflections: 0 },
+          sentiment_distribution: bundle.sentiment_distribution || { Positivo: 0, Neutro: 0, Negativo: 0 },
+          historical_trends: bundle.historical_trends || [],
+          total_members: bundle.total_members || bundle.active_users_count || 0
+        });
+        if (bundle.pending_alerts) setAlerts(bundle.pending_alerts);
+      }
+      if (tasksRes.status === 'fulfilled' && tasksRes.value?.data) setTasks(tasksRes.value.data);
+      if (membersRes.status === 'fulfilled' && membersRes.value?.data) setMembers(membersRes.value.data);
     } catch (err) {
-      console.error('Error al cargar datos del administrador:', err);
+      console.error('Error al cargar datos base del dashboard:', err);
     } finally {
       setLoading(false);
+    }
+
+    // 2. Cargar instituciones y sugerencias en background ligero
+    try {
+      fetchInstitutionsAll();
+      api.get('/institutions/suggestions').then(res => { if (res.data) setSuggestions(res.data); }).catch(() => {});
+      api.get('/evaluations').then(res => { if (res.data) setEvaluations(res.data); }).catch(() => {});
+    } catch (err) {
+      console.error('Error al cargar datos secundarios:', err);
     }
   };
 
   const fetchInstitutionsAll = async () => {
     try {
       const res = await api.get('/institutions/all');
-      setAllInstitutions(res.data);
+      const instData = res.data || [];
+      setAllInstitutions(instData);
+      if (instData.length > 0 && !selectedInstForDepts) {
+        setSelectedInstForDepts(user?.role === 'superadmin' ? instData[0].id : (user?.institution_id || instData[0].id));
+      }
     } catch (err) {
       console.error('Error al cargar instituciones:', err);
     }
   };
 
-  const handleCreateInstitution = async (e) => {
-    e.preventDefault();
-    if (!newInstName.trim()) return;
-    setInstCreateLoading(true);
+  const fetchDepartmentsForInst = async (instId) => {
+    if (!instId) return;
+    setDeptsLoading(true);
     try {
-      const res = await api.post('/institutions', {
-        name: newInstName,
-        type: newInstType
-      });
-      setNewInstName('');
-      showAlert('success', 'Institución Creada', res.data.message);
-      fetchInstitutionsAll();
+      const res = await api.get(`/institutions/${instId}/departments`);
+      setDepartmentsList(res.data);
     } catch (err) {
-      showAlert('danger', 'Error de Creación', err.response?.data?.message || 'Error al crear institución.');
+      console.error('Error al cargar departamentos:', err);
     } finally {
-      setInstCreateLoading(false);
+      setDeptsLoading(false);
     }
   };
 
-  // Generador Dinámico de Notificaciones 100% basadas en la Base de Datos Supabase
+  const fetchInvitationsForInst = async (instId) => {
+    if (!instId) return;
+    setInvLoading(true);
+    try {
+      const res = await api.get(`/institutions/${instId}/invitations`);
+      setInvitationsList(res.data);
+    } catch (err) {
+      console.error('Error al cargar invitaciones:', err);
+    } finally {
+      setInvLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchDashboardData();
+  }, []);
+
+  useEffect(() => {
+    if (activeTab === 'culture') {
+      fetchCulturalExpressions();
+    }
+  }, [activeTab, cultureSafetyFilter, cultureSearch]);
+
+  useEffect(() => {
+    if (selectedInstForDepts) {
+      fetchDepartmentsForInst(selectedInstForDepts);
+      fetchInvitationsForInst(selectedInstForDepts);
+    }
+  }, [selectedInstForDepts]);
+
+  // Generador Dinámico de Notificaciones
   useEffect(() => {
     const realNotifs = [];
     (alerts || []).forEach((al) => {
@@ -458,24 +559,129 @@ const AdminDashboard = ({ initialTab = 'analytics' }) => {
     setNotifications(realNotifs);
   }, [alerts, appointments, tasks, kudosList]);
 
-  useEffect(() => {
-    fetchDashboardData();
-  }, []);
-
-  useEffect(() => {
-    if (showPrivacyNotice) {
-      const timer = setTimeout(() => {
-        setShowPrivacyNotice(false);
-      }, 20000); // 20 segundos sin desfasar el diseño
-      return () => clearTimeout(timer);
+  const handleCreateInstitution = async (e) => {
+    e.preventDefault();
+    if (!newInstName.trim()) return;
+    setInstCreateLoading(true);
+    try {
+      const res = await api.post('/institutions', {
+        name: newInstName.trim(),
+        type: newInstType,
+        description: newInstDesc.trim(),
+        email: newInstEmail.trim(),
+        phone: newInstPhone.trim(),
+        country: newInstCountry.trim(),
+        city: newInstCity.trim(),
+        allowed_domains: newInstDomains.trim(),
+        require_institutional_domain: newInstRequireDomain
+      });
+      setNewInstName('');
+      setNewInstDesc('');
+      setNewInstEmail('');
+      setNewInstPhone('');
+      setNewInstCity('');
+      setNewInstDomains('');
+      setNewInstRequireDomain(false);
+      showAlert('success', 'Institución Creada', res.data.message);
+      fetchInstitutionsAll();
+    } catch (err) {
+      showAlert('danger', 'Error de Creación', err.response?.data?.message || 'Error al crear institución.');
+    } finally {
+      setInstCreateLoading(false);
     }
-  }, [showPrivacyNotice]);
+  };
+
+  const handleToggleInstitutionStatus = async (instId, currentStatus) => {
+    const newStatus = currentStatus === 'ACTIVE' ? 'SUSPENDED' : 'ACTIVE';
+    const actionText = newStatus === 'SUSPENDED' ? 'suspender' : 'reactivar';
+    if (!window.confirm(`¿Está seguro de que desea ${actionText} esta institución?`)) return;
+    try {
+      const res = await api.patch(`/institutions/${instId}/status`, { status: newStatus });
+      showAlert('success', 'Estado Actualizado', res.data.message);
+      fetchInstitutionsAll();
+    } catch (err) {
+      showAlert('danger', 'Error de Estado', err.response?.data?.message || 'Error al cambiar estado.');
+    }
+  };
+
+  const handleCreateDepartment = async (e) => {
+    e.preventDefault();
+    const instId = user?.role === 'superadmin' ? selectedInstForDepts : user?.institution_id;
+    if (!instId || !newDeptName.trim() || !newDeptCode.trim()) return;
+    setDeptCreateLoading(true);
+    try {
+      const res = await api.post(`/institutions/${instId}/departments`, {
+        name: newDeptName.trim(),
+        code: newDeptCode.trim().toUpperCase(),
+        description: newDeptDesc.trim(),
+        leader_id: newDeptLeaderId || null
+      });
+      setNewDeptName('');
+      setNewDeptCode('');
+      setNewDeptDesc('');
+      setNewDeptLeaderId('');
+      showAlert('success', 'Departamento Creado', res.data.message);
+      fetchDepartmentsForInst(instId);
+      fetchInstitutionsAll();
+    } catch (err) {
+      showAlert('danger', 'Error al Crear Departamento', err.response?.data?.message || 'Error al crear departamento.');
+    } finally {
+      setDeptCreateLoading(false);
+    }
+  };
+
+  const handleToggleDeptStatus = async (instId, deptId) => {
+    try {
+      const res = await api.patch(`/institutions/${instId}/departments/${deptId}/status`);
+      showAlert('success', 'Departamento Actualizado', res.data.message);
+      fetchDepartmentsForInst(instId);
+      fetchInstitutionsAll();
+    } catch (err) {
+      showAlert('danger', 'Error al Actualizar Depto', err.response?.data?.message || 'Error al modificar departamento.');
+    }
+  };
+
+  const handleCreateInvitation = async (e) => {
+    e.preventDefault();
+    const instId = user?.role === 'superadmin' ? selectedInstForDepts : user?.institution_id;
+    if (!instId) return;
+    setInvCreateLoading(true);
+    try {
+      const res = await api.post(`/institutions/${instId}/invitations`, {
+        role: newInvRole,
+        department_id: newInvDeptId || null,
+        max_uses: newInvMaxUses ? parseInt(newInvMaxUses) : null,
+        expires_in_days: parseInt(newInvExpiresDays) || 30
+      });
+      setNewInvMaxUses('');
+      showAlert('success', 'Invitación Generada', `Código generado: ${res.data.invitation.code}`);
+      fetchInvitationsForInst(instId);
+    } catch (err) {
+      showAlert('danger', 'Error de Invitación', err.response?.data?.message || 'Error al generar invitación.');
+    } finally {
+      setInvCreateLoading(false);
+    }
+  };
+
+  const handleRevokeInvitation = async (instId, invId) => {
+    if (!window.confirm('¿Está seguro de que desea revocar este código de invitación? No podrá volver a usarse.')) return;
+    try {
+      const res = await api.post(`/institutions/${instId}/invitations/${invId}/revoke`);
+      showAlert('success', 'Invitación Revocada', res.data.message);
+      fetchInvitationsForInst(instId);
+    } catch (err) {
+      showAlert('danger', 'Error al Revocar', err.response?.data?.message || 'Error al revocar invitación.');
+    }
+  };
 
   const openEditUserModal = (u) => {
     setEditingUser(u);
+    setEditFirstName(u.first_name || '');
+    setEditLastName(u.last_name || '');
     setEditRole(u.role || 'miembro');
     setEditDept(u.department || 'General');
-    setEditPassword('');
+    setEditDeptId(u.department_id || '');
+    setEditStatus(u.status || 'ACTIVE');
     setUserUpdateMsg('');
   };
 
@@ -486,23 +692,82 @@ const AdminDashboard = ({ initialTab = 'analytics' }) => {
     setUserUpdateMsg('');
     try {
       const payload = {
+        first_name: editFirstName.trim(),
+        last_name: editLastName.trim(),
         role: editRole,
         department: editDept,
-        ...(editPassword.trim() ? { new_password: editPassword } : {})
+        department_id: editDeptId || null,
+        status: editStatus
       };
       const res = await api.put(`/institutions/members/${editingUser.id}`, payload);
       setUserUpdateMsg(res.data.message);
-      setEditPassword('');
+      showAlert('success', 'Usuario Actualizado', res.data.message);
       const membersRes = await api.get('/institutions/members');
       if (membersRes.data) setMembers(membersRes.data);
       setTimeout(() => {
         setEditingUser(null);
         setUserUpdateMsg('');
-      }, 1500);
+      }, 1200);
     } catch (err) {
-      alert(err.response?.data?.message || 'Error al actualizar el usuario');
+      const errTxt = err.response?.data?.message || 'Error al actualizar el usuario';
+      showAlert('danger', 'Error al Actualizar', errTxt);
+      setUserUpdateMsg(errTxt);
     } finally {
       setUserUpdateLoading(false);
+    }
+  };
+
+  const handleGeneratePasswordReset = async (targetUser) => {
+    setResetPassLoading(true);
+    try {
+      const res = await api.post(`/institutions/members/${targetUser.id}/reset-password`);
+      setResetPassModalData({
+        user: targetUser,
+        reset_link: `${window.location.origin}${res.data.reset_link}`
+      });
+      showAlert('success', 'Enlace Generado', 'Enlace de restablecimiento generado de manera segura.');
+    } catch (err) {
+      showAlert('danger', 'Error', err.response?.data?.message || 'Error al generar restablecimiento.');
+    } finally {
+      setResetPassLoading(false);
+    }
+  };
+
+  const handleMemberStatusAction = async (userId, action) => {
+    try {
+      const res = await api.post(`/institutions/members/${userId}/status-action`, { action });
+      showAlert('success', 'Estado de Cuenta', res.data.message);
+      fetchDashboardData();
+    } catch (err) {
+      showAlert('danger', 'Error de Acción', err.response?.data?.message || 'Error al modificar estado de la cuenta.');
+    }
+  };
+
+  const openTransferModal = (u) => {
+    setTransferTargetUser(u);
+    setTransferTargetInstId(allInstitutions[0]?.id || '');
+    setTransferTargetDeptId('');
+    setShowTransferModal(true);
+  };
+
+  const handleTransferUserSubmit = async (e) => {
+    e.preventDefault();
+    if (!transferTargetUser || !transferTargetInstId) return;
+    setTransferLoading(true);
+    try {
+      const res = await api.patch(`/institutions/members/${transferTargetUser.id}/transfer`, {
+        institution_id: transferTargetInstId,
+        department_id: transferTargetDeptId || null
+      });
+      showAlert('success', 'Usuario Transferido', res.data.message);
+      setShowTransferModal(false);
+      const membersRes = await api.get('/institutions/members');
+      if (membersRes.data) setMembers(membersRes.data);
+      fetchInstitutionsAll();
+    } catch (err) {
+      showAlert('danger', 'Error de Transferencia', err.response?.data?.message || 'Error al transferir usuario.');
+    } finally {
+      setTransferLoading(false);
     }
   };
 
@@ -666,6 +931,94 @@ const AdminDashboard = ({ initialTab = 'analytics' }) => {
       alert(err.response?.data?.message || 'Error al enviar la prueba.');
     } finally {
       setPreviewSubmitLoading(false);
+    }
+  };
+
+  // Funciones para Gestión del Diccionario Cultural Guatemalteco 🇬🇹
+  const fetchCulturalExpressions = async () => {
+    try {
+      setCultureLoading(true);
+      const params = {};
+      if (cultureSafetyFilter !== 'ALL') params.safety_level = cultureSafetyFilter;
+      if (cultureSearch) params.search = cultureSearch;
+      const res = await api.get('/culture/expressions', { params });
+      setCulturalExpressions(res.data.expressions || []);
+      setCulturalCounts(res.data.counts || { total: 0, allowed: 0, explainable: 0, restricted: 0 });
+    } catch (err) {
+      console.error('Error al cargar expresiones culturales:', err);
+    } finally {
+      setCultureLoading(false);
+    }
+  };
+
+  const handleOpenNewExprModal = () => {
+    setEditingExpr(null);
+    setExprForm({
+      term: '',
+      meaning: '',
+      example: '',
+      category: 'GUATEMALTEQUISMO',
+      safety_level: 'ALLOWED',
+      can_use: true,
+      can_explain: true,
+      context_notes: ''
+    });
+    setShowExprModal(true);
+  };
+
+  const handleOpenEditExprModal = (expr) => {
+    setEditingExpr(expr);
+    setExprForm({
+      term: expr.term,
+      meaning: expr.meaning,
+      example: expr.example || '',
+      category: expr.category || 'GUATEMALTEQUISMO',
+      safety_level: expr.safety_level || 'ALLOWED',
+      can_use: expr.can_use,
+      can_explain: expr.can_explain,
+      context_notes: expr.context_notes || ''
+    });
+    setShowExprModal(true);
+  };
+
+  const handleSaveCulturalExpression = async (e) => {
+    e.preventDefault();
+    if (!exprForm.term.trim() || !exprForm.meaning.trim()) {
+      showAlert('error', 'Campos Requeridos', 'El término y el significado son obligatorios.');
+      return;
+    }
+    try {
+      if (editingExpr) {
+        await api.put(`/culture/expressions/${editingExpr.id}`, exprForm);
+        showAlert('success', 'Expresión Actualizada', `La expresión '${exprForm.term}' fue actualizada exitosamente.`);
+      } else {
+        await api.post('/culture/expressions', exprForm);
+        showAlert('success', 'Expresión Creada', `La expresión '${exprForm.term}' fue agregada al Diccionario Cultural 🇬🇹.`);
+      }
+      setShowExprModal(false);
+      fetchCulturalExpressions();
+    } catch (err) {
+      showAlert('error', 'Error', err.response?.data?.message || 'No se pudo guardar la expresión.');
+    }
+  };
+
+  const handleToggleExpressionActive = async (expr) => {
+    try {
+      await api.put(`/culture/expressions/${expr.id}`, { active: !expr.active });
+      fetchCulturalExpressions();
+    } catch (err) {
+      showAlert('error', 'Error', 'No se pudo cambiar el estado de la expresión.');
+    }
+  };
+
+  const handleDeleteExpression = async (expr) => {
+    if (!window.confirm(`¿Estás seguro de eliminar la expresión '${expr.term}' del diccionario?`)) return;
+    try {
+      await api.delete(`/culture/expressions/${expr.id}`);
+      showAlert('info', 'Expresión Eliminada', `La expresión '${expr.term}' fue eliminada.`);
+      fetchCulturalExpressions();
+    } catch (err) {
+      showAlert('error', 'Error', err.response?.data?.message || 'No se pudo eliminar la expresión.');
     }
   };
 
@@ -1175,9 +1528,9 @@ const AdminDashboard = ({ initialTab = 'analytics' }) => {
     );
   }
 
-  const pieData = Object.keys(stats.sentiment_distribution).map(key => ({
+  const pieData = Object.keys(stats?.sentiment_distribution || {}).map(key => ({
     name: key,
-    value: stats.sentiment_distribution[key] || 0
+    value: (stats?.sentiment_distribution && stats.sentiment_distribution[key]) || 0
   }));
 
   const COLORS = {
@@ -1186,41 +1539,129 @@ const AdminDashboard = ({ initialTab = 'analytics' }) => {
     Negativo: 'var(--danger)'
   };
 
-  const departmentsList = ['Tecnología', 'Operaciones', 'Recursos Humanos', 'Finanzas', 'Salud', 'Ventas'];
+  const fallbackDeptNames = departmentsList.length > 0 
+    ? departmentsList.map(d => typeof d === 'string' ? d : d.name)
+    : ['General', 'Tecnología', 'Recursos Humanos', 'Psicología y Salud', 'Educación'];
   const unreadNotificationsCount = notifications.filter(n => n.unread).length;
 
-  // INTERCEPTAR RENDERIZADO SI EL ADMIN ESTÁ PROBANDO EL TEST
+  // INTERCEPTAR RENDERIZADO SI EL ADMIN ESTÁ PROBANDO EL TEST (EXPERIENCIA PASO A PASO CON COLIBRÍ)
   if (previewTest) {
     const questions = previewTest.questions || [];
-    const answeredCount = questions.filter(q => previewAnswers[q.id] !== undefined).length;
-    const progressPercent = Math.round((answeredCount / questions.length) * 100);
+    const totalQ = questions.length;
+    const currentQ = questions[adminTestCurrentQIndex] || {};
+    const isCurrentAnswered = previewAnswers[currentQ.id] !== undefined && previewAnswers[currentQ.id] !== '';
+    const progressPercent = totalQ > 0 ? Math.round(((adminTestCurrentQIndex + (isCurrentAnswered ? 1 : 0)) / totalQ) * 100) : 0;
 
     return (
       <div style={{ 
         minHeight: '100vh', 
+        background: 'var(--page-bg)', 
         backgroundColor: 'var(--bg-primary)', 
         paddingBottom: '60px',
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'center',
-        width: '100%'
-      }}>
+        position: 'relative',
+        overflow: 'hidden'
+      }} className="animate-fade">
         
+        {/* Cielo Estrellado Oficial de EquilibrIA */}
+        <StarryBackground isLogin={false} />
+
+        {/* Modal de Confirmación antes de Enviar */}
+        {showAdminConfirmModal && (
+          <div style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: 'rgba(0,0,0,0.65)',
+            backdropFilter: 'blur(8px)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 10000,
+            padding: '20px'
+          }} className="animate-fade">
+            <div className="glass-card" style={{
+              maxWidth: '460px',
+              width: '100%',
+              padding: '32px 28px',
+              textAlign: 'center',
+              borderRadius: '24px',
+              border: '2px solid var(--border)',
+              boxShadow: 'var(--shadow-lg)'
+            }}>
+              <div style={{
+                width: '60px',
+                height: '60px',
+                borderRadius: '50%',
+                backgroundColor: 'var(--primary-light)',
+                color: 'var(--primary)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                margin: '0 auto 16px'
+              }}>
+                <Sparkles size={30} />
+              </div>
+
+              <h3 style={{ fontSize: '20px', fontWeight: '900', marginBottom: '8px' }}>
+                ¿Deseas finalizar la prueba del test?
+              </h3>
+
+              <p style={{ fontSize: '13.5px', color: 'var(--text-secondary)', lineHeight: '1.5', marginBottom: '24px' }}>
+                Has completado las preguntas en modo prueba. La respuesta quedará registrada para fines de validación y métricas de analítica.
+              </p>
+
+              {previewSuccess && (
+                <div style={{ backgroundColor: 'var(--success-light)', color: 'var(--success)', padding: '10px', borderRadius: '12px', marginBottom: '16px', fontSize: '12.5px', fontWeight: '700' }}>
+                  {previewSuccess}
+                </div>
+              )}
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                <button
+                  type="button"
+                  onClick={() => setShowAdminConfirmModal(false)}
+                  className="btn btn-secondary"
+                  style={{ padding: '12px', borderRadius: '14px', fontWeight: '800' }}
+                  disabled={previewSubmitLoading}
+                >
+                  Revisar
+                </button>
+                <button
+                  type="button"
+                  onClick={handleAdminSubmitPreviewTest}
+                  className="btn btn-primary"
+                  style={{ padding: '12px', borderRadius: '14px', fontWeight: '900', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
+                  disabled={previewSubmitLoading}
+                >
+                  {previewSubmitLoading ? <Loader className="animate-spin" size={16} /> : <><span>Sí, Enviar Prueba</span><CheckCircle2 size={16} /></>}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Cabecera Fija Superior con Progreso */}
         <div style={{
           width: '100%',
           backgroundColor: 'var(--bg-secondary)',
           borderBottom: '1px solid var(--border)',
-          padding: '12px 24px',
+          padding: '12px 28px',
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center',
           boxShadow: 'var(--shadow-sm)',
           position: 'sticky',
           top: 0,
-          zIndex: 100
+          zIndex: 100,
+          backdropFilter: 'blur(10px)'
         }}>
           <button 
-            onClick={() => setPreviewTest(null)}
+            onClick={() => { setPreviewTest(null); setAdminTestStep('intro'); }}
             style={{
               display: 'flex',
               alignItems: 'center',
@@ -1229,227 +1670,420 @@ const AdminDashboard = ({ initialTab = 'analytics' }) => {
               border: 'none',
               color: 'var(--text-primary)',
               cursor: 'pointer',
-              fontWeight: '700',
+              fontWeight: '800',
               fontSize: '13px'
             }}
           >
             <ArrowLeft size={16} />
-            <span>Cerrar Vista Previa</span>
+            <span>Salir de Vista Previa</span>
           </button>
           
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <span style={{ fontSize: '12px', color: 'var(--text-secondary)', fontWeight: '600' }}>
-              Progreso de Prueba: {progressPercent}%
+          <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+            <span style={{ fontSize: '11px', fontWeight: '900', padding: '3px 10px', borderRadius: '12px', backgroundColor: 'var(--primary-light)', color: 'var(--primary)', textTransform: 'uppercase' }}>
+              🛡️ Modo Prueba Admin
             </span>
-            <div style={{ width: '120px', height: '6px', backgroundColor: 'var(--bg-primary)', borderRadius: '3px', overflow: 'hidden' }}>
-              <div style={{ width: `${progressPercent}%`, height: '100%', backgroundColor: 'var(--primary)', transition: 'width 0.3s ease' }} />
-            </div>
+
+            {adminTestStep === 'question' && totalQ > 0 && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginLeft: '6px' }}>
+                <span style={{ fontSize: '12px', color: 'var(--text-secondary)', fontWeight: '800' }}>
+                  {progressPercent}%
+                </span>
+                <div style={{ width: '120px', height: '8px', backgroundColor: 'var(--bg-primary)', borderRadius: '6px', overflow: 'hidden', border: '1px solid var(--border)' }}>
+                  <div style={{ width: `${progressPercent}%`, height: '100%', backgroundColor: 'var(--primary)', transition: 'width 0.3s ease' }} />
+                </div>
+              </div>
+            )}
           </div>
         </div>
 
-        <div style={{ width: '100%', maxWidth: '780px', padding: '24px 16px', display: 'grid', gap: '20px' }}>
+        {/* CONTENEDOR PRINCIPAL CENTRADO Y AMPLIO EN PC */}
+        <div style={{ 
+          width: '100%', 
+          maxWidth: '1060px', 
+          margin: 'auto 0',
+          padding: '40px 24px', 
+          position: 'relative', 
+          zIndex: 10,
+          display: 'flex',
+          flexDirection: 'column',
+          justifyContent: 'center'
+        }}>
           
-          {/* Mascota Equi el Colibrí Orientador en la vista previa del Admin */}
-          <div style={{
-            backgroundColor: 'var(--bg-secondary)',
-            borderRadius: '20px',
-            border: '3px solid var(--primary-light)',
-            padding: '16px 22px',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '16px',
-            boxShadow: 'var(--shadow-sm)'
-          }}>
-            <div style={{
-              backgroundColor: 'var(--primary-light)',
-              width: '56px',
-              height: '56px',
-              borderRadius: '50%',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              boxShadow: '0 4px 14px var(--primary-light)',
-              flexShrink: 0,
-              overflow: 'hidden'
-            }}>
-              <img src="/logo.png" alt="Equi Colibrí" style={{ width: '42px', height: '42px', objectFit: 'contain' }} />
+          {/* PASO 1: PANTALLA INTRODUCTORIA / ENCABEZADO DEL TEST */}
+          {adminTestStep === 'intro' && (
+            <div className="animate-fade" style={{ display: 'grid', gridTemplateColumns: 'minmax(300px, 340px) 1fr', gap: '32px', alignItems: 'center' }}>
+              
+              {/* Mascota Colibrí en estado de bienvenida */}
+              <ColibriMascot 
+                mood="welcome" 
+                customMessage="¡Hola Administrador! Te acompaño en la prueba de este test. Así experimentarán tus colaboradores cada evaluación. 🌿"
+                progressPercent={0}
+              />
+
+              {/* Tarjeta de Encabezado */}
+              <div className="glass-card" style={{
+                padding: '40px 36px',
+                borderRadius: '24px',
+                border: '2px solid var(--border)',
+                borderBottom: '6px solid var(--primary)',
+                boxShadow: 'var(--shadow-lg)'
+              }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
+                  <span style={{ fontSize: '11px', fontWeight: '900', padding: '4px 12px', borderRadius: '20px', backgroundColor: 'var(--primary-light)', color: 'var(--primary)', textTransform: 'uppercase' }}>
+                    {previewTest.category || 'Evaluación'}
+                  </span>
+                  <span style={{ fontSize: '12px', color: 'var(--text-muted)', fontWeight: '700' }}>
+                    Vista de Prueba Administrativa
+                  </span>
+                </div>
+                
+                <h1 style={{ fontSize: '24px', fontWeight: '900', color: 'var(--text-primary)', letterSpacing: '-0.5px', marginBottom: '10px' }}>
+                  {previewTest.title}
+                </h1>
+                
+                <p style={{ fontSize: '14px', color: 'var(--text-secondary)', lineHeight: '1.6', marginBottom: '24px' }}>
+                  {previewTest.description || 'Evaluación guiada de bienestar emocional con preguntas dinámicas interactivas. Esta vista previa permite validar la experiencia completa de los integrantes.'}
+                </p>
+
+                {/* Chips de Información del Test */}
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px', marginBottom: '28px' }}>
+                  <div style={{ backgroundColor: 'var(--bg-secondary)', border: '1px solid var(--border)', padding: '8px 14px', borderRadius: '12px', fontSize: '12.5px', fontWeight: '800', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <span>📋</span>
+                    <span>{totalQ} preguntas interactivas</span>
+                  </div>
+                  <div style={{ backgroundColor: 'var(--bg-secondary)', border: '1px solid var(--border)', padding: '8px 14px', borderRadius: '12px', fontSize: '12.5px', fontWeight: '800', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <span>⏱️</span>
+                    <span>~{Math.max(2, Math.round(totalQ * 0.6))} minutos estimados</span>
+                  </div>
+                  <div style={{ backgroundColor: 'var(--primary-light)', color: 'var(--primary)', padding: '8px 14px', borderRadius: '12px', fontSize: '12.5px', fontWeight: '900', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <Zap size={14} />
+                    <span>Experiencia Paso a Paso</span>
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setAdminTestStep('question');
+                    setAdminTestCurrentQIndex(0);
+                    setAdminTestMascotMood('thinking');
+                  }}
+                  className="btn btn-primary"
+                  style={{
+                    width: '100%',
+                    padding: '16px 24px',
+                    fontSize: '15px',
+                    borderRadius: '16px',
+                    fontWeight: '900',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '10px',
+                    boxShadow: 'var(--shadow-md)'
+                  }}
+                >
+                  <span>Comenzar Prueba de Evaluación</span>
+                  <ChevronRight size={18} />
+                </button>
+              </div>
+
             </div>
-            <div>
-              <span style={{ fontSize: '11px', fontWeight: '900', color: 'var(--primary)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                Equi • Tu Colibrí Orientador (Vista de Prueba Admin)
-              </span>
-              <p style={{ fontSize: '13.5px', fontWeight: '800', color: 'var(--text-primary)', marginTop: '2px' }}>
-                "{progressPercent === 0 ? '¡Hola Administrador! Aquí puedes probar la experiencia completa con escalas numéricas, la escala de 5 Emojis de Ánimo y dictado por voz.' : progressPercent >= 100 ? '¡Excelente! Has completado todas las preguntas de prueba.' : '¡Vas por la mitad del test! Sigue completando las opciones.'}"
-              </p>
-            </div>
-          </div>
+          )}
 
-          {/* Tarjeta de Encabezado */}
-          <div style={{
-            backgroundColor: 'var(--bg-secondary)',
-            borderRadius: '16px',
-            border: '2px solid var(--border)',
-            borderBottom: '6px solid var(--primary)',
-            boxShadow: 'var(--shadow)',
-            padding: '24px 28px'
-          }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '12px' }}>
-              <span style={{ fontSize: '10px', fontWeight: '800', padding: '3px 8px', borderRadius: '4px', backgroundColor: 'var(--primary-light)', color: 'var(--primary)', textTransform: 'uppercase' }}>
-                Vista Previa del Administrador
-              </span>
-              <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Muestra</span>
-            </div>
-            
-            <h1 style={{ fontSize: '24px', fontWeight: '900', color: 'var(--text-primary)', letterSpacing: '-0.5px' }}>
-              {previewTest.title}
-            </h1>
-            
-            <p style={{ fontSize: '13.5px', color: 'var(--text-secondary)', marginTop: '8px', lineHeight: '1.5' }}>
-              {previewTest.description || 'Esta es la pantalla dedicada e independiente de llenado de tests. Los colaboradores interactúan únicamente en esta sección aislada.'}
-            </p>
-          </div>
+          {/* PASO 2: PREGUNTAS INDIVIDUALES (UNA A LA VEZ) */}
+          {adminTestStep === 'question' && currentQ && (
+            <div className="animate-fade" style={{ display: 'grid', gridTemplateColumns: 'minmax(300px, 340px) 1fr', gap: '32px', alignItems: 'flex-start' }}>
+              
+              {/* Mascota Colibrí en el lateral */}
+              <div style={{ position: 'sticky', top: '80px' }}>
+                <ColibriMascot 
+                  mood={adminTestMascotMood}
+                  progressPercent={progressPercent}
+                />
+              </div>
 
-          {previewSuccess && <div style={{ backgroundColor: 'var(--success-light)', border: '1px solid var(--success)', color: 'var(--success)', padding: '12px', borderRadius: 'var(--radius-sm)', fontSize: '13px' }}>{previewSuccess}</div>}
+              {/* Tarjeta de la Pregunta Actual */}
+              <div className="glass-card" style={{
+                padding: '38px 36px',
+                borderRadius: '24px',
+                border: '2px solid var(--border)',
+                borderLeft: isCurrentAnswered ? '6px solid var(--success)' : '2px solid var(--border)',
+                boxShadow: 'var(--shadow-md)'
+              }}>
+                {/* Header de la Pregunta */}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '18px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <span style={{
+                      width: '32px',
+                      height: '32px',
+                      borderRadius: '50%',
+                      backgroundColor: isCurrentAnswered ? 'var(--success-light)' : 'var(--primary-light)',
+                      color: isCurrentAnswered ? 'var(--success)' : 'var(--primary)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      fontWeight: '900',
+                      fontSize: '13.5px'
+                    }}>
+                      {adminTestCurrentQIndex + 1}
+                    </span>
+                    <span style={{ fontSize: '12px', fontWeight: '800', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                      Pregunta {adminTestCurrentQIndex + 1} de {totalQ}
+                    </span>
+                  </div>
 
-          <form onSubmit={handleAdminSubmitPreviewTest} style={{ display: 'grid', gap: '16px' }}>
-            {questions.map((q, idx) => (
-              <div 
-                key={q.id || idx}
-                style={{
-                  backgroundColor: 'var(--bg-secondary)',
-                  borderRadius: '14px',
-                  border: '2px solid var(--border)',
-                  borderLeft: previewAnswers[q.id] !== undefined ? '5px solid var(--success)' : '2px solid var(--border)',
-                  boxShadow: 'var(--shadow-sm)',
-                  padding: '24px 28px'
-                }}
-              >
-                <h3 style={{ fontSize: '14px', fontWeight: '800', color: 'var(--text-primary)', display: 'flex', gap: '8px', marginBottom: '16px' }}>
-                  <span style={{ color: 'var(--primary)' }}>{idx + 1}.</span>
-                  {q.question}
-                </h3>
+                  {isCurrentAnswered && (
+                    <span style={{ fontSize: '11px', fontWeight: '800', color: 'var(--success)', backgroundColor: 'var(--success-light)', padding: '3px 10px', borderRadius: '12px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                      <CheckCircle2 size={12} /> Respondida
+                    </span>
+                  )}
+                </div>
 
-                {q.type === 'text' && (
-                  <div>
-                    <textarea
-                      rows="3"
-                      placeholder="Escribe o dicta por micrófono la respuesta de prueba..."
-                      value={previewAnswers[q.id] || ''}
-                      onChange={(e) => setPreviewAnswers(prev => ({ ...prev, [q.id]: e.target.value }))}
-                      required
-                    />
-                    <div style={{ marginTop: '8px' }}>
+                {/* Enunciado */}
+                <h2 style={{ fontSize: '18px', fontWeight: '900', color: 'var(--text-primary)', lineHeight: '1.45', marginBottom: '24px' }}>
+                  {currentQ.question}
+                </h2>
+
+                {/* COMPONENTES DE RESPUESTA POR TIPO */}
+                <div style={{ marginBottom: '32px' }}>
+                  
+                  {/* Tipo Texto con Dictado por Voz */}
+                  {currentQ.type === 'text' && (
+                    <div>
+                      <textarea
+                        rows="5"
+                        placeholder="Escribe o dicta por micrófono la respuesta de prueba..."
+                        value={previewAnswers[currentQ.id] || ''}
+                        onChange={(e) => {
+                          setPreviewAnswers(prev => ({ ...prev, [currentQ.id]: e.target.value }));
+                          setAdminTestMascotMood('happy');
+                        }}
+                        style={{ resize: 'vertical', width: '100%', marginBottom: '14px', borderRadius: '14px', padding: '14px', fontSize: '14px', lineHeight: '1.5' }}
+                      />
+
+                      <div>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+                            if (!SpeechRecognition) {
+                              alert('El dictado por voz nativo no es soportado por este navegador.');
+                              return;
+                            }
+                            const rec = new SpeechRecognition();
+                            rec.lang = 'es-ES';
+                            rec.onresult = (event) => {
+                              const transcript = event.results[0][0].transcript;
+                              setPreviewAnswers(prev => ({ ...prev, [currentQ.id]: (prev[currentQ.id] || '') + ' ' + transcript }));
+                              setAdminTestMascotMood('happy');
+                            };
+                            rec.start();
+                          }}
+                          className="duo-pill"
+                        >
+                          <Mic size={15} style={{ color: 'var(--primary)' }} />
+                          <span>Hablar por Micrófono (Dictado por Voz)</span>
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Escala Numérica 1 a 5 o 1 a 10 */}
+                  {(currentQ.type === 'scale_1_5' || currentQ.type === 'scale_1_10') && (
+                    <div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '12px', fontSize: '12px', fontWeight: '800', color: 'var(--text-muted)' }}>
+                        <span>Mínimo (1)</span>
+                        <span>{currentQ.type === 'scale_1_10' ? 'Máximo (10)' : 'Máximo (5)'}</span>
+                      </div>
+                      
+                      <div style={{ display: 'grid', gridTemplateColumns: currentQ.type === 'scale_1_10' ? 'repeat(5, 1fr)' : 'repeat(5, 1fr)', gap: '10px' }}>
+                        {(currentQ.type === 'scale_1_10' ? [1, 2, 3, 4, 5, 6, 7, 8, 9, 10] : [1, 2, 3, 4, 5]).map((val) => {
+                          const isSelected = previewAnswers[currentQ.id] === val;
+                          return (
+                            <button
+                              key={val}
+                              type="button"
+                              onClick={() => {
+                                setPreviewAnswers(prev => ({ ...prev, [currentQ.id]: val }));
+                                setAdminTestMascotMood('happy');
+                              }}
+                              className={`duo-card ${isSelected ? 'selected' : ''}`}
+                              style={{ justifyContent: 'center', padding: '16px 8px', fontSize: '17px', fontWeight: '900', borderRadius: '14px' }}
+                            >
+                              <span>{val}</span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Escala de 5 Emojis de Ánimo */}
+                  {currentQ.type === 'emoji_scale_5' && (
+                    <div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '12px', fontSize: '12px', fontWeight: '800', color: 'var(--text-muted)' }}>
+                        <span>😡 Muy Bajo / Difícil</span>
+                        <span>😁 Excelente / Pleno</span>
+                      </div>
+                      
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '10px' }}>
+                        {[
+                          { emoji: '😡', label: 'Molesto' },
+                          { emoji: '🙁', label: 'Agotado' },
+                          { emoji: '😐', label: 'Neutral' },
+                          { emoji: '🙂', label: 'Tranquilo' },
+                          { emoji: '😁', label: 'Excelente' }
+                        ].map((item, eIdx) => {
+                          const isSelected = previewAnswers[currentQ.id] === `${item.emoji} ${item.label}` || previewAnswers[currentQ.id] === item.label;
+                          return (
+                            <button
+                              key={eIdx}
+                              type="button"
+                              onClick={() => {
+                                setPreviewAnswers(prev => ({ ...prev, [currentQ.id]: `${item.emoji} ${item.label}` }));
+                                setAdminTestMascotMood('happy');
+                              }}
+                              className={`duo-card ${isSelected ? 'selected' : ''}`}
+                              style={{ justifyContent: 'center', padding: '14px 6px', flexDirection: 'column', gap: '6px', borderRadius: '16px' }}
+                            >
+                              <span style={{ fontSize: '30px' }}>{item.emoji}</span>
+                              <span style={{ fontSize: '11px', fontWeight: '800' }}>{item.label}</span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Dibujo / Canvas */}
+                  {currentQ.type === 'drawing' && (
+                    <div>
+                      <DrawingCanvas 
+                        savedImage={previewAnswers[currentQ.id] || ''}
+                        onSaveDrawing={(dataUrl) => {
+                          setPreviewAnswers(prev => ({ ...prev, [currentQ.id]: dataUrl }));
+                          setAdminTestMascotMood('happy');
+                        }}
+                      />
+                    </div>
+                  )}
+
+                  {/* Opción Booleana (Sí / No) */}
+                  {currentQ.type === 'boolean' && (
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
                       <button
                         type="button"
                         onClick={() => {
-                          const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-                          if (!SpeechRecognition) {
-                            alert('El dictado por voz nativo no es soportado por este navegador. Intenta con Google Chrome o Microsoft Edge.');
-                            return;
-                          }
-                          const rec = new SpeechRecognition();
-                          rec.lang = 'es-ES';
-                          rec.onresult = (event) => {
-                            const transcript = event.results[0][0].transcript;
-                            setPreviewAnswers(prev => ({ ...prev, [q.id]: (prev[q.id] || '') + ' ' + transcript }));
-                          };
-                          rec.start();
+                          setPreviewAnswers(prev => ({ ...prev, [currentQ.id]: 'Sí' }));
+                          setAdminTestMascotMood('happy');
                         }}
-                        className="duo-pill"
-                        style={{ fontSize: '11.5px' }}
+                        className={`duo-card ${previewAnswers[currentQ.id] === 'Sí' ? 'selected' : ''}`}
+                        style={{ justifyContent: 'center', padding: '18px', fontSize: '15px', fontWeight: '900', borderRadius: '14px' }}
                       >
-                        <Mic size={14} style={{ color: 'var(--primary)' }} />
-                        <span>Hablar por Micrófono (Dictado por Voz)</span>
+                        <ThumbsUp size={20} />
+                        <span>Sí</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setPreviewAnswers(prev => ({ ...prev, [currentQ.id]: 'No' }));
+                          setAdminTestMascotMood('happy');
+                        }}
+                        className={`duo-card ${previewAnswers[currentQ.id] === 'No' ? 'selected' : ''}`}
+                        style={{ justifyContent: 'center', padding: '18px', fontSize: '15px', fontWeight: '900', borderRadius: '14px' }}
+                      >
+                        <ThumbsDown size={20} />
+                        <span>No</span>
                       </button>
                     </div>
-                  </div>
-                )}
+                  )}
 
-                {(q.type === 'scale_1_5' || q.type === 'scale_1_10') && (
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '10px', marginTop: '8px' }}>
-                    {(q.type === 'scale_1_10' ? [1, 2, 3, 4, 5, 6, 7, 8, 9, 10] : [1, 2, 3, 4, 5]).map((val) => (
-                      <button
-                        key={val}
-                        type="button"
-                        onClick={() => setPreviewAnswers(prev => ({ ...prev, [q.id]: val }))}
-                        className={`duo-card ${previewAnswers[q.id] === val ? 'selected' : ''}`}
-                        style={{ justifyContent: 'center', padding: '12px 6px', fontSize: '15px', fontWeight: '900' }}
-                      >
-                        <span>{val}</span>
-                      </button>
-                    ))}
-                  </div>
-                )}
+                  {/* Opciones de Selección Única */}
+                  {currentQ.type === 'single_choice' && Array.isArray(currentQ.options) && (
+                    <div style={{ display: 'grid', gap: '10px' }}>
+                      {currentQ.options.map((opt, oIdx) => {
+                        const isSelected = previewAnswers[currentQ.id] === opt;
+                        return (
+                          <button
+                            key={oIdx}
+                            type="button"
+                            onClick={() => {
+                              setPreviewAnswers(prev => ({ ...prev, [currentQ.id]: opt }));
+                              setAdminTestMascotMood('happy');
+                            }}
+                            className={`duo-card ${isSelected ? 'selected' : ''}`}
+                            style={{ padding: '14px 18px', fontSize: '14px', fontWeight: '800', textAlign: 'left', borderRadius: '14px' }}
+                          >
+                            <span>{opt}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
 
-                {q.type === 'emoji_scale_5' && (
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '10px', marginTop: '8px' }}>
-                    {[
-                      { emoji: '😡', label: 'Molesto' },
-                      { emoji: '🙁', label: 'Agotado' },
-                      { emoji: '😐', label: 'Neutral' },
-                      { emoji: '🙂', label: 'Tranquilo' },
-                      { emoji: '😁', label: 'Excelente' }
-                    ].map((item, eIdx) => (
-                      <button
-                        key={eIdx}
-                        type="button"
-                        onClick={() => setPreviewAnswers(prev => ({ ...prev, [q.id]: `${item.emoji} ${item.label}` }))}
-                        className={`duo-card ${previewAnswers[q.id] === `${item.emoji} ${item.label}` ? 'selected' : ''}`}
-                        style={{ justifyContent: 'center', padding: '10px 4px', flexDirection: 'column', gap: '4px' }}
-                      >
-                        <span style={{ fontSize: '24px' }}>{item.emoji}</span>
-                        <span style={{ fontSize: '11px', fontWeight: '800' }}>{item.label}</span>
-                      </button>
-                    ))}
-                  </div>
-                )}
+                {/* BARRA DE NAVEGACIÓN INFERIOR (ANTERIOR / SIGUIENTE) */}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: '20px', borderTop: '1px solid var(--border)' }}>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (adminTestCurrentQIndex > 0) {
+                        setAdminTestCurrentQIndex(prev => prev - 1);
+                        setAdminTestMascotMood('thinking');
+                      } else {
+                        setAdminTestStep('intro');
+                        setAdminTestMascotMood('welcome');
+                      }
+                    }}
+                    className="btn btn-secondary"
+                    style={{ padding: '12px 20px', borderRadius: '14px', fontWeight: '800', fontSize: '13.5px', display: 'flex', alignItems: 'center', gap: '6px' }}
+                  >
+                    <ChevronLeft size={16} />
+                    <span>{adminTestCurrentQIndex === 0 ? 'Volver al Inicio' : 'Anterior'}</span>
+                  </button>
 
-                {q.type === 'drawing' && (
-                  <div style={{ marginTop: '8px' }}>
-                    <DrawingCanvas 
-                      savedImage={previewAnswers[q.id] || ''}
-                      onSaveDrawing={(dataUrl) => setPreviewAnswers(prev => ({ ...prev, [q.id]: dataUrl }))}
-                    />
-                  </div>
-                )}
+                  {adminTestCurrentQIndex < totalQ - 1 ? (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (!isCurrentAnswered) return;
+                        setAdminTestCurrentQIndex(prev => prev + 1);
+                        if (adminTestCurrentQIndex + 1 === totalQ - 1) {
+                          setAdminTestMascotMood('almost_done');
+                        } else {
+                          setAdminTestMascotMood('thinking');
+                        }
+                      }}
+                      className="btn btn-primary"
+                      disabled={!isCurrentAnswered}
+                      style={{ padding: '12px 24px', borderRadius: '14px', fontWeight: '900', fontSize: '13.5px', display: 'flex', alignItems: 'center', gap: '6px' }}
+                    >
+                      <span>Siguiente</span>
+                      <ChevronRight size={16} />
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (!isCurrentAnswered) return;
+                        setShowAdminConfirmModal(true);
+                      }}
+                      className="btn btn-primary"
+                      disabled={!isCurrentAnswered}
+                      style={{ padding: '12px 24px', borderRadius: '14px', fontWeight: '900', fontSize: '13.5px', display: 'flex', alignItems: 'center', gap: '6px', backgroundColor: 'var(--success)', borderColor: 'var(--success)' }}
+                    >
+                      <span>Finalizar Prueba</span>
+                      <CheckCircle2 size={16} />
+                    </button>
+                  )}
+                </div>
 
-                {q.type === 'boolean' && (
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginTop: '8px' }}>
-                    {['Sí', 'No'].map((opt) => (
-                      <button
-                        key={opt}
-                        type="button"
-                        onClick={() => setPreviewAnswers(prev => ({ ...prev, [q.id]: opt }))}
-                        className={`duo-card ${previewAnswers[q.id] === opt ? 'selected' : ''}`}
-                        style={{ justifyContent: 'center', padding: '14px', fontSize: '15px', fontWeight: '900' }}
-                      >
-                        <span>{opt}</span>
-                      </button>
-                    ))}
-                  </div>
-                )}
               </div>
-            ))}
 
-            <div style={{ display: 'flex', gap: '16px', marginTop: '10px' }}>
-              <button 
-                type="submit" 
-                className="btn btn-primary" 
-                disabled={previewSubmitLoading || answeredCount < questions.length}
-                style={{ flex: 1, padding: '12px 24px', borderRadius: '12px', fontWeight: '900' }}
-              >
-                {previewSubmitLoading ? <Loader className="animate-spin" size={16} /> : 'Enviar Respuesta de Prueba'}
-              </button>
-              <button 
-                type="button" 
-                onClick={() => setPreviewTest(null)}
-                className="btn btn-secondary"
-                style={{ padding: '12px 24px', borderRadius: '12px' }}
-              >
-                Cerrar Prueba
-              </button>
             </div>
-          </form>
+          )}
+
         </div>
       </div>
     );
@@ -1682,6 +2316,13 @@ const AdminDashboard = ({ initialTab = 'analytics' }) => {
           {hasModuleAccess(user?.role, 'chat_ia') && (
             <button className={`tab-btn ${activeTab === 'chat_ia' ? 'active' : ''}`} onClick={() => handleTabChange('chat_ia')}><Bot size={15} /><span>Chatbot IA</span></button>
           )}
+
+          {hasModuleAccess(user?.role, 'culture') && (
+            <button className={`tab-btn ${activeTab === 'culture' ? 'active' : ''}`} onClick={() => handleTabChange('culture')}>
+              <BookOpen size={15} />
+              <span>Diccionario Cultural 🇬🇹</span>
+            </button>
+          )}
         </div>
 
         {/* TAB 0: MI BIENESTAR PERSONAL */}
@@ -1888,7 +2529,7 @@ const AdminDashboard = ({ initialTab = 'analytics' }) => {
                       <div>
                         <label style={{ fontSize: '11px', fontWeight: '800', color: 'var(--text-secondary)', display: 'block', marginBottom: '6px' }}>SELECCIONAR DEPARTAMENTO:</label>
                         <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', marginBottom: '8px' }}>
-                          {departmentsList.map(dept => (
+                          {fallbackDeptNames.map(dept => (
                             <button
                               key={dept}
                               type="button"
@@ -2275,7 +2916,14 @@ const AdminDashboard = ({ initialTab = 'analytics' }) => {
                                 <span>Ver Métricas</span>
                               </button>
                               <button 
-                                onClick={() => { setPreviewTest(ev); setPreviewAnswers({}); setPreviewSuccess(''); }}
+                                onClick={() => { 
+                                  setPreviewTest(ev); 
+                                  setPreviewAnswers({}); 
+                                  setAdminTestStep('intro');
+                                  setAdminTestCurrentQIndex(0);
+                                  setAdminTestMascotMood('welcome');
+                                  setPreviewSuccess(''); 
+                                }}
                                 className="duo-pill selected"
                                 style={{ flex: 1, fontSize: '11.5px', justifyContent: 'center' }}
                               >
@@ -2633,7 +3281,7 @@ const AdminDashboard = ({ initialTab = 'analytics' }) => {
                       <div>
                         <label style={{ fontSize: '11px', fontWeight: '800', color: 'var(--text-secondary)', display: 'block', marginBottom: '6px' }}>SELECCIONAR DEPARTAMENTO:</label>
                         <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', marginBottom: '8px' }}>
-                          {departmentsList.map(dept => (
+                          {fallbackDeptNames.map(dept => (
                             <button
                               key={dept}
                               type="button"
@@ -2810,13 +3458,25 @@ const AdminDashboard = ({ initialTab = 'analytics' }) => {
                 <p style={{ fontSize: '12.5px', color: 'var(--text-secondary)' }}>Administra los usuarios registrados y los niveles de permiso por rol institucional.</p>
               </div>
 
-              <div style={{ display: 'flex', gap: '8px' }}>
+              <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
                 <button 
                   onClick={() => setMembersSubTab('directory')}
                   className={`duo-pill ${membersSubTab === 'directory' ? 'selected' : ''}`}
                 >
                   <Users size={13} />
-                  <span>Directorio de Miembros ({members.length})</span>
+                  <span>Directorio de Miembros ({(members || []).length})</span>
+                </button>
+                <button 
+                  onClick={() => setMembersSubTab('pending_accounts')}
+                  className={`duo-pill ${membersSubTab === 'pending_accounts' ? 'selected' : ''}`}
+                >
+                  <ShieldCheck size={13} />
+                  <span>Cuentas Pendientes</span>
+                  {(members || []).filter(m => (m.status || '').toUpperCase() === 'PENDIENTE' || (m.status || '').toUpperCase() === 'PENDING').length > 0 && (
+                    <span style={{ backgroundColor: 'var(--primary)', color: '#fff', fontSize: '10px', padding: '1px 7px', borderRadius: '10px', fontWeight: '900', marginLeft: '4px' }}>
+                      {(members || []).filter(m => (m.status || '').toUpperCase() === 'PENDIENTE' || (m.status || '').toUpperCase() === 'PENDING').length}
+                    </span>
+                  )}
                 </button>
                 <button 
                   onClick={() => setMembersSubTab('roles_rbac')}
@@ -2830,119 +3490,666 @@ const AdminDashboard = ({ initialTab = 'analytics' }) => {
 
             {membersSubTab === 'directory' && (
               <div>
-                {/* Modal / Editor de Usuario Seleccionado */}
+                {/* BARRA DE BÚSQUEDA Y FILTROS AVANZADOS */}
+                <div style={{
+                  backgroundColor: 'var(--bg-secondary)',
+                  padding: '16px',
+                  borderRadius: '16px',
+                  border: '1px solid var(--border)',
+                  marginBottom: '20px',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '12px'
+                }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '12px', alignItems: 'center' }}>
+                    {/* Búsqueda por Texto */}
+                    <div style={{ position: 'relative' }}>
+                      <Search size={15} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
+                      <input
+                        type="text"
+                        placeholder="Buscar por nombre o correo..."
+                        value={memberSearchText}
+                        onChange={(e) => setMemberSearchText(e.target.value)}
+                        style={{ width: '100%', paddingLeft: '34px', paddingRight: '12px', fontSize: '12px', borderRadius: '10px', height: '38px' }}
+                      />
+                    </div>
+
+                    {/* Filtro por Rol */}
+                    <div>
+                      <CustomSelect
+                        options={[
+                          { value: 'todos', label: '👥 Todos los Roles' },
+                          { value: 'superadmin', label: '🛡️ SuperAdmin' },
+                          { value: 'admin_institucion', label: '🏛️ Admin Institucional' },
+                          { value: 'profesional_apoyo', label: '🧠 Profesional / Psicólogo' },
+                          { value: 'lider_depto', label: '👔 Líder de Depto' },
+                          { value: 'miembro', label: '👤 Miembro / Colaborador' }
+                        ]}
+                        value={memberRoleFilter}
+                        onChange={(val) => setMemberRoleFilter(val)}
+                      />
+                    </div>
+
+                    {/* Filtro por Departamento */}
+                    <div>
+                      <CustomSelect
+                        options={[
+                          { value: 'todos', label: '🏢 Todos los Departamentos' },
+                          ...Array.from(new Set(members.map(m => m.department || 'General'))).map(d => ({ value: d, label: `🏢 ${d}` }))
+                        ]}
+                        value={memberDeptFilter}
+                        onChange={(val) => setMemberDeptFilter(val)}
+                      />
+                    </div>
+
+                    {/* Filtro por Estado */}
+                    <div>
+                      <CustomSelect
+                        options={[
+                          { value: 'todos', label: '🔘 Todos los Estados' },
+                          { value: 'ACTIVE', label: '🟢 Activo (ACTIVE)' },
+                          { value: 'PENDING', label: '🟠 Pendiente (PENDING)' },
+                          { value: 'SUSPENDED', label: '🔴 Suspendido (SUSPENDED)' },
+                          { value: 'INACTIVE', label: '⚪ Inactivo (INACTIVE)' }
+                        ]}
+                        value={memberStatusFilter}
+                        onChange={(val) => setMemberStatusFilter(val)}
+                      />
+                    </div>
+
+                    {/* Filtro por Institución (SuperAdmin) */}
+                    {user?.role === 'superadmin' && allInstitutions.length > 0 && (
+                      <div>
+                        <CustomSelect
+                          options={[
+                            { value: 'todos', label: '🌐 Todas las Instituciones' },
+                            ...allInstitutions.map(inst => ({ value: inst.id, label: `🏛️ ${inst.name}` }))
+                          ]}
+                          value={memberInstFilter}
+                          onChange={(val) => setMemberInstFilter(val)}
+                        />
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Resumen y Limpiar Filtros */}
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '11.5px', color: 'var(--text-secondary)' }}>
+                    <span>
+                      Mostrando <strong>{(members || []).filter(m => {
+                        if (memberSearchText.trim()) {
+                          const q = memberSearchText.toLowerCase();
+                          const fullName = `${m.first_name || ''} ${m.last_name || ''}`.toLowerCase();
+                          const email = (m.email || '').toLowerCase();
+                          if (!fullName.includes(q) && !email.includes(q)) return false;
+                        }
+                        if (memberRoleFilter !== 'todos' && m.role !== memberRoleFilter) return false;
+                        if (memberDeptFilter !== 'todos' && (m.department !== memberDeptFilter && m.department_id !== memberDeptFilter)) return false;
+                        if (memberStatusFilter !== 'todos' && (m.status || 'ACTIVE') !== memberStatusFilter) return false;
+                        if (memberInstFilter !== 'todos' && m.institution_id !== memberInstFilter) return false;
+                        return true;
+                      }).length}</strong> de <strong>{members.length}</strong> usuarios registrados.
+                    </span>
+
+                    {(memberSearchText || memberRoleFilter !== 'todos' || memberDeptFilter !== 'todos' || memberStatusFilter !== 'todos' || memberInstFilter !== 'todos') && (
+                      <button
+                        onClick={() => {
+                          setMemberSearchText('');
+                          setMemberRoleFilter('todos');
+                          setMemberDeptFilter('todos');
+                          setMemberStatusFilter('todos');
+                          setMemberInstFilter('todos');
+                        }}
+                        style={{ border: 'none', background: 'none', color: 'var(--primary)', fontWeight: '800', cursor: 'pointer', fontSize: '11px' }}
+                      >
+                        ✕ Limpiar Filtros
+                      </button>
+                    )}
+                  </div>
+                </div>
+
+                {/* MODAL DE EDICIÓN ESTRUCTURADA DE USUARIO */}
                 {editingUser && (
                   <div style={{
                     backgroundColor: 'var(--bg-primary)',
                     border: '2px solid var(--primary)',
-                    borderRadius: '16px',
-                    padding: '20px',
-                    marginBottom: '20px',
+                    borderRadius: '18px',
+                    padding: '22px',
+                    marginBottom: '24px',
                     boxShadow: 'var(--shadow-md)',
                     animation: 'fadeIn 0.2s ease'
                   }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px', borderBottom: '1px solid var(--border)', paddingBottom: '10px' }}>
-                      <h4 style={{ fontSize: '15px', fontWeight: '900', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <Edit3 size={16} style={{ color: 'var(--primary)' }} />
-                        Edición de Usuario: <span style={{ color: 'var(--primary)' }}>{editingUser.first_name} {editingUser.last_name}</span> ({editingUser.email})
-                      </h4>
-                      <button onClick={() => setEditingUser(null)} style={{ border: 'none', background: 'none', color: 'var(--text-muted)', cursor: 'pointer', fontSize: '18px', fontWeight: 'bold' }}>×</button>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', borderBottom: '1px solid var(--border)', paddingBottom: '12px' }}>
+                      <div>
+                        <span style={{ fontSize: '10px', fontWeight: '900', color: 'var(--primary)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                          Edición Administrativa RBAC
+                        </span>
+                        <h4 style={{ fontSize: '16px', fontWeight: '900', display: 'flex', alignItems: 'center', gap: '8px', marginTop: '2px' }}>
+                          <Edit3 size={17} style={{ color: 'var(--primary)' }} />
+                          {editingUser.first_name} {editingUser.last_name} <span style={{ fontSize: '12px', color: 'var(--text-secondary)', fontWeight: 'normal' }}>({editingUser.email})</span>
+                        </h4>
+                      </div>
+                      <button onClick={() => setEditingUser(null)} style={{ border: 'none', background: 'none', color: 'var(--text-muted)', cursor: 'pointer', fontSize: '22px', fontWeight: 'bold' }}>×</button>
                     </div>
 
                     {userUpdateMsg && (
-                      <div style={{ backgroundColor: 'var(--success-light)', color: 'var(--success)', border: '1px solid var(--success)', padding: '10px', borderRadius: '8px', fontSize: '12.5px', marginBottom: '14px' }}>
+                      <div style={{ backgroundColor: 'var(--bg-secondary)', color: 'var(--primary)', border: '1px solid var(--primary)', padding: '10px 14px', borderRadius: '10px', fontSize: '12.5px', marginBottom: '16px', fontWeight: '700' }}>
                         {userUpdateMsg}
                       </div>
                     )}
 
-                    <form onSubmit={handleUpdateUser} style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px', alignItems: 'end' }}>
-                      <div>
-                        <label style={{ fontSize: '11px', fontWeight: '800', color: 'var(--text-secondary)', display: 'block', marginBottom: '6px' }}>
-                          ASIGNAR ROL INSTITUCIONAL:
-                        </label>
-                        <select 
-                          value={editRole} 
-                          onChange={(e) => setEditRole(e.target.value)}
-                          style={{ width: '100%', padding: '10px', borderRadius: '10px', fontSize: '12.5px', border: '1px solid var(--border)', backgroundColor: 'var(--bg-secondary)', color: 'var(--text-primary)' }}
+                    <form onSubmit={handleUpdateUser}>
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '16px', marginBottom: '18px' }}>
+                        {/* Sección 1: Datos Básicos */}
+                        <div style={{ backgroundColor: 'var(--bg-secondary)', padding: '14px', borderRadius: '12px', border: '1px solid var(--border)' }}>
+                          <span style={{ fontSize: '11px', fontWeight: '900', color: 'var(--text-secondary)', display: 'block', marginBottom: '10px' }}>
+                            1. INFORMACIÓN PERSONAL
+                          </span>
+                          <div style={{ marginBottom: '10px' }}>
+                            <label style={{ fontSize: '10px', fontWeight: '800', display: 'block', marginBottom: '4px' }}>NOMBRE:</label>
+                            <input
+                              type="text"
+                              value={editFirstName}
+                              onChange={(e) => setEditFirstName(e.target.value)}
+                              required
+                              style={{ width: '100%', fontSize: '12px', padding: '8px 10px', borderRadius: '8px' }}
+                            />
+                          </div>
+                          <div>
+                            <label style={{ fontSize: '10px', fontWeight: '800', display: 'block', marginBottom: '4px' }}>APELLIDO:</label>
+                            <input
+                              type="text"
+                              value={editLastName}
+                              onChange={(e) => setEditLastName(e.target.value)}
+                              required
+                              style={{ width: '100%', fontSize: '12px', padding: '8px 10px', borderRadius: '8px' }}
+                            />
+                          </div>
+                        </div>
+
+                        {/* Sección 2: Asignación Institucional */}
+                        <div style={{ backgroundColor: 'var(--bg-secondary)', padding: '14px', borderRadius: '12px', border: '1px solid var(--border)' }}>
+                          <span style={{ fontSize: '11px', fontWeight: '900', color: 'var(--text-secondary)', display: 'block', marginBottom: '10px' }}>
+                            2. ASIGNACIÓN INSTITUCIONAL
+                          </span>
+                          <div style={{ marginBottom: '10px' }}>
+                            <label style={{ fontSize: '10px', fontWeight: '800', display: 'block', marginBottom: '4px' }}>INSTITUCIÓN:</label>
+                            <input
+                              type="text"
+                              value={editingUser.institution_name || 'EquilibrIA General'}
+                              disabled
+                              style={{ width: '100%', fontSize: '12px', padding: '8px 10px', borderRadius: '8px', opacity: 0.7 }}
+                            />
+                          </div>
+                          <div>
+                            <label style={{ fontSize: '10px', fontWeight: '800', display: 'block', marginBottom: '4px' }}>DEPARTAMENTO / ÁREA:</label>
+                            <input
+                              type="text"
+                              placeholder="Ej. Tecnología, Recursos Humanos..."
+                              value={editDept}
+                              onChange={(e) => setEditDept(e.target.value)}
+                              style={{ width: '100%', fontSize: '12px', padding: '8px 10px', borderRadius: '8px' }}
+                            />
+                          </div>
+                        </div>
+
+                        {/* Sección 3: Control de Acceso y Estado */}
+                        <div style={{ backgroundColor: 'var(--bg-secondary)', padding: '14px', borderRadius: '12px', border: '1px solid var(--border)' }}>
+                          <span style={{ fontSize: '11px', fontWeight: '900', color: 'var(--text-secondary)', display: 'block', marginBottom: '10px' }}>
+                            3. ROL Y ESTADO DE CUENTA
+                          </span>
+                          <div style={{ marginBottom: '10px' }}>
+                            <label style={{ fontSize: '10px', fontWeight: '800', display: 'block', marginBottom: '4px' }}>ROL ASIGNADO:</label>
+                            <select
+                              value={editRole}
+                              onChange={(e) => setEditRole(e.target.value)}
+                              disabled={user?.role !== 'superadmin' && editRole === 'superadmin'}
+                              style={{ width: '100%', padding: '8px 10px', borderRadius: '8px', fontSize: '12px', border: '1px solid var(--border)', backgroundColor: 'var(--bg-primary)', color: 'var(--text-primary)' }}
+                            >
+                              <option value="miembro">👤 Miembro / Colaborador</option>
+                              <option value="lider_depto">👔 Líder de Departamento</option>
+                              <option value="profesional_apoyo">🧠 Profesional / Psicólogo</option>
+                              <option value="admin_institucion">🏛️ Admin Institucional</option>
+                              {user?.role === 'superadmin' && (
+                                <option value="superadmin">🛡️ SuperAdmin (Global)</option>
+                              )}
+                            </select>
+                          </div>
+                          <div>
+                            <label style={{ fontSize: '10px', fontWeight: '800', display: 'block', marginBottom: '4px' }}>ESTADO DE LA CUENTA:</label>
+                            <select
+                              value={editStatus}
+                              onChange={(e) => setEditStatus(e.target.value)}
+                              style={{ width: '100%', padding: '8px 10px', borderRadius: '8px', fontSize: '12px', border: '1px solid var(--border)', backgroundColor: 'var(--bg-primary)', color: 'var(--text-primary)' }}
+                            >
+                              <option value="ACTIVE">🟢 Activa (ACTIVE)</option>
+                              <option value="PENDING">🟠 Pendiente (PENDING)</option>
+                              <option value="SUSPENDED">🔴 Suspendida (SUSPENDED)</option>
+                              <option value="INACTIVE">⚪ Inactiva (INACTIVE)</option>
+                            </select>
+                          </div>
+                        </div>
+
+                        {/* Sección 4: Restablecimiento de Seguridad */}
+                        <div style={{ backgroundColor: 'var(--bg-secondary)', padding: '14px', borderRadius: '12px', border: '1px solid var(--border)', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+                          <div>
+                            <span style={{ fontSize: '11px', fontWeight: '900', color: 'var(--text-secondary)', display: 'block', marginBottom: '8px' }}>
+                              4. SEGURIDAD Y ACCESO
+                            </span>
+                            <p style={{ fontSize: '11.5px', color: 'var(--text-muted)', marginBottom: '10px' }}>
+                              Genera un enlace seguro de restablecimiento de contraseña para el usuario sin exponer claves.
+                            </p>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => handleGeneratePasswordReset(editingUser)}
+                            disabled={resetPassLoading}
+                            className="btn btn-secondary"
+                            style={{ padding: '8px 12px', fontSize: '11.5px', borderRadius: '8px', fontWeight: '800', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
+                          >
+                            <Key size={13} />
+                            <span>{resetPassLoading ? 'Generando...' : 'Generar Reset de Contraseña'}</span>
+                          </button>
+                        </div>
+                      </div>
+
+                      <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
+                        <button
+                          type="button"
+                          onClick={() => setEditingUser(null)}
+                          className="btn btn-secondary"
+                          style={{ padding: '10px 18px', fontSize: '12.5px', borderRadius: '10px' }}
                         >
-                          <option value="miembro">👤 Miembro / Colaborador</option>
-                          <option value="profesional_apoyo">🧠 Psicólogo / Profesional de Apoyo</option>
-                          <option value="lider_depto">👔 Líder de Departamento / Manager</option>
-                          <option value="superadmin">🛡️ Administrador General</option>
-                        </select>
-                      </div>
-
-                      <div>
-                        <label style={{ fontSize: '11px', fontWeight: '800', color: 'var(--text-secondary)', display: 'block', marginBottom: '6px' }}>
-                          DEPARTAMENTO / ÁREA:
-                        </label>
-                        <select 
-                          value={editDept} 
-                          onChange={(e) => setEditDept(e.target.value)}
-                          style={{ width: '100%', padding: '10px', borderRadius: '10px', fontSize: '12.5px', border: '1px solid var(--border)', backgroundColor: 'var(--bg-secondary)', color: 'var(--text-primary)' }}
-                        >
-                          {departmentsList.concat(['General']).map(d => (
-                            <option key={d} value={d}>{d}</option>
-                          ))}
-                        </select>
-                      </div>
-
-                      <div>
-                        <label style={{ fontSize: '11px', fontWeight: '800', color: 'var(--text-secondary)', display: 'block', marginBottom: '6px' }}>
-                          RESTABLECER CONTRASEÑA (OPCIONAL):
-                        </label>
-                        <input 
-                          type="password" 
-                          placeholder="Nueva contraseña..." 
-                          value={editPassword}
-                          onChange={(e) => setEditPassword(e.target.value)}
-                          style={{ width: '100%', padding: '10px', borderRadius: '10px', fontSize: '12.5px', border: '1px solid var(--border)' }}
-                        />
-                      </div>
-
-                      <div style={{ display: 'flex', gap: '8px' }}>
-                        <button type="submit" className="btn btn-primary" disabled={userUpdateLoading} style={{ flex: 1, padding: '10px', fontSize: '12.5px', borderRadius: '10px', fontWeight: '800' }}>
-                          {userUpdateLoading ? <Loader className="animate-spin" size={14} /> : 'Guardar Cambios'}
-                        </button>
-                        <button type="button" onClick={() => setEditingUser(null)} className="btn btn-secondary" style={{ padding: '10px', fontSize: '12.5px', borderRadius: '10px' }}>
                           Cancelar
+                        </button>
+                        <button
+                          type="submit"
+                          className="btn btn-primary"
+                          disabled={userUpdateLoading}
+                          style={{ padding: '10px 24px', fontSize: '12.5px', borderRadius: '10px', fontWeight: '900', display: 'flex', alignItems: 'center', gap: '6px' }}
+                        >
+                          {userUpdateLoading ? <Loader className="animate-spin" size={14} /> : <CheckCircle2 size={14} />}
+                          <span>Guardar Cambios de Usuario</span>
                         </button>
                       </div>
                     </form>
                   </div>
                 )}
 
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '16px' }}>
-                  {members.length === 0 ? (
-                    <p style={{ color: 'var(--text-muted)', fontSize: '13px', textAlign: 'center' }}>No hay miembros registrados.</p>
+                {/* MODAL DE ENLACE DE RESTABLECIMIENTO DE CONTRASEÑA */}
+                {resetPassModalData && (
+                  <div style={{
+                    position: 'fixed',
+                    inset: 0,
+                    backgroundColor: 'rgba(0, 0, 0, 0.65)',
+                    backdropFilter: 'blur(6px)',
+                    zIndex: 99999,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    padding: '20px'
+                  }}>
+                    <div className="glass-card animate-scale" style={{ maxWidth: '520px', width: '100%', padding: '24px', borderRadius: '20px', border: '2px solid var(--primary)' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
+                        <h4 style={{ fontSize: '16px', fontWeight: '900', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <Key size={18} style={{ color: 'var(--primary)' }} />
+                          Enlace de Restablecimiento Generado
+                        </h4>
+                        <button onClick={() => setResetPassModalData(null)} style={{ border: 'none', background: 'none', color: 'var(--text-muted)', cursor: 'pointer', fontSize: '20px', fontWeight: 'bold' }}>×</button>
+                      </div>
+
+                      <p style={{ fontSize: '12.5px', color: 'var(--text-secondary)', marginBottom: '14px' }}>
+                        Se ha generado el siguiente enlace seguro para <strong>{resetPassModalData.user.email}</strong>. Puedes copiarlo y enviárselo directamente:
+                      </p>
+
+                      <div style={{ display: 'flex', gap: '8px', marginBottom: '16px' }}>
+                        <input
+                          type="text"
+                          readOnly
+                          value={resetPassModalData.reset_link}
+                          style={{ flex: 1, fontSize: '11.5px', padding: '10px', borderRadius: '8px', backgroundColor: 'var(--bg-secondary)' }}
+                        />
+                        <button
+                          type="button"
+                          onClick={() => {
+                            navigator.clipboard.writeText(resetPassModalData.reset_link);
+                            showAlert('success', 'Copiado', 'Enlace copiado al portapapeles.');
+                          }}
+                          className="btn btn-primary"
+                          style={{ padding: '0 14px', borderRadius: '8px', fontSize: '12px' }}
+                        >
+                          <Copy size={14} />
+                        </button>
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={() => setResetPassModalData(null)}
+                        className="btn btn-primary"
+                        style={{ width: '100%', padding: '10px', borderRadius: '10px', fontWeight: '800' }}
+                      >
+                        Entendido y Cerrar
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {/* MODAL DE TRANSFERENCIA ENTRE INSTITUCIONES (SUPERADMIN) */}
+                {showTransferModal && transferTargetUser && (
+                  <div style={{
+                    position: 'fixed',
+                    inset: 0,
+                    backgroundColor: 'rgba(0, 0, 0, 0.65)',
+                    backdropFilter: 'blur(6px)',
+                    zIndex: 99999,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    padding: '20px'
+                  }}>
+                    <div className="glass-card animate-scale" style={{ maxWidth: '520px', width: '100%', padding: '24px', borderRadius: '20px', border: '2px solid var(--accent)' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
+                        <h4 style={{ fontSize: '16px', fontWeight: '900', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <RefreshCw size={18} style={{ color: 'var(--accent)' }} />
+                          Transferir Usuario de Institución
+                        </h4>
+                        <button onClick={() => setShowTransferModal(false)} style={{ border: 'none', background: 'none', color: 'var(--text-muted)', cursor: 'pointer', fontSize: '20px', fontWeight: 'bold' }}>×</button>
+                      </div>
+
+                      <p style={{ fontSize: '12.5px', color: 'var(--text-secondary)', marginBottom: '16px' }}>
+                        Transfiere la cuenta de <strong>{transferTargetUser.first_name} {transferTargetUser.last_name}</strong> ({transferTargetUser.email}) a otra organización.
+                      </p>
+
+                      <form onSubmit={handleTransferUserSubmit}>
+                        <div style={{ marginBottom: '14px' }}>
+                          <label style={{ fontSize: '11px', fontWeight: '800', display: 'block', marginBottom: '6px' }}>SELECCIONAR INSTITUCIÓN DE DESTINO:</label>
+                          <select
+                            value={transferTargetInstId}
+                            onChange={(e) => setTransferTargetInstId(e.target.value)}
+                            required
+                            style={{ width: '100%', padding: '10px', borderRadius: '10px', fontSize: '12.5px', backgroundColor: 'var(--bg-secondary)', border: '1px solid var(--border)' }}
+                          >
+                            {allInstitutions.map(inst => (
+                              <option key={inst.id} value={inst.id}>🏛️ {inst.name} ({inst.code})</option>
+                            ))}
+                          </select>
+                        </div>
+
+                        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '20px' }}>
+                          <button
+                            type="button"
+                            onClick={() => setShowTransferModal(false)}
+                            className="btn btn-secondary"
+                            style={{ padding: '10px 16px', fontSize: '12px', borderRadius: '10px' }}
+                          >
+                            Cancelar
+                          </button>
+                          <button
+                            type="submit"
+                            disabled={transferLoading}
+                            className="btn btn-primary"
+                            style={{ padding: '10px 20px', fontSize: '12px', borderRadius: '10px', fontWeight: '900' }}
+                          >
+                            {transferLoading ? <Loader className="animate-spin" size={14} /> : 'Confirmar Transferencia'}
+                          </button>
+                        </div>
+                      </form>
+                    </div>
+                  </div>
+                )}
+
+                {/* GRILLA DE USUARIOS FILTRADOS */}
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '16px' }}>
+                  {(members || []).filter(m => {
+                    if (memberSearchText.trim()) {
+                      const q = memberSearchText.toLowerCase();
+                      const fullName = `${m.first_name || ''} ${m.last_name || ''}`.toLowerCase();
+                      const email = (m.email || '').toLowerCase();
+                      if (!fullName.includes(q) && !email.includes(q)) return false;
+                    }
+                    if (memberRoleFilter !== 'todos' && m.role !== memberRoleFilter) return false;
+                    if (memberDeptFilter !== 'todos' && (m.department !== memberDeptFilter && m.department_id !== memberDeptFilter)) return false;
+                    if (memberStatusFilter !== 'todos' && (m.status || 'ACTIVE') !== memberStatusFilter) return false;
+                    if (memberInstFilter !== 'todos' && m.institution_id !== memberInstFilter) return false;
+                    return true;
+                  }).length === 0 ? (
+                    <div style={{ gridColumn: '1 / -1', padding: '30px', textAlign: 'center', backgroundColor: 'var(--bg-secondary)', borderRadius: '16px' }}>
+                      <Users size={32} style={{ color: 'var(--text-muted)', marginBottom: '8px' }} />
+                      <p style={{ color: 'var(--text-muted)', fontSize: '13px' }}>No se encontraron usuarios con los filtros seleccionados.</p>
+                    </div>
                   ) : (
-                    members.map((m) => (
-                      <div key={m.id} className="futuristic-card-item" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
-                          <div style={{ width: '42px', height: '42px', borderRadius: '50%', background: 'linear-gradient(135deg, var(--primary) 0%, var(--accent) 100%)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '900', fontSize: '15px' }}>
-                            {m.first_name?.[0]}{m.last_name?.[0]}
+                    (members || []).filter(m => {
+                      if (memberSearchText.trim()) {
+                        const q = memberSearchText.toLowerCase();
+                        const fullName = `${m.first_name || ''} ${m.last_name || ''}`.toLowerCase();
+                        const email = (m.email || '').toLowerCase();
+                        if (!fullName.includes(q) && !email.includes(q)) return false;
+                      }
+                      if (memberRoleFilter !== 'todos' && m.role !== memberRoleFilter) return false;
+                      if (memberDeptFilter !== 'todos' && (m.department !== memberDeptFilter && m.department_id !== memberDeptFilter)) return false;
+                      if (memberStatusFilter !== 'todos' && (m.status || 'ACTIVE') !== memberStatusFilter) return false;
+                      if (memberInstFilter !== 'todos' && m.institution_id !== memberInstFilter) return false;
+                      return true;
+                    }).map((m) => {
+                      const userStatus = m.status || 'ACTIVE';
+                      const statusBadgeColor = userStatus === 'ACTIVE' ? 'var(--success)' : userStatus === 'PENDING' ? 'var(--warning)' : userStatus === 'SUSPENDED' ? 'var(--danger)' : 'var(--text-muted)';
+                      const statusBgColor = userStatus === 'ACTIVE' ? 'var(--success-light)' : userStatus === 'PENDING' ? 'var(--warning-light)' : userStatus === 'SUSPENDED' ? 'var(--danger-light)' : 'var(--bg-primary)';
+
+                      return (
+                        <div key={m.id} className="futuristic-card-item" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', padding: '16px', gap: '12px' }}>
+                          <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px' }}>
+                            <div style={{
+                              width: '44px',
+                              height: '44px',
+                              borderRadius: '50%',
+                              background: 'linear-gradient(135deg, var(--primary) 0%, var(--accent) 100%)',
+                              color: '#fff',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              fontWeight: '900',
+                              fontSize: '15px',
+                              flexShrink: 0
+                            }}>
+                              {m.first_name?.[0]}{m.last_name?.[0]}
+                            </div>
+
+                            <div style={{ flex: 1, minWidth: 0 }}>
+                              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '6px', marginBottom: '2px' }}>
+                                <h4 style={{ fontSize: '14px', fontWeight: '800', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                  {m.first_name} {m.last_name}
+                                </h4>
+                                <span style={{
+                                  fontSize: '9.5px',
+                                  fontWeight: '900',
+                                  padding: '2px 7px',
+                                  borderRadius: '8px',
+                                  backgroundColor: statusBgColor,
+                                  color: statusBadgeColor,
+                                  textTransform: 'uppercase',
+                                  flexShrink: 0
+                                }}>
+                                  {userStatus}
+                                </span>
+                              </div>
+
+                              <p style={{ fontSize: '11.5px', color: 'var(--text-secondary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginBottom: '6px' }}>
+                                {m.email}
+                              </p>
+
+                              <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+                                <span style={{ fontSize: '9.5px', fontWeight: '800', padding: '2px 7px', borderRadius: '8px', backgroundColor: 'var(--primary-light)', color: 'var(--primary)' }}>
+                                  🏢 {m.department || 'General'}
+                                </span>
+                                <span style={{ fontSize: '9.5px', fontWeight: '800', padding: '2px 7px', borderRadius: '8px', backgroundColor: 'var(--bg-primary)', color: 'var(--text-secondary)', border: '1px solid var(--border)' }}>
+                                  {m.role === 'superadmin' ? '🛡️ SuperAdmin' : m.role === 'admin_institucion' ? '🏛️ Admin' : m.role === 'profesional_apoyo' ? '🧠 Psicólogo' : m.role === 'lider_depto' ? '👔 Líder' : '👤 Miembro'}
+                                </span>
+                              </div>
+                            </div>
                           </div>
-                          <div>
-                            <h4 style={{ fontSize: '14px', fontWeight: '800' }}>{m.first_name} {m.last_name}</h4>
-                            <p style={{ fontSize: '11.5px', color: 'var(--text-secondary)' }}>{m.email}</p>
-                            <div style={{ display: 'flex', gap: '6px', marginTop: '6px' }}>
-                              <span style={{ fontSize: '9px', fontWeight: '800', padding: '2px 6px', borderRadius: '10px', backgroundColor: 'var(--primary-light)', color: 'var(--primary)' }}>{m.department || 'General'}</span>
-                              <span style={{ fontSize: '9px', fontWeight: '800', padding: '2px 6px', borderRadius: '10px', backgroundColor: 'var(--bg-primary)', color: 'var(--text-secondary)' }}>
-                                {m.role === 'superadmin' ? '🛡️ Admin' : m.role === 'profesional_apoyo' ? '🧠 Psicólogo' : m.role === 'lider_depto' ? '👔 Líder' : '👤 Miembro'}
-                              </span>
+
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid var(--border)', paddingTop: '10px', fontSize: '11px', color: 'var(--text-muted)' }}>
+                            <span>
+                              {m.institution_name ? `🏛️ ${m.institution_name}` : 'EquilibrIA'}
+                            </span>
+
+                            <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+                              {((m.status || '').toUpperCase() === 'PENDIENTE' || (m.status || '').toUpperCase() === 'PENDING') && (
+                                <>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleMemberStatusAction(m.id, 'approve')}
+                                    className="duo-pill"
+                                    style={{ padding: '4px 8px', fontSize: '10.5px', color: 'var(--success)', borderColor: 'var(--success)', fontWeight: '800' }}
+                                    title="Aprobar cuenta de usuario"
+                                  >
+                                    <CheckCircle2 size={12} />
+                                    <span>Aprobar</span>
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleMemberStatusAction(m.id, 'reject')}
+                                    className="duo-pill"
+                                    style={{ padding: '4px 8px', fontSize: '10.5px', color: 'var(--danger)', borderColor: 'var(--danger)', fontWeight: '800' }}
+                                    title="Rechazar solicitud"
+                                  >
+                                    <X size={12} />
+                                    <span>Rechazar</span>
+                                  </button>
+                                </>
+                              )}
+
+                              {((m.status || '').toUpperCase() === 'ACTIVO' || (m.status || '').toUpperCase() === 'ACTIVE') && m.role !== 'superadmin' && (
+                                <button
+                                  type="button"
+                                  onClick={() => handleMemberStatusAction(m.id, 'block')}
+                                  className="duo-pill"
+                                  style={{ padding: '4px 8px', fontSize: '10.5px', color: 'var(--warning)', borderColor: 'var(--warning)' }}
+                                  title="Bloquear cuenta temporalmente"
+                                >
+                                  <Lock size={11} />
+                                  <span>Bloquear</span>
+                                </button>
+                              )}
+
+                              {((m.status || '').toUpperCase() === 'BLOQUEADO' || (m.status || '').toUpperCase() === 'SUSPENDED' || (m.status || '').toUpperCase() === 'RECHAZADO') && (
+                                <button
+                                  type="button"
+                                  onClick={() => handleMemberStatusAction(m.id, 'reactivate')}
+                                  className="duo-pill"
+                                  style={{ padding: '4px 8px', fontSize: '10.5px', color: 'var(--primary)', borderColor: 'var(--primary)', fontWeight: '800' }}
+                                  title="Reactivar cuenta"
+                                >
+                                  <RefreshCw size={11} />
+                                  <span>Reactivar</span>
+                                </button>
+                              )}
+
+                              <button
+                                type="button"
+                                onClick={() => handleGeneratePasswordReset(m)}
+                                className="duo-pill"
+                                style={{ padding: '4px 8px', fontSize: '10.5px' }}
+                                title="Generar enlace de restablecimiento de contraseña"
+                              >
+                                <Key size={11} />
+                                <span>Reset</span>
+                              </button>
+
+                              {user?.role === 'superadmin' && (
+                                <button
+                                  type="button"
+                                  onClick={() => openTransferModal(m)}
+                                  className="duo-pill"
+                                  style={{ padding: '4px 8px', fontSize: '10.5px' }}
+                                  title="Transferir a otra institución"
+                                >
+                                  <RefreshCw size={11} />
+                                </button>
+                              )}
+                              <button
+                                type="button"
+                                onClick={() => openEditUserModal(m)}
+                                className="duo-pill"
+                                style={{ padding: '4px 10px', fontSize: '11px', fontWeight: '800' }}
+                                title="Editar Rol y Permisos"
+                              >
+                                <Edit3 size={12} />
+                                <span>Editar</span>
+                              </button>
                             </div>
                           </div>
                         </div>
+                      );
+                    })
+                  )}
+                </div>
+              </div>
+            )}
 
-                        <button 
-                          onClick={() => openEditUserModal(m)} 
-                          className="duo-pill" 
-                          style={{ padding: '6px 12px', fontSize: '11.5px' }}
-                          title="Editar Rol y Contraseña"
-                        >
-                          <Edit3 size={13} />
-                          <span>Editar</span>
-                        </button>
+            {membersSubTab === 'pending_accounts' && (
+              <div className="animate-fade">
+                <div style={{ backgroundColor: 'var(--bg-primary)', padding: '16px', borderRadius: '14px', border: '1px solid var(--border)', marginBottom: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div>
+                    <h4 style={{ fontSize: '14px', fontWeight: '900', color: 'var(--primary)', marginBottom: '4px' }}>
+                      Solicitudes y Cuentas Pendientes de Aprobación
+                    </h4>
+                    <p style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>
+                      Revisa y autoriza el acceso a nuevos usuarios registrados en tu institución antes de que puedan ingresar al sistema.
+                    </p>
+                  </div>
+                  <span style={{ fontSize: '12px', fontWeight: '900', padding: '4px 12px', borderRadius: '12px', backgroundColor: 'var(--warning-light)', color: 'var(--warning)' }}>
+                    {(members || []).filter(m => (m.status || '').toUpperCase() === 'PENDIENTE' || (m.status || '').toUpperCase() === 'PENDING').length} pendientes
+                  </span>
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '16px' }}>
+                  {(members || []).filter(m => (m.status || '').toUpperCase() === 'PENDIENTE' || (m.status || '').toUpperCase() === 'PENDING').length === 0 ? (
+                    <div style={{ gridColumn: '1 / -1', padding: '40px', textAlign: 'center', backgroundColor: 'var(--bg-secondary)', borderRadius: '16px', border: '1px dashed var(--border)' }}>
+                      <CheckCircle2 size={36} style={{ color: 'var(--success)', margin: '0 auto 10px' }} />
+                      <h4 style={{ fontSize: '15px', fontWeight: '800', marginBottom: '4px' }}>¡Todo al día!</h4>
+                      <p style={{ color: 'var(--text-muted)', fontSize: '12.5px' }}>No hay solicitudes de registro pendientes de aprobación en este momento.</p>
+                    </div>
+                  ) : (
+                    (members || []).filter(m => (m.status || '').toUpperCase() === 'PENDIENTE' || (m.status || '').toUpperCase() === 'PENDING').map(m => (
+                      <div key={m.id} className="futuristic-card-item" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', padding: '18px', gap: '14px', borderLeft: '4px solid var(--warning)' }}>
+                        <div>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '8px' }}>
+                            <h4 style={{ fontSize: '14.5px', fontWeight: '900' }}>{m.first_name} {m.last_name}</h4>
+                            <span style={{ fontSize: '10px', fontWeight: '900', padding: '2px 8px', borderRadius: '8px', backgroundColor: 'var(--warning-light)', color: 'var(--warning)', textTransform: 'uppercase' }}>
+                              PENDIENTE
+                            </span>
+                          </div>
+                          <p style={{ fontSize: '12px', color: 'var(--text-secondary)', marginBottom: '8px' }}>{m.email}</p>
+                          <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+                            <span style={{ fontSize: '10px', fontWeight: '800', padding: '2px 8px', borderRadius: '8px', backgroundColor: 'var(--primary-light)', color: 'var(--primary)' }}>
+                              🏢 {m.department || 'General'}
+                            </span>
+                            <span style={{ fontSize: '10px', fontWeight: '800', padding: '2px 8px', borderRadius: '8px', backgroundColor: 'var(--bg-primary)', color: 'var(--text-secondary)', border: '1px solid var(--border)' }}>
+                              Rol: {m.role}
+                            </span>
+                          </div>
+                        </div>
+
+                        <div style={{ display: 'flex', gap: '8px', borderTop: '1px solid var(--border)', paddingTop: '12px' }}>
+                          <button
+                            type="button"
+                            onClick={() => handleMemberStatusAction(m.id, 'approve')}
+                            className="btn btn-primary"
+                            style={{ flex: 1, padding: '8px', fontSize: '12px', borderRadius: '10px', fontWeight: '900', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', backgroundColor: 'var(--success)', borderColor: 'var(--success)' }}
+                          >
+                            <CheckCircle2 size={14} />
+                            <span>Aprobar Acceso</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleMemberStatusAction(m.id, 'reject')}
+                            className="btn btn-secondary"
+                            style={{ padding: '8px 14px', fontSize: '12px', borderRadius: '10px', fontWeight: '800', color: 'var(--danger)' }}
+                          >
+                            <X size={14} />
+                            <span>Rechazar</span>
+                          </button>
+                        </div>
                       </div>
                     ))
                   )}
@@ -3890,91 +5097,935 @@ const AdminDashboard = ({ initialTab = 'analytics' }) => {
         {activeTab === 'institutions' && (
           <div className="animate-fade" style={{ display: 'grid', gap: '20px' }}>
             <div className="glass-card">
-              <h3 style={{ fontSize: '18px', fontWeight: '900', marginBottom: '14px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <Building size={20} style={{ color: 'var(--primary)' }} /> Gestión de Instituciones y Departamentos Reales (Supabase)
-              </h3>
-              <p style={{ fontSize: '12.5px', color: 'var(--text-secondary)', marginBottom: '20px' }}>
-                Crea y administra las organizaciones e instituciones vinculadas a la plataforma relacional.
-              </p>
-
-              {/* Formulario de Creación de Institución */}
-              <form onSubmit={handleCreateInstitution} style={{ display: 'grid', gridTemplateColumns: '1fr 200px auto', gap: '12px', alignItems: 'end', marginBottom: '24px', backgroundColor: 'var(--bg-secondary)', padding: '16px', borderRadius: '16px', border: '1px solid var(--border)' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px', marginBottom: '20px' }}>
                 <div>
-                  <label style={{ fontSize: '11px', fontWeight: '800', display: 'block', marginBottom: '6px' }}>NOMBRE DE LA NUEVA INSTITUCIÓN:</label>
-                  <input
-                    type="text"
-                    placeholder="Ej. Universidad Central, Tecnologías S.A. o Colegio San Pablo"
-                    value={newInstName}
-                    onChange={(e) => setNewInstName(e.target.value)}
-                    required
-                    style={{ borderRadius: '10px' }}
-                  />
+                  <h3 style={{ fontSize: '18px', fontWeight: '900', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <Building size={20} style={{ color: 'var(--primary)' }} /> Jerarquía Institucional y Departamentos Reales
+                  </h3>
+                  <p style={{ fontSize: '12.5px', color: 'var(--text-secondary)' }}>
+                    Administración multitenant: Organizaciones, departamentos internos y códigos de acceso seguros.
+                  </p>
                 </div>
 
-                <div>
-                  <label style={{ fontSize: '11px', fontWeight: '800', display: 'block', marginBottom: '6px' }}>TIPO / SECTOR:</label>
-                  <CustomSelect
-                    options={[
-                      { value: 'educativa', label: 'Educativa / Universidad' },
-                      { value: 'laboral', label: 'Empresa / Corporativo' },
-                      { value: 'salud', label: 'Salud / Clínica' },
-                      { value: 'comunitaria', label: 'Comunitaria / ONG' }
-                    ]}
-                    value={newInstType}
-                    onChange={(val) => setNewInstType(val)}
-                  />
+                <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                  <button
+                    type="button"
+                    onClick={() => setInstSubTab('institutions')}
+                    className={`duo-pill ${instSubTab === 'institutions' ? 'selected' : ''}`}
+                  >
+                    <Building size={13} />
+                    <span>Instituciones ({allInstitutions.length})</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setInstSubTab('departments')}
+                    className={`duo-pill ${instSubTab === 'departments' ? 'selected' : ''}`}
+                  >
+                    <Layers size={13} />
+                    <span>Departamentos ({departmentsList.length})</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setInstSubTab('invitations')}
+                    className={`duo-pill ${instSubTab === 'invitations' ? 'selected' : ''}`}
+                  >
+                    <Key size={13} />
+                    <span>Invitaciones ({invitationsList.length})</span>
+                  </button>
                 </div>
+              </div>
 
-                <button
-                  type="submit"
-                  className="btn btn-primary"
-                  disabled={instCreateLoading}
-                  style={{ padding: '12px 20px', borderRadius: '12px', fontWeight: '900', height: '44px', display: 'flex', alignItems: 'center', gap: '6px' }}
-                >
-                  {instCreateLoading ? <Loader className="animate-spin" size={16} /> : <PlusCircle size={16} />}
-                  <span>Crear Institución Real</span>
-                </button>
-              </form>
+              {/* SUB-PESTAÑA 1: INSTITUCIONES */}
+              {instSubTab === 'institutions' && (
+                <div>
+                  {/* Formulario de Creación Exclusivo para SuperAdmin */}
+                  {user?.role === 'superadmin' && (
+                    <div style={{ backgroundColor: 'var(--bg-secondary)', padding: '20px', borderRadius: '16px', border: '1px solid var(--border)', marginBottom: '24px' }}>
+                      <h4 style={{ fontSize: '14px', fontWeight: '900', color: 'var(--primary)', marginBottom: '14px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <PlusCircle size={16} /> Crear Nueva Organización Institucional (Exclusivo SuperAdmin)
+                      </h4>
 
-              {/* Listado de Instituciones en Supabase */}
-              <h4 style={{ fontSize: '14px', fontWeight: '800', color: 'var(--primary)', marginBottom: '12px' }}>
-                Instituciones Registradas en Supabase ({allInstitutions.length}):
-              </h4>
-              <div className="grid grid-2" style={{ gap: '16px' }}>
-                {allInstitutions.length === 0 ? (
-                  <p style={{ color: 'var(--text-muted)', fontSize: '12.5px' }}>No hay instituciones creadas aún.</p>
-                ) : (
-                  allInstitutions.map((inst) => (
-                    <div key={inst.id} className="futuristic-card-item" style={{ padding: '18px', borderLeft: '4px solid var(--primary)' }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                        <h4 style={{ fontSize: '16px', fontWeight: '900' }}>{inst.name}</h4>
-                        <span style={{ fontSize: '10px', fontWeight: '800', padding: '2px 8px', borderRadius: '10px', backgroundColor: 'var(--primary-light)', color: 'var(--primary)', textTransform: 'uppercase' }}>
-                          {inst.type}
-                        </span>
-                      </div>
-                      
-                      <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginBottom: '10px' }}>
-                        👥 Miembros Totales: <strong>{inst.total_members}</strong> • Creado: {new Date(inst.created_at).toLocaleDateString()}
-                      </div>
+                      <form onSubmit={handleCreateInstitution}>
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '14px', marginBottom: '14px' }}>
+                          <div>
+                            <label style={{ fontSize: '11px', fontWeight: '800', display: 'block', marginBottom: '4px' }}>NOMBRE DE LA INSTITUCIÓN *:</label>
+                            <input
+                              type="text"
+                              placeholder="Ej. Universidad Central de Guatemala"
+                              value={newInstName}
+                              onChange={(e) => setNewInstName(e.target.value)}
+                              required
+                              style={{ width: '100%', borderRadius: '10px', fontSize: '12px', padding: '10px' }}
+                            />
+                          </div>
 
-                      {/* Lista de Departamentos */}
-                      <div style={{ borderTop: '1px dashed var(--border)', paddingTop: '10px' }}>
-                        <span style={{ fontSize: '10.5px', fontWeight: '800', color: 'var(--text-muted)', textTransform: 'uppercase', display: 'block', marginBottom: '6px' }}>
-                          DEPARTAMENTOS ACTIVOS EN ESTA INSTITUCIÓN:
-                        </span>
-                        <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
-                          {(inst.departments || []).map((d) => (
-                            <span key={d} style={{ fontSize: '11px', padding: '3px 10px', borderRadius: '12px', backgroundColor: 'var(--bg-primary)', border: '1px solid var(--border)', fontWeight: '700' }}>
-                              🏢 {d}
-                            </span>
-                          ))}
+                          <div>
+                            <label style={{ fontSize: '11px', fontWeight: '800', display: 'block', marginBottom: '4px' }}>TIPO / SECTOR *:</label>
+                            <CustomSelect
+                              options={[
+                                { value: 'educativa', label: '🎓 Educativa / Universidad' },
+                                { value: 'laboral', label: '💼 Empresa / Corporativo' },
+                                { value: 'salud', label: '🏥 Salud / Clínica' },
+                                { value: 'comunitaria', label: '🤝 Comunitaria / ONG' }
+                              ]}
+                              value={newInstType}
+                              onChange={(val) => setNewInstType(val)}
+                            />
+                          </div>
+
+                          <div>
+                            <label style={{ fontSize: '11px', fontWeight: '800', display: 'block', marginBottom: '4px' }}>CORREO OFICIAL:</label>
+                            <input
+                              type="email"
+                              placeholder="contacto@institucion.edu.gt"
+                              value={newInstEmail}
+                              onChange={(e) => setNewInstEmail(e.target.value)}
+                              style={{ width: '100%', borderRadius: '10px', fontSize: '12px', padding: '10px' }}
+                            />
+                          </div>
+
+                          <div>
+                            <label style={{ fontSize: '11px', fontWeight: '800', display: 'block', marginBottom: '4px' }}>TELÉFONO:</label>
+                            <input
+                              type="text"
+                              placeholder="+502 2345-6789"
+                              value={newInstPhone}
+                              onChange={(e) => setNewInstPhone(e.target.value)}
+                              style={{ width: '100%', borderRadius: '10px', fontSize: '12px', padding: '10px' }}
+                            />
+                          </div>
+
+                          <div>
+                            <label style={{ fontSize: '11px', fontWeight: '800', display: 'block', marginBottom: '4px' }}>CIUDAD / SEDE:</label>
+                            <input
+                              type="text"
+                              placeholder="Ciudad de Guatemala"
+                              value={newInstCity}
+                              onChange={(e) => setNewInstCity(e.target.value)}
+                              style={{ width: '100%', borderRadius: '10px', fontSize: '12px', padding: '10px' }}
+                            />
+                          </div>
+
+                          <div>
+                            <label style={{ fontSize: '11px', fontWeight: '800', display: 'block', marginBottom: '4px' }}>PAÍS:</label>
+                            <input
+                              type="text"
+                              value={newInstCountry}
+                              onChange={(e) => setNewInstCountry(e.target.value)}
+                              style={{ width: '100%', borderRadius: '10px', fontSize: '12px', padding: '10px' }}
+                            />
+                          </div>
+
+                          <div>
+                            <label style={{ fontSize: '11px', fontWeight: '800', display: 'block', marginBottom: '4px' }}>DOMINIOS PERMITIDOS (OPCIONAL):</label>
+                            <input
+                              type="text"
+                              placeholder="ej. universidad.edu.gt, facultad.edu.gt"
+                              value={newInstDomains}
+                              onChange={(e) => setNewInstDomains(e.target.value)}
+                              style={{ width: '100%', borderRadius: '10px', fontSize: '12px', padding: '10px' }}
+                            />
+                          </div>
                         </div>
+
+                        <div style={{ marginBottom: '14px', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                          <input
+                            type="checkbox"
+                            id="require_domain_checkbox"
+                            checked={newInstRequireDomain}
+                            onChange={(e) => setNewInstRequireDomain(e.target.checked)}
+                            style={{ width: '16px', height: '16px', accentColor: 'var(--primary)', cursor: 'pointer' }}
+                          />
+                          <label htmlFor="require_domain_checkbox" style={{ fontSize: '12px', fontWeight: '700', cursor: 'pointer', color: 'var(--text-primary)' }}>
+                            Exigir validación estricta de correo institucional en el registro
+                          </label>
+                        </div>
+
+                        <div style={{ marginBottom: '14px' }}>
+                          <label style={{ fontSize: '11px', fontWeight: '800', display: 'block', marginBottom: '4px' }}>DESCRIPCIÓN / PROPÓSITO INSTITUCIONAL:</label>
+                          <textarea
+                            rows={2}
+                            placeholder="Misión, objetivos institucionales o área de cobertura..."
+                            value={newInstDesc}
+                            onChange={(e) => setNewInstDesc(e.target.value)}
+                            style={{ width: '100%', borderRadius: '10px', fontSize: '12px', padding: '10px' }}
+                          />
+                        </div>
+
+                        <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+                          <button
+                            type="submit"
+                            className="btn btn-primary"
+                            disabled={instCreateLoading}
+                            style={{ padding: '12px 24px', borderRadius: '12px', fontWeight: '900', display: 'flex', alignItems: 'center', gap: '6px' }}
+                          >
+                            {instCreateLoading ? <Loader className="animate-spin" size={16} /> : <PlusCircle size={16} />}
+                            <span>Registrar Institución en EquilibrIA</span>
+                          </button>
+                        </div>
+                      </form>
+                    </div>
+                  )}
+
+                  {/* Listado de Instituciones Registradas */}
+                  <div className="grid grid-2" style={{ gap: '16px' }}>
+                    {allInstitutions.length === 0 ? (
+                      <p style={{ color: 'var(--text-muted)', fontSize: '12.5px' }}>No hay instituciones creadas aún.</p>
+                    ) : (
+                      allInstitutions.map((inst) => {
+                        const isSuspended = inst.status === 'SUSPENDED';
+                        const statusBadgeBg = inst.status === 'ACTIVE' ? 'var(--success-light)' : isSuspended ? 'var(--danger-light)' : 'var(--bg-primary)';
+                        const statusBadgeColor = inst.status === 'ACTIVE' ? 'var(--success)' : isSuspended ? 'var(--danger)' : 'var(--text-muted)';
+
+                        return (
+                          <div key={inst.id} className="futuristic-card-item" style={{ padding: '20px', borderLeft: `4px solid ${isSuspended ? 'var(--danger)' : 'var(--primary)'}` }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '10px' }}>
+                              <div>
+                                <span style={{ fontSize: '10px', fontWeight: '900', color: 'var(--primary)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                                  CÓDIGO: {inst.code || 'EQUI-ORG'}
+                                </span>
+                                <h4 style={{ fontSize: '16px', fontWeight: '900', marginTop: '2px' }}>{inst.name}</h4>
+                              </div>
+
+                              <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+                                <span style={{ fontSize: '10px', fontWeight: '800', padding: '3px 8px', borderRadius: '10px', backgroundColor: 'var(--primary-light)', color: 'var(--primary)', textTransform: 'uppercase' }}>
+                                  {inst.type}
+                                </span>
+                                <span style={{ fontSize: '10px', fontWeight: '900', padding: '3px 8px', borderRadius: '10px', backgroundColor: statusBadgeBg, color: statusBadgeColor }}>
+                                  {inst.status}
+                                </span>
+                              </div>
+                            </div>
+
+                            {inst.description && (
+                              <p style={{ fontSize: '12px', color: 'var(--text-secondary)', marginBottom: '10px' }}>
+                                {inst.description}
+                              </p>
+                            )}
+
+                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px', padding: '10px', backgroundColor: 'var(--bg-secondary)', borderRadius: '10px', marginBottom: '12px', fontSize: '11px', textAlign: 'center' }}>
+                              <div>
+                                <span style={{ color: 'var(--text-muted)', display: 'block' }}>Integrantes</span>
+                                <strong style={{ fontSize: '13px' }}>{inst.total_members || 0}</strong>
+                              </div>
+                              <div>
+                                <span style={{ color: 'var(--text-muted)', display: 'block' }}>Activos</span>
+                                <strong style={{ fontSize: '13px', color: 'var(--success)' }}>{inst.active_members || 0}</strong>
+                              </div>
+                              <div>
+                                <span style={{ color: 'var(--text-muted)', display: 'block' }}>Departamentos</span>
+                                <strong style={{ fontSize: '13px', color: 'var(--primary)' }}>{inst.total_departments || 0}</strong>
+                              </div>
+                            </div>
+
+                            {/* Departamentos */}
+                            <div style={{ borderTop: '1px dashed var(--border)', paddingTop: '10px', marginBottom: '12px' }}>
+                              <span style={{ fontSize: '10px', fontWeight: '800', color: 'var(--text-muted)', textTransform: 'uppercase', display: 'block', marginBottom: '6px' }}>
+                                DEPARTAMENTOS ACTIVOS:
+                              </span>
+                              <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+                                {(inst.departments || []).map((d) => (
+                                  <span key={d} style={{ fontSize: '10.5px', padding: '2px 8px', borderRadius: '10px', backgroundColor: 'var(--bg-primary)', border: '1px solid var(--border)', fontWeight: '700' }}>
+                                    🏢 {d}
+                                  </span>
+                                ))}
+                              </div>
+                            </div>
+
+                            {/* Acciones de SuperAdmin */}
+                            {user?.role === 'superadmin' && (
+                              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', borderTop: '1px solid var(--border)', paddingTop: '10px' }}>
+                                <button
+                                  type="button"
+                                  onClick={() => handleToggleInstitutionStatus(inst.id, inst.status)}
+                                  className="duo-pill"
+                                  style={{
+                                    padding: '6px 12px',
+                                    fontSize: '11.5px',
+                                    fontWeight: '800',
+                                    color: isSuspended ? 'var(--success)' : 'var(--danger)',
+                                    borderColor: isSuspended ? 'var(--success)' : 'var(--danger)'
+                                  }}
+                                >
+                                  <Shield size={12} />
+                                  <span>{isSuspended ? 'Reactivar Institución' : 'Suspender Acceso'}</span>
+                                </button>
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* SUB-PESTAÑA 2: DEPARTAMENTOS REALES */}
+              {instSubTab === 'departments' && (
+                <div>
+                  {/* Selector de Institución si es SuperAdmin */}
+                  {user?.role === 'superadmin' && (
+                    <div style={{ marginBottom: '18px', display: 'flex', alignItems: 'center', gap: '12px' }}>
+                      <label style={{ fontSize: '12px', fontWeight: '800' }}>INSTITUCIÓN A GESTIONAR:</label>
+                      <div style={{ minWidth: '260px' }}>
+                        <CustomSelect
+                          options={allInstitutions.map(i => ({ value: i.id, label: `🏛️ ${i.name} (${i.code})` }))}
+                          value={selectedInstForDepts}
+                          onChange={(val) => setSelectedInstForDepts(val)}
+                        />
                       </div>
                     </div>
-                  ))
-                )}
+                  )}
+
+                  {/* Formulario de Creación de Departamento */}
+                  <div style={{ backgroundColor: 'var(--bg-secondary)', padding: '18px', borderRadius: '16px', border: '1px solid var(--border)', marginBottom: '22px' }}>
+                    <h4 style={{ fontSize: '14px', fontWeight: '900', color: 'var(--primary)', marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <PlusCircle size={16} /> Crear Departamento en la Institución
+                    </h4>
+
+                    <form onSubmit={handleCreateDepartment} style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '12px', alignItems: 'end' }}>
+                      <div>
+                        <label style={{ fontSize: '10.5px', fontWeight: '800', display: 'block', marginBottom: '4px' }}>NOMBRE DEL DEPARTAMENTO *:</label>
+                        <input
+                          type="text"
+                          placeholder="Ej. Innovación y Desarrollo"
+                          value={newDeptName}
+                          onChange={(e) => setNewDeptName(e.target.value)}
+                          required
+                          style={{ width: '100%', fontSize: '12px', padding: '9px', borderRadius: '9px' }}
+                        />
+                      </div>
+
+                      <div>
+                        <label style={{ fontSize: '10.5px', fontWeight: '800', display: 'block', marginBottom: '4px' }}>CÓDIGO ÚNICO (Ej. I+D, TEC, RRHH) *:</label>
+                        <input
+                          type="text"
+                          placeholder="Ej. INV"
+                          value={newDeptCode}
+                          onChange={(e) => setNewDeptCode(e.target.value)}
+                          required
+                          style={{ width: '100%', fontSize: '12px', padding: '9px', borderRadius: '9px', textTransform: 'uppercase' }}
+                        />
+                      </div>
+
+                      <div>
+                        <label style={{ fontSize: '10.5px', fontWeight: '800', display: 'block', marginBottom: '4px' }}>ASIGNAR LÍDER (OPCIONAL):</label>
+                        <select
+                          value={newDeptLeaderId}
+                          onChange={(e) => setNewDeptLeaderId(e.target.value)}
+                          style={{ width: '100%', fontSize: '12px', padding: '9px', borderRadius: '9px', backgroundColor: 'var(--bg-primary)', border: '1px solid var(--border)', color: 'var(--text-primary)' }}
+                        >
+                          <option value="">Sin Líder Asignado</option>
+                          {members.map(m => (
+                            <option key={m.id} value={m.id}>{m.first_name} {m.last_name} ({m.email})</option>
+                          ))}
+                        </select>
+                      </div>
+
+                      <div>
+                        <button
+                          type="submit"
+                          className="btn btn-primary"
+                          disabled={deptCreateLoading}
+                          style={{ width: '100%', padding: '10px', borderRadius: '10px', fontWeight: '900', height: '40px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
+                        >
+                          {deptCreateLoading ? <Loader className="animate-spin" size={14} /> : <Plus size={14} />}
+                          <span>Crear Departamento</span>
+                        </button>
+                      </div>
+                    </form>
+                  </div>
+
+                  {/* Listado de Departamentos */}
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '14px' }}>
+                    {deptsLoading ? (
+                      <div style={{ gridColumn: '1 / -1', textAlign: 'center', padding: '30px' }}><Loader className="animate-spin" size={24} /></div>
+                    ) : departmentsList.length === 0 ? (
+                      <p style={{ color: 'var(--text-muted)', fontSize: '12.5px' }}>No hay departamentos registrados para esta institución.</p>
+                    ) : (
+                      departmentsList.map(dept => (
+                        <div key={dept.id} className="futuristic-card-item" style={{ padding: '16px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', opacity: dept.is_active ? 1 : 0.65 }}>
+                          <div>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                              <span style={{ fontSize: '10px', fontWeight: '900', padding: '2px 7px', borderRadius: '6px', backgroundColor: 'var(--primary-light)', color: 'var(--primary)' }}>
+                                {dept.code}
+                              </span>
+                              <span style={{ fontSize: '10px', fontWeight: '900', padding: '2px 6px', borderRadius: '6px', backgroundColor: dept.is_active ? 'var(--success-light)' : 'var(--danger-light)', color: dept.is_active ? 'var(--success)' : 'var(--danger)' }}>
+                                {dept.is_active ? 'ACTIVO' : 'INACTIVO'}
+                              </span>
+                            </div>
+
+                            <h4 style={{ fontSize: '14.5px', fontWeight: '800', marginBottom: '4px' }}>{dept.name}</h4>
+                            <p style={{ fontSize: '11.5px', color: 'var(--text-secondary)', marginBottom: '8px' }}>{dept.description || 'Área institucional de trabajo.'}</p>
+                            
+                            <div style={{ fontSize: '11px', color: 'var(--text-muted)', display: 'flex', flexDirection: 'column', gap: '3px' }}>
+                              <span>👔 Líder: <strong>{dept.leader_name || 'No asignado'}</strong></span>
+                              <span>👥 Miembros Asociados: <strong>{dept.user_count || 0}</strong></span>
+                            </div>
+                          </div>
+
+                          <div style={{ borderTop: '1px solid var(--border)', paddingTop: '10px', marginTop: '10px', display: 'flex', justifyContent: 'flex-end' }}>
+                            <button
+                              type="button"
+                              onClick={() => handleToggleDeptStatus(dept.institution_id, dept.id)}
+                              className="duo-pill"
+                              style={{ padding: '4px 10px', fontSize: '11px', color: dept.is_active ? 'var(--danger)' : 'var(--success)' }}
+                            >
+                              <span>{dept.is_active ? 'Desactivar (Soft Delete)' : 'Reactivar'}</span>
+                            </button>
+                          </div>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* SUB-PESTAÑA 3: INVITACIONES INSTITUCIONALES */}
+              {instSubTab === 'invitations' && (
+                <div>
+                  {/* Selector de Institución si es SuperAdmin */}
+                  {user?.role === 'superadmin' && (
+                    <div style={{ marginBottom: '18px', display: 'flex', alignItems: 'center', gap: '12px' }}>
+                      <label style={{ fontSize: '12px', fontWeight: '800' }}>INSTITUCIÓN:</label>
+                      <div style={{ minWidth: '260px' }}>
+                        <CustomSelect
+                          options={allInstitutions.map(i => ({ value: i.id, label: `🏛️ ${i.name} (${i.code})` }))}
+                          value={selectedInstForDepts}
+                          onChange={(val) => setSelectedInstForDepts(val)}
+                        />
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Formulario de Generación de Invitación */}
+                  <div style={{ backgroundColor: 'var(--bg-secondary)', padding: '18px', borderRadius: '16px', border: '1px solid var(--border)', marginBottom: '22px' }}>
+                    <h4 style={{ fontSize: '14px', fontWeight: '900', color: 'var(--primary)', marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <Key size={16} /> Generar Código de Invitación Seguro
+                    </h4>
+
+                    <form onSubmit={handleCreateInvitation} style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '12px', alignItems: 'end' }}>
+                      <div>
+                        <label style={{ fontSize: '10.5px', fontWeight: '800', display: 'block', marginBottom: '4px' }}>ROL AUTORIZADO:</label>
+                        <select
+                          value={newInvRole}
+                          onChange={(e) => setNewInvRole(e.target.value)}
+                          style={{ width: '100%', fontSize: '12px', padding: '9px', borderRadius: '9px', backgroundColor: 'var(--bg-primary)', border: '1px solid var(--border)', color: 'var(--text-primary)' }}
+                        >
+                          <option value="miembro">👤 Miembro / Colaborador</option>
+                          <option value="lider_depto">👔 Líder de Departamento</option>
+                          <option value="profesional_apoyo">🧠 Profesional / Psicólogo</option>
+                          <option value="admin_institucion">🏛️ Admin Institucional</option>
+                        </select>
+                      </div>
+
+                      <div>
+                        <label style={{ fontSize: '10.5px', fontWeight: '800', display: 'block', marginBottom: '4px' }}>DEPARTAMENTO DESTINO:</label>
+                        <select
+                          value={newInvDeptId}
+                          onChange={(e) => setNewInvDeptId(e.target.value)}
+                          style={{ width: '100%', fontSize: '12px', padding: '9px', borderRadius: '9px', backgroundColor: 'var(--bg-primary)', border: '1px solid var(--border)', color: 'var(--text-primary)' }}
+                        >
+                          <option value="">General / Por Definir</option>
+                          {departmentsList.map(d => (
+                            <option key={d.id} value={d.id}>🏢 {d.name} ({d.code})</option>
+                          ))}
+                        </select>
+                      </div>
+
+                      <div>
+                        <label style={{ fontSize: '10.5px', fontWeight: '800', display: 'block', marginBottom: '4px' }}>USOS MÁXIMOS (VACÍO = ILIMITADO):</label>
+                        <input
+                          type="number"
+                          placeholder="Ej. 10"
+                          min="1"
+                          value={newInvMaxUses}
+                          onChange={(e) => setNewInvMaxUses(e.target.value)}
+                          style={{ width: '100%', fontSize: '12px', padding: '9px', borderRadius: '9px' }}
+                        />
+                      </div>
+
+                      <div>
+                        <label style={{ fontSize: '10.5px', fontWeight: '800', display: 'block', marginBottom: '4px' }}>DÍAS DE VIGENCIA:</label>
+                        <input
+                          type="number"
+                          placeholder="30"
+                          min="1"
+                          max="365"
+                          value={newInvExpiresDays}
+                          onChange={(e) => setNewInvExpiresDays(e.target.value)}
+                          style={{ width: '100%', fontSize: '12px', padding: '9px', borderRadius: '9px' }}
+                        />
+                      </div>
+
+                      <div>
+                        <button
+                          type="submit"
+                          className="btn btn-primary"
+                          disabled={invCreateLoading}
+                          style={{ width: '100%', padding: '10px', borderRadius: '10px', fontWeight: '900', height: '40px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
+                        >
+                          {invCreateLoading ? <Loader className="animate-spin" size={14} /> : <Key size={14} />}
+                          <span>Generar Código</span>
+                        </button>
+                      </div>
+                    </form>
+                  </div>
+
+                  {/* Listado de Invitaciones */}
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '14px' }}>
+                    {invLoading ? (
+                      <div style={{ gridColumn: '1 / -1', textAlign: 'center', padding: '30px' }}><Loader className="animate-spin" size={24} /></div>
+                    ) : invitationsList.length === 0 ? (
+                      <p style={{ color: 'var(--text-muted)', fontSize: '12.5px' }}>No hay invitaciones creadas para esta institución.</p>
+                    ) : (
+                      invitationsList.map(inv => {
+                        const isRevoked = !inv.is_active;
+                        const statusColor = inv.status === 'ACTIVE' ? 'var(--success)' : 'var(--danger)';
+                        const statusBg = inv.status === 'ACTIVE' ? 'var(--success-light)' : 'var(--danger-light)';
+
+                        return (
+                          <div key={inv.id} className="futuristic-card-item" style={{ padding: '16px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', opacity: isRevoked ? 0.6 : 1 }}>
+                            <div>
+                              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                                <span style={{ fontSize: '10px', fontWeight: '900', padding: '2px 7px', borderRadius: '6px', backgroundColor: statusBg, color: statusColor }}>
+                                  {inv.status}
+                                </span>
+                                <span style={{ fontSize: '10px', color: 'var(--text-muted)' }}>
+                                  Usos: <strong>{inv.used_count}</strong> {inv.max_uses ? `/ ${inv.max_uses}` : '(Ilimitado)'}
+                                </span>
+                              </div>
+
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px', backgroundColor: 'var(--bg-secondary)', padding: '8px 12px', borderRadius: '8px' }}>
+                                <span style={{ fontSize: '13px', fontWeight: '900', fontFamily: 'monospace', letterSpacing: '1px', color: 'var(--primary)', flex: 1 }}>
+                                  {inv.code}
+                                </span>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    navigator.clipboard.writeText(inv.code);
+                                    setCopiedInvCode(inv.code);
+                                    showAlert('success', 'Código Copiado', `Código ${inv.code} copiado al portapapeles.`);
+                                    setTimeout(() => setCopiedInvCode(null), 2000);
+                                  }}
+                                  style={{ border: 'none', background: 'none', color: 'var(--primary)', cursor: 'pointer', display: 'flex', alignItems: 'center' }}
+                                  title="Copiar código"
+                                >
+                                  {copiedInvCode === inv.code ? <CheckCircle size={14} style={{ color: 'var(--success)' }} /> : <Copy size={14} />}
+                                </button>
+                              </div>
+
+                              <div style={{ fontSize: '11px', color: 'var(--text-secondary)', display: 'flex', flexDirection: 'column', gap: '3px' }}>
+                                <span>Rol asignado: <strong>{inv.role}</strong></span>
+                                <span>Depto: <strong>{inv.department || 'General'}</strong></span>
+                                <span>Vence: <strong>{inv.expires_at ? new Date(inv.expires_at).toLocaleDateString() : 'Sin expiración'}</strong></span>
+                                {inv.created_by_name && <span>Creado por: {inv.created_by_name}</span>}
+                              </div>
+                            </div>
+
+                            {inv.is_active && (
+                              <div style={{ borderTop: '1px solid var(--border)', paddingTop: '10px', marginTop: '10px', display: 'flex', justifyContent: 'flex-end' }}>
+                                <button
+                                  type="button"
+                                  onClick={() => handleRevokeInvitation(inv.institution_id, inv.id)}
+                                  className="duo-pill"
+                                  style={{ padding: '4px 10px', fontSize: '11px', color: 'var(--danger)', borderColor: 'var(--danger)' }}
+                                >
+                                  <span>Revocar Código</span>
+                                </button>
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* TAB 12: DICCIONARIO CULTURAL GUATEMALTECO 🇬🇹 (SUPERADMIN) */}
+        {activeTab === 'culture' && (
+          <div className="animate-fade" style={{ display: 'grid', gap: '16px' }}>
+            
+            {/* Header del Módulo */}
+            <div className="glass-card" style={{
+              padding: '20px 24px',
+              borderRadius: '20px',
+              border: '1.5px solid var(--border)',
+              borderBottom: '4px solid var(--primary)',
+              boxShadow: 'var(--shadow-sm)',
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              flexWrap: 'wrap',
+              gap: '14px'
+            }}>
+              <div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+                  <span style={{ fontSize: '10px', fontWeight: '900', padding: '2px 8px', borderRadius: '8px', backgroundColor: 'var(--primary-light)', color: 'var(--primary)', textTransform: 'uppercase' }}>
+                    🇬🇹 Diccionario Cultural & Ética IA
+                  </span>
+                  <span style={{ fontSize: '11px', color: 'var(--text-muted)', fontWeight: '700' }}>
+                    3 Niveles de Seguridad
+                  </span>
+                </div>
+                <h1 style={{ fontSize: '20px', fontWeight: '900', color: 'var(--text-primary)', letterSpacing: '-0.5px' }}>
+                  Diccionario Cultural Guatemalteco
+                </h1>
+                <p style={{ fontSize: '12px', color: 'var(--text-secondary)', marginTop: '2px', maxWidth: '650px', lineHeight: '1.4' }}>
+                  Administra los modismos y términos locales clasificados para la interacción segura y ética de la IA.
+                </p>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => {
+                  if (showExprModal) {
+                    setShowExprModal(false);
+                  } else {
+                    handleOpenNewExprModal();
+                  }
+                }}
+                className="btn btn-primary"
+                style={{ padding: '10px 18px', borderRadius: '12px', fontWeight: '800', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '6px' }}
+              >
+                {showExprModal && !editingExpr ? <X size={16} /> : <Plus size={16} />}
+                <span>{showExprModal && !editingExpr ? 'Cerrar Formulario' : '➕ Nueva Expresión'}</span>
+              </button>
+            </div>
+
+            {/* FORMULARIO SUPERIOR EXPANDIBLE (SE ABRE ARRIBA AL PRESIONAR EL BOTÓN) */}
+            {showExprModal && (
+              <div className="glass-card animate-scale" style={{
+                padding: '20px 24px',
+                borderRadius: '18px',
+                border: '2px solid var(--primary)',
+                backgroundColor: 'var(--bg-secondary)',
+                boxShadow: 'var(--shadow-md)'
+              }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px', borderBottom: '1px solid var(--border)', paddingBottom: '10px' }}>
+                  <h3 style={{ fontSize: '15px', fontWeight: '900', display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--primary)' }}>
+                    <BookOpen size={18} />
+                    <span>{editingExpr ? `Editar Expresión: "${editingExpr.term}"` : '➕ Registrar Nueva Expresión Cultural'}</span>
+                  </h3>
+                  <button
+                    type="button"
+                    onClick={() => setShowExprModal(false)}
+                    style={{ border: 'none', background: 'none', color: 'var(--text-muted)', cursor: 'pointer', fontSize: '18px', fontWeight: 'bold' }}
+                    title="Cerrar"
+                  >
+                    <X size={18} />
+                  </button>
+                </div>
+
+                <form onSubmit={handleSaveCulturalExpression} style={{ display: 'grid', gap: '12px' }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '12px' }}>
+                    <div>
+                      <label style={{ fontSize: '10.5px', fontWeight: '800', color: 'var(--text-secondary)', display: 'block', marginBottom: '4px' }}>
+                        TÉRMINO O PALABRA: *
+                      </label>
+                      <input
+                        type="text"
+                        placeholder="Ej. cabal, chilero, patojo..."
+                        value={exprForm.term}
+                        onChange={(e) => setExprForm({ ...exprForm, term: e.target.value })}
+                        required
+                        disabled={!!editingExpr}
+                        style={{ width: '100%', borderRadius: '10px', padding: '8px 12px', fontSize: '12.5px' }}
+                      />
+                    </div>
+
+                    <div>
+                      <label style={{ fontSize: '10.5px', fontWeight: '800', color: 'var(--text-secondary)', display: 'block', marginBottom: '4px' }}>
+                        NIVEL DE SEGURIDAD: *
+                      </label>
+                      <select
+                        value={exprForm.safety_level}
+                        onChange={(e) => {
+                          const lvl = e.target.value;
+                          setExprForm({
+                            ...exprForm,
+                            safety_level: lvl,
+                            can_use: lvl === 'ALLOWED'
+                          });
+                        }}
+                        style={{ width: '100%', fontSize: '12px', padding: '8px 10px', borderRadius: '10px', backgroundColor: 'var(--bg-primary)', border: '1px solid var(--border)', color: 'var(--text-primary)' }}
+                      >
+                        <option value="ALLOWED">🟢 Nivel 1 (Permitida) • Uso sutil por IA</option>
+                        <option value="EXPLAINABLE">🟡 Nivel 2 (Solo Explicable) • Si el usuario pregunta</option>
+                        <option value="RESTRICTED">🔴 Nivel 3 (Restringida) • Vulgaridad / Bloqueo</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label style={{ fontSize: '10.5px', fontWeight: '800', color: 'var(--text-secondary)', display: 'block', marginBottom: '4px' }}>
+                        CATEGORÍA:
+                      </label>
+                      <select
+                        value={exprForm.category}
+                        onChange={(e) => setExprForm({ ...exprForm, category: e.target.value })}
+                        style={{ width: '100%', fontSize: '12px', padding: '8px 10px', borderRadius: '10px', backgroundColor: 'var(--bg-primary)', border: '1px solid var(--border)', color: 'var(--text-primary)' }}
+                      >
+                        <option value="GUATEMALTEQUISMO">Guatemaltequismo</option>
+                        <option value="COLOQUIAL">Coloquialismo</option>
+                        <option value="JERGA">Jerga Popular</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '12px' }}>
+                    <div>
+                      <label style={{ fontSize: '10.5px', fontWeight: '800', color: 'var(--text-secondary)', display: 'block', marginBottom: '4px' }}>
+                        SIGNIFICADO: *
+                      </label>
+                      <input
+                        type="text"
+                        placeholder="Descripción clara y precisa del significado..."
+                        value={exprForm.meaning}
+                        onChange={(e) => setExprForm({ ...exprForm, meaning: e.target.value })}
+                        required
+                        style={{ width: '100%', borderRadius: '10px', padding: '8px 12px', fontSize: '12.5px' }}
+                      />
+                    </div>
+
+                    <div>
+                      <label style={{ fontSize: '10.5px', fontWeight: '800', color: 'var(--text-secondary)', display: 'block', marginBottom: '4px' }}>
+                        EJEMPLO DE USO COTIDIANO:
+                      </label>
+                      <input
+                        type="text"
+                        placeholder="Ej. Cabal, eso era lo que teníamos pendiente."
+                        value={exprForm.example}
+                        onChange={(e) => setExprForm({ ...exprForm, example: e.target.value })}
+                        style={{ width: '100%', borderRadius: '10px', padding: '8px 12px', fontSize: '12.5px' }}
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label style={{ fontSize: '10.5px', fontWeight: '800', color: 'var(--text-secondary)', display: 'block', marginBottom: '4px' }}>
+                      NOTAS DE CONTEXTO (OPCIONAL):
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="Ej. Uso positivo de afirmación / evitar dirigir al usuario..."
+                      value={exprForm.context_notes}
+                      onChange={(e) => setExprForm({ ...exprForm, context_notes: e.target.value })}
+                      style={{ width: '100%', borderRadius: '10px', padding: '8px 12px', fontSize: '12px' }}
+                    />
+                  </div>
+
+                  <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '4px' }}>
+                    <button
+                      type="button"
+                      onClick={() => setShowExprModal(false)}
+                      className="btn btn-secondary"
+                      style={{ padding: '8px 16px', borderRadius: '10px', fontSize: '12px', fontWeight: '700' }}
+                    >
+                      Cancelar
+                    </button>
+                    <button
+                      type="submit"
+                      className="btn btn-primary"
+                      style={{ padding: '8px 22px', borderRadius: '10px', fontSize: '12px', fontWeight: '800' }}
+                    >
+                      {editingExpr ? '💾 Guardar Cambios' : '➕ Registrar Expresión'}
+                    </button>
+                  </div>
+                </form>
+              </div>
+            )}
+
+            {/* Barra Compacta de Filtros y Estadísticas Integradas */}
+            <div className="glass-card" style={{
+              padding: '12px 18px',
+              borderRadius: '16px',
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              gap: '12px',
+              flexWrap: 'wrap'
+            }}>
+              {/* Buscador */}
+              <div style={{ position: 'relative', flex: 1, minWidth: '220px', maxWidth: '380px' }}>
+                <Search size={14} style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
+                <input
+                  type="text"
+                  placeholder="Buscar término o significado..."
+                  value={cultureSearch}
+                  onChange={(e) => setCultureSearch(e.target.value)}
+                  style={{ width: '100%', padding: '7px 10px 7px 32px', borderRadius: '10px', fontSize: '12px' }}
+                />
+              </div>
+
+              {/* Botones de Filtro con Conteo Integrado */}
+              <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', alignItems: 'center' }}>
+                {[
+                  { id: 'ALL', label: 'Todos', count: culturalCounts.total, color: 'var(--text-primary)', bg: 'var(--bg-secondary)' },
+                  { id: 'ALLOWED', label: '🟢 Permitidas', count: culturalCounts.allowed, color: 'var(--success)', bg: 'var(--success-light)' },
+                  { id: 'EXPLAINABLE', label: '🟡 Explicables', count: culturalCounts.explainable, color: 'var(--warning)', bg: 'rgba(234, 179, 8, 0.12)' },
+                  { id: 'RESTRICTED', label: '🔴 Restringidas', count: culturalCounts.restricted, color: 'var(--danger)', bg: 'var(--danger-light)' }
+                ].map(f => {
+                  const isSelected = cultureSafetyFilter === f.id;
+                  return (
+                    <button
+                      key={f.id}
+                      type="button"
+                      onClick={() => setCultureSafetyFilter(f.id)}
+                      className={`duo-pill ${isSelected ? 'selected' : ''}`}
+                      style={{
+                        fontSize: '11.5px',
+                        padding: '5px 12px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                        fontWeight: isSelected ? '800' : '600'
+                      }}
+                    >
+                      <span>{f.label}</span>
+                      <span style={{
+                        fontSize: '10px',
+                        fontWeight: '900',
+                        padding: '1px 6px',
+                        borderRadius: '10px',
+                        backgroundColor: isSelected ? 'var(--primary)' : 'var(--bg-tertiary)',
+                        color: isSelected ? '#fff' : 'var(--text-secondary)'
+                      }}>
+                        {f.count}
+                      </span>
+                    </button>
+                  );
+                })}
               </div>
             </div>
+
+            {/* VISTA DE LISTA COMPACTA Y ORDENADA */}
+            {cultureLoading ? (
+              <div style={{ padding: '40px', textAlign: 'center', color: 'var(--text-secondary)' }}>
+                <Loader className="animate-spin" size={24} style={{ margin: '0 auto 10px', color: 'var(--primary)' }} />
+                <span style={{ fontSize: '12.5px' }}>Cargando expresiones...</span>
+              </div>
+            ) : culturalExpressions.length === 0 ? (
+              <div className="glass-card" style={{ padding: '32px', textAlign: 'center' }}>
+                <BookOpen size={32} style={{ color: 'var(--text-muted)', margin: '0 auto 8px' }} />
+                <h3 style={{ fontSize: '14px', fontWeight: '800' }}>No se encontraron expresiones</h3>
+                <p style={{ fontSize: '12px', color: 'var(--text-secondary)', marginTop: '2px' }}>
+                  Ajusta los filtros de búsqueda o agrega una nueva expresión arriba.
+                </p>
+              </div>
+            ) : (
+              <div className="glass-card" style={{ padding: '6px', borderRadius: '18px', overflow: 'hidden' }}>
+                <div style={{ display: 'grid', gap: '4px' }}>
+                  {culturalExpressions.map((expr, idx) => {
+                    const isAllowed = expr.safety_level === 'ALLOWED';
+                    const isExplainable = expr.safety_level === 'EXPLAINABLE';
+                    const isRestricted = expr.safety_level === 'RESTRICTED';
+
+                    const badgeColor = isAllowed ? 'var(--success)' : isExplainable ? 'var(--warning)' : 'var(--danger)';
+                    const badgeBg = isAllowed ? 'var(--success-light)' : isExplainable ? 'rgba(234, 179, 8, 0.12)' : 'var(--danger-light)';
+                    const badgeIcon = isAllowed ? '🟢 N1' : isExplainable ? '🟡 N2' : '🔴 N3';
+                    const badgeDesc = isAllowed ? 'Permitida' : isExplainable ? 'Solo Explicable' : 'Restringida';
+
+                    return (
+                      <div 
+                        key={expr.id}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'space-between',
+                          padding: '10px 16px',
+                          borderRadius: '12px',
+                          backgroundColor: idx % 2 === 0 ? 'var(--bg-primary)' : 'var(--bg-secondary)',
+                          borderLeft: `4px solid ${badgeColor}`,
+                          opacity: expr.active ? 1 : 0.6,
+                          gap: '14px',
+                          transition: 'all 0.15s ease'
+                        }}
+                      >
+                        {/* Nivel y Término */}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', minWidth: '180px' }}>
+                          <span style={{
+                            fontSize: '10px',
+                            fontWeight: '900',
+                            padding: '2px 7px',
+                            borderRadius: '6px',
+                            backgroundColor: badgeBg,
+                            color: badgeColor,
+                            whiteSpace: 'nowrap'
+                          }} title={badgeDesc}>
+                            {badgeIcon}
+                          </span>
+
+                          <div>
+                            <strong style={{ fontSize: '13.5px', color: 'var(--text-primary)', display: 'block' }}>
+                              "{expr.term}"
+                            </strong>
+                            <span style={{ fontSize: '10px', color: 'var(--text-muted)', fontWeight: '600' }}>
+                              {expr.category}
+                            </span>
+                          </div>
+                        </div>
+
+                        {/* Significado y Ejemplo */}
+                        <div style={{ flex: 1, minWidth: '220px' }}>
+                          <p style={{ fontSize: '12px', color: 'var(--text-primary)', margin: 0, lineHeight: '1.35' }}>
+                            {expr.meaning}
+                          </p>
+                          {expr.example && (
+                            <span style={{ fontSize: '11px', color: 'var(--text-muted)', fontStyle: 'italic', display: 'block', marginTop: '2px' }}>
+                              💡 "{expr.example}"
+                            </span>
+                          )}
+                        </div>
+
+                        {/* Estado y Acciones Compactas */}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
+                          <button
+                            type="button"
+                            onClick={() => handleToggleExpressionActive(expr)}
+                            className="duo-pill"
+                            style={{
+                              fontSize: '10.5px',
+                              padding: '3px 8px',
+                              color: expr.active ? 'var(--success)' : 'var(--text-muted)',
+                              borderColor: expr.active ? 'var(--success)' : 'var(--border)'
+                            }}
+                            title={expr.active ? 'Desactivar expresión' : 'Activar expresión'}
+                          >
+                            {expr.active ? <ToggleRight size={14} /> : <ToggleLeft size={14} />}
+                            <span>{expr.active ? 'Activa' : 'Inactiva'}</span>
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() => handleOpenEditExprModal(expr)}
+                            className="theme-toggle"
+                            style={{ border: '1px solid var(--border)', width: '28px', height: '28px', borderRadius: '8px', color: 'var(--primary)' }}
+                            title="Editar"
+                          >
+                            <Edit3 size={12} />
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteExpression(expr)}
+                            className="theme-toggle"
+                            style={{ border: '1px solid var(--border)', width: '28px', height: '28px', borderRadius: '8px', color: 'var(--danger)' }}
+                            title="Eliminar"
+                          >
+                            <Trash2 size={12} />
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
           </div>
         )}
 

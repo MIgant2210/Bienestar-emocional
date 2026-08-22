@@ -2,7 +2,8 @@ import React, { useState, useEffect, useContext } from 'react';
 import { 
   Settings as SettingsIcon, User, Palette, Bell, Shield, Lock, 
   Check, Save, Moon, Sun, ShieldAlert, ShieldCheck, KeyRound, 
-  LogOut, Laptop, CheckCircle2, AlertCircle, Loader, RefreshCw
+  LogOut, Laptop, CheckCircle2, AlertCircle, Loader, RefreshCw,
+  Sparkles, Bot, Globe, ToggleLeft, ToggleRight, HeartHandshake
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { AuthContext } from '../contexts/AuthContext';
@@ -15,13 +16,19 @@ const Settings = () => {
   const { user, loginUser, logout } = useContext(AuthContext);
   const { theme, toggleTheme, colorPalette, changePalette, PALETTES } = useContext(ThemeContext);
 
-  const [activeTab, setActiveTab] = useState('account'); // 'account', 'appearance', 'notifications', 'privacy', 'security'
+  const [activeTab, setActiveTab] = useState('account'); // 'account', 'ai_culture', 'appearance', 'notifications', 'privacy', 'security'
 
   // Estados de Mi Cuenta
   const [firstName, setFirstName] = useState(user?.first_name || '');
   const [lastName, setLastName] = useState(user?.last_name || '');
   const [accountLoading, setAccountLoading] = useState(false);
   const [accountMsg, setAccountMsg] = useState({ type: '', text: '' });
+
+  // Estados de Preferencias de IA & Cultura Guatemalteca 🇬🇹
+  const [aiStyle, setAiStyle] = useState(user?.ai_communication_style || 'guatemalteco');
+  const [useGtExpr, setUseGtExpr] = useState(user?.use_guatemalan_expressions !== undefined ? user.use_guatemalan_expressions : true);
+  const [aiPrefsLoading, setAiPrefsLoading] = useState(false);
+  const [aiPrefsMsg, setAiPrefsMsg] = useState({ type: '', text: '' });
 
   // Estados de Notificaciones
   const [notifPrefs, setNotifPrefs] = useState({
@@ -56,22 +63,51 @@ const Settings = () => {
     }
   }, [user]);
 
-  // Cargar Preferencias de Notificaciones y Consentimientos
+  // Cargar Preferencias de Notificaciones, Consentimientos e IA
   useEffect(() => {
     const fetchSettingsData = async () => {
       try {
-        const [prefsRes, consentsRes] = await Promise.all([
+        const [prefsRes, consentsRes, aiRes] = await Promise.all([
           api.get('/notifications/preferences'),
-          api.get('/wellbeing/consents')
+          api.get('/wellbeing/consents'),
+          api.get('/auth/preferences')
         ]);
         if (prefsRes.data) setNotifPrefs(prefsRes.data);
         if (consentsRes.data) setConsents(consentsRes.data);
+        if (aiRes.data) {
+          setAiStyle(aiRes.data.ai_communication_style || 'guatemalteco');
+          setUseGtExpr(aiRes.data.use_guatemalan_expressions !== undefined ? aiRes.data.use_guatemalan_expressions : true);
+        }
       } catch (err) {
         console.error('Error cargando configuraciones:', err);
       }
     };
     fetchSettingsData();
   }, []);
+
+  // Guardar Preferencias de IA y Cultura Guatemalteca
+  const handleSaveAiPreferences = async (e) => {
+    e.preventDefault();
+    setAiPrefsLoading(true);
+    setAiPrefsMsg({ type: '', text: '' });
+    try {
+      await api.put('/auth/preferences', {
+        ai_communication_style: aiStyle,
+        use_guatemalan_expressions: useGtExpr
+      });
+      const updatedUser = {
+        ...user,
+        ai_communication_style: aiStyle,
+        use_guatemalan_expressions: useGtExpr
+      };
+      localStorage.setItem('user', JSON.stringify(updatedUser));
+      setAiPrefsMsg({ type: 'success', text: 'Preferencias de Inteligencia Artificial actualizadas correctamente.' });
+    } catch (err) {
+      setAiPrefsMsg({ type: 'danger', text: err.response?.data?.message || 'Error al guardar preferencias de IA.' });
+    } finally {
+      setAiPrefsLoading(false);
+    }
+  };
 
   // Guardar Datos Personales
   const handleSaveProfile = async (e) => {
@@ -218,6 +254,7 @@ const Settings = () => {
         <div className="glass-card" style={{ padding: '12px', display: 'grid', gap: '6px' }}>
           {[
             { id: 'account', label: 'Mi Cuenta', icon: User },
+            { id: 'ai_culture', label: 'Asistente IA & Cultura 🇬🇹', icon: Sparkles },
             { id: 'appearance', label: 'Apariencia', icon: Palette },
             { id: 'notifications', label: 'Notificaciones', icon: Bell },
             { id: 'privacy', label: 'Privacidad y Consentimientos', icon: Shield },
@@ -340,6 +377,175 @@ const Settings = () => {
                     style={{ padding: '10px 24px', borderRadius: '10px', fontSize: '12.5px', fontWeight: '800' }}
                   >
                     {accountLoading ? <Loader className="animate-spin" size={15} /> : <><Save size={15} /><span>Guardar Cambios</span></>}
+                  </button>
+                </div>
+              </form>
+            </div>
+          )}
+
+          {/* ======================================================== */}
+          {/* PESTAÑA: ASISTENTE IA & CULTURA GUATEMALTECA 🇬🇹          */}
+          {/* ======================================================== */}
+          {activeTab === 'ai_culture' && (
+            <div className="animate-fade" style={{ display: 'grid', gap: '20px' }}>
+              <div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+                  <span style={{ fontSize: '10.5px', fontWeight: '900', padding: '3px 8px', borderRadius: '10px', backgroundColor: 'var(--primary-light)', color: 'var(--primary)' }}>
+                    🇬🇹 ADAPTACIÓN CULTURAL
+                  </span>
+                  <span style={{ fontSize: '11px', color: 'var(--text-muted)', fontWeight: '700' }}>
+                    Personalización del Asistente
+                  </span>
+                </div>
+                <h3 style={{ fontSize: '17px', fontWeight: '900', color: 'var(--text-primary)' }}>
+                  Preferencias de Inteligencia Artificial y Tono Conversacional
+                </h3>
+                <p style={{ fontSize: '12.5px', color: 'var(--text-secondary)', marginTop: '2px' }}>
+                  Personaliza cómo el asistente inteligente (Equi) se comunica contigo en el Chatbot y en las interpretaciones formativas.
+                </p>
+              </div>
+
+              {aiPrefsMsg.text && (
+                <div style={{
+                  padding: '12px 16px',
+                  borderRadius: '12px',
+                  fontSize: '12.5px',
+                  backgroundColor: aiPrefsMsg.type === 'success' ? 'var(--success-light)' : 'var(--danger-light)',
+                  color: aiPrefsMsg.type === 'success' ? 'var(--success)' : 'var(--danger)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px'
+                }}>
+                  {aiPrefsMsg.type === 'success' ? <CheckCircle2 size={16} /> : <AlertCircle size={16} />}
+                  <span>{aiPrefsMsg.text}</span>
+                </div>
+              )}
+
+              {/* Aviso Ético y de Seguridad */}
+              <div style={{
+                padding: '16px 18px',
+                borderRadius: '16px',
+                backgroundColor: 'var(--bg-secondary)',
+                border: '1.5px solid var(--primary)',
+                display: 'flex',
+                gap: '12px',
+                alignItems: 'flex-start'
+              }}>
+                <Bot size={22} style={{ color: 'var(--primary)', flexShrink: 0, marginTop: '2px' }} />
+                <div>
+                  <h4 style={{ fontSize: '13px', fontWeight: '900', color: 'var(--primary)', marginBottom: '2px' }}>
+                    Marco Ético de EquilibrIA
+                  </h4>
+                  <p style={{ fontSize: '12px', color: 'var(--text-secondary)', lineHeight: '1.5' }}>
+                    La inteligencia artificial de EquilibrIA funciona como un <strong>asistente de bienestar, apoyo formativo y orientación</strong>. No realiza diagnósticos clínicos, no prescribe tratamientos médicos y clasifica rigurosamente el vocabulario para asegurar un trato respetuoso en todo momento.
+                  </p>
+                </div>
+              </div>
+
+              <form onSubmit={handleSaveAiPreferences} style={{ display: 'grid', gap: '20px' }}>
+                {/* Selector de Estilo de Comunicación */}
+                <div>
+                  <label style={{ fontSize: '11px', fontWeight: '800', color: 'var(--text-secondary)', display: 'block', marginBottom: '8px', textTransform: 'uppercase' }}>
+                    ESTILO DE COMUNICACIÓN PREFERIDO:
+                  </label>
+                  
+                  <div style={{ display: 'grid', gap: '10px' }}>
+                    {[
+                      {
+                        id: 'guatemalteco',
+                        icon: '🇬🇹',
+                        title: 'Guatemalteco (Recomendado)',
+                        desc: 'Tono cálido, cercano y empático propio de Guatemala. Utiliza voseo respetuoso e incorpora de forma sutil modismos cotidianos apropiados (cabal, chilero, pilas).'
+                      },
+                      {
+                        id: 'cercano',
+                        icon: '🤝',
+                        title: 'Cercano y Amigable',
+                        desc: 'Tono cálido y comprensivo en español neutro estándar (tuteo), enfocado en la empatía y la contención sin expresiones locales específicas.'
+                      },
+                      {
+                        id: 'formal',
+                        icon: '👔',
+                        title: 'Formal e Institucional',
+                        desc: 'Tono sobrio, profesional y estructurado (trato de usted), ideal para un enfoque directo y formal sin coloquialismos.'
+                      }
+                    ].map(styleOpt => (
+                      <div
+                        key={styleOpt.id}
+                        onClick={() => setAiStyle(styleOpt.id)}
+                        className={`duo-card ${aiStyle === styleOpt.id ? 'selected' : ''}`}
+                        style={{
+                          padding: '14px 18px',
+                          borderRadius: '14px',
+                          display: 'flex',
+                          alignItems: 'flex-start',
+                          gap: '14px',
+                          cursor: 'pointer',
+                          border: aiStyle === styleOpt.id ? '2px solid var(--primary)' : '1px solid var(--border)',
+                          backgroundColor: aiStyle === styleOpt.id ? 'var(--primary-light)' : 'var(--bg-primary)',
+                          transition: 'all 0.2s ease'
+                        }}
+                      >
+                        <span style={{ fontSize: '24px', flexShrink: 0 }}>{styleOpt.icon}</span>
+                        <div style={{ flex: 1 }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <strong style={{ fontSize: '13.5px', color: 'var(--text-primary)' }}>{styleOpt.title}</strong>
+                            {aiStyle === styleOpt.id && <Check size={16} style={{ color: 'var(--primary)' }} />}
+                          </div>
+                          <p style={{ fontSize: '11.5px', color: 'var(--text-secondary)', marginTop: '3px', lineHeight: '1.4' }}>
+                            {styleOpt.desc}
+                          </p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Switch de Expresiones Guatemaltecas */}
+                <div style={{
+                  padding: '16px 18px',
+                  borderRadius: '16px',
+                  backgroundColor: 'var(--bg-secondary)',
+                  border: '1px solid var(--border)',
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  gap: '16px'
+                }}>
+                  <div>
+                    <strong style={{ fontSize: '13px', color: 'var(--text-primary)', display: 'block' }}>
+                      Utilizar modismos guatemaltecos permitidos (Nivel 1)
+                    </strong>
+                    <span style={{ fontSize: '11.5px', color: 'var(--text-secondary)' }}>
+                      Permite que la IA use ocasionalmente palabras como <em>cabal, chilero, echar ganas, pilas, buena onda</em>.
+                    </span>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => setUseGtExpr(!useGtExpr)}
+                    className="duo-pill"
+                    style={{
+                      fontSize: '12px',
+                      padding: '6px 14px',
+                      color: useGtExpr ? 'var(--success)' : 'var(--text-muted)',
+                      borderColor: useGtExpr ? 'var(--success)' : 'var(--border)',
+                      backgroundColor: useGtExpr ? 'var(--success-light)' : 'var(--bg-primary)'
+                    }}
+                  >
+                    {useGtExpr ? <ToggleRight size={18} /> : <ToggleLeft size={18} />}
+                    <span>{useGtExpr ? 'Activado' : 'Desactivado'}</span>
+                  </button>
+                </div>
+
+                <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '10px' }}>
+                  <button
+                    type="submit"
+                    className="btn btn-primary"
+                    disabled={aiPrefsLoading}
+                    style={{ padding: '12px 28px', borderRadius: '12px', fontSize: '13px', fontWeight: '800', display: 'flex', alignItems: 'center', gap: '8px' }}
+                  >
+                    {aiPrefsLoading ? <Loader className="animate-spin" size={16} /> : <><Save size={16} /><span>Guardar Preferencias de IA</span></>}
                   </button>
                 </div>
               </form>

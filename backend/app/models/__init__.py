@@ -1,4 +1,5 @@
 from app.models.institution import Institution
+from app.models.department import Department
 from app.models.user import User
 from app.models.reflection import Reflection
 from app.models.task_model import Task
@@ -12,4 +13,7 @@ from app.models.gamification import XpTransaction, UserActivityDay, Badge, UserB
 from app.models.consent import Consent
 from app.models.resource import Resource
 from app.models.notification import Notification, NotificationPreference
-
+from app.models.invitation import InvitationCode
+from app.models.verification_token import EmailVerificationToken
+from app.models.cultural_expression import CulturalExpression
+from app.models.knowledge_document import KnowledgeDocument

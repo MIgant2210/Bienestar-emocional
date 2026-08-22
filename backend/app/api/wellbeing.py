@@ -10,7 +10,72 @@ from app.services.audit_service import AuditService
 from datetime import datetime, timedelta
 from sqlalchemy import or_, desc
 
+from app.models.task_model import Task
+from app.models.notification import Notification
+from app.models.kudos import Kudos
+
 wellbeing_bp = Blueprint('wellbeing', __name__)
+
+@wellbeing_bp.route('/dashboard-bundle', methods=['GET'])
+@token_required
+def get_dashboard_bundle(current_user):
+    """
+    Endpoint de Alto Rendimiento Agregado:
+    Consolida en 1 sola llamada HTTP todo el paquete de datos necesario para renderizar
+    el MemberDashboard (Mi Bienestar, Tareas, Historial, Evaluaciones y Notificaciones).
+    Reduce de 7 peticiones secuenciales a 1 sola respuesta optimizada.
+    """
+    # 1. Historial de reflexiones recientes
+    reflections = Reflection.query.filter_by(user_id=current_user.id).order_by(desc(Reflection.created_at)).limit(10).all()
+    history_dicts = [r.to_dict() for r in reflections]
+    last_reflection = history_dicts[0] if history_dicts else None
+
+    # 2. Promedios recientes
+    if reflections:
+        recent_count = len(reflections)
+        avg_stress = round(sum(r.stress_score for r in reflections) / recent_count, 1)
+        avg_motivation = round(sum(r.motivation_score for r in reflections) / recent_count, 1)
+        avg_burnout = round(sum(r.burnout_score for r in reflections) / recent_count, 1)
+        status_label = "Indicadores que requieren atención" if (avg_stress > 70 or avg_burnout > 70) else ("Bienestar estable con tendencia positiva" if (avg_stress < 40 and avg_motivation > 60) else "Bienestar estable")
+        status_tone = "warning" if (avg_stress > 70 or avg_burnout > 70) else ("success" if (avg_stress < 40 and avg_motivation > 60) else "info")
+    else:
+        avg_stress, avg_motivation, avg_burnout = 0, 0, 0
+        status_label = "Sin registros recientes"
+        status_tone = "neutral"
+
+    # 3. Tareas activas del usuario
+    tasks = Task.query.filter_by(user_id=current_user.id).order_by(Task.created_at.desc()).limit(15).all()
+    tasks_dicts = [t.to_dict() for t in tasks]
+
+    # 4. Evaluaciones activas
+    eval_query = Evaluation.query.filter_by(is_active=True)
+    if current_user.institution_id:
+        eval_query = eval_query.filter(or_(Evaluation.institution_id == current_user.institution_id, Evaluation.institution_id.is_(None)))
+    evaluations = eval_query.order_by(Evaluation.created_at.desc()).limit(10).all()
+    eval_dicts = [e.to_dict() for e in evaluations]
+
+    # 5. Conteo de notificaciones no leídas
+    unread_notifs = Notification.query.filter_by(user_id=current_user.id, is_read=False).count()
+
+    return jsonify({
+        'user': current_user.to_dict(),
+        'summary': {
+            'last_reflection': last_reflection,
+            'recent_averages': {
+                'stress': avg_stress,
+                'motivation': avg_motivation,
+                'burnout': avg_burnout
+            },
+            'status_label': status_label,
+            'status_tone': status_tone
+        },
+        'history': history_dicts,
+        'tasks': tasks_dicts,
+        'evaluations': eval_dicts,
+        'unread_notifications': unread_notifs,
+        'xp': current_user.total_xp or 0,
+        'streak': current_user.current_streak or 0
+    }), 200
 
 @wellbeing_bp.route('/summary', methods=['GET'])
 @token_required

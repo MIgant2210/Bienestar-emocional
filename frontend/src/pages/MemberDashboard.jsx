@@ -7,7 +7,7 @@ import {
   SendHorizontal, Bot, User, Loader, Calendar, ClipboardCheck, Sliders, Check, 
   HelpCircle, Mic, MicOff, ArrowLeft, FileAudio, Volume2, Play, Square, CheckCircle,
   Flame, Zap, Award, ThumbsUp, ThumbsDown, Palette, Trophy, Bell, Settings as SettingsIcon,
-  UserPlus, X
+  UserPlus, X, ChevronLeft, ChevronRight
 } from 'lucide-react';
 import api from '../services/api';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
@@ -18,6 +18,8 @@ import SystemAlert from '../components/SystemAlert';
 import GamificationWidget from '../components/GamificationWidget';
 import NotificationCenter from '../components/NotificationCenter';
 import TestResponseViewer from '../components/TestResponseViewer';
+import ColibriMascot from '../components/ColibriMascot';
+import StarryBackground from '../components/StarryBackground';
 import MyProgress from './MyProgress';
 import MyWellbeing from './MyWellbeing';
 import { useNavigate } from 'react-router-dom';
@@ -171,6 +173,12 @@ const MemberDashboard = ({ initialTab }) => {
   const [evalSubmitLoading, setEvalSubmitLoading] = useState(false);
   const [evalSuccessMsg, setEvalSuccessMsg] = useState('');
   const [evalErrorMsg, setEvalErrorMsg] = useState('');
+
+  // Estados para experiencia de evaluación interactiva Paso a Paso y Mascota Colibrí
+  const [testStep, setTestStep] = useState('intro'); // 'intro' | 'question'
+  const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
+  const [mascotMood, setMascotMood] = useState('welcome');
 
   // Audio / Multimodal & Web Speech API States
   const [isRecording, setIsRecording] = useState(false);
@@ -340,8 +348,27 @@ const MemberDashboard = ({ initialTab }) => {
     }
   };
 
+  const fetchDashboardBundle = async () => {
+    try {
+      const response = await api.get('/wellbeing/dashboard-bundle');
+      const data = response.data;
+      if (data.history) setHistory(data.history);
+      if (data.tasks) setTasks(data.tasks);
+      if (data.evaluations) setEvaluations(data.evaluations);
+      if (data.xp !== undefined) setXpPoints(data.xp);
+      if (data.streak !== undefined) setStreak(data.streak);
+    } catch (err) {
+      console.warn('Fallback a llamadas individuales:', err);
+      fetchHistory();
+      fetchTasks();
+      fetchEvaluations();
+    }
+  };
+
   useEffect(() => {
-    Promise.allSettled([fetchHistory(), fetchTasks(), fetchEvaluations(), fetchRewards(), fetchAppointments(), fetchKudos(), fetchMembers()]);
+    fetchDashboardBundle();
+    // Cargas diferidas para módulos secundarios
+    Promise.allSettled([fetchRewards(), fetchAppointments(), fetchKudos(), fetchMembers()]);
   }, []);
 
   useEffect(() => {
@@ -564,7 +591,12 @@ const MemberDashboard = ({ initialTab }) => {
 
     try {
       const response = await api.post('/analysis/chat', { message: messageToSend });
-      setChatMessages(prev => [...prev, { sender: 'ai', text: response.data.reply }]);
+      setChatMessages(prev => [...prev, { 
+        sender: 'ai', 
+        text: response.data.reply,
+        is_emergency: response.data.is_emergency,
+        citations: response.data.citations || []
+      }]);
     } catch (err) {
       setChatMessages(prev => [...prev, { sender: 'ai', text: 'Lo siento, he tenido dificultades para conectarme. Por favor intenta de nuevo.' }]);
     } finally {
@@ -638,22 +670,31 @@ const MemberDashboard = ({ initialTab }) => {
     );
   };
 
-  // RENDER PANTALLA EXCLUSIVA DE TEST (TIPO DUOLINGO / GOOGLE FORMS GAMIFICADO)
+  // RENDER PANTALLA EXCLUSIVA DE TEST PASO A PASO CON MASCOTA COLIBRÍ
   if (activeView === 'fill_test' && selectedEval) {
     const questions = selectedEval.questions || [];
-    const answeredCount = questions.filter(q => testAnswers[q.id] !== undefined).length;
-    const progressPercent = Math.round((answeredCount / questions.length) * 100);
+    const totalQ = questions.length;
+    const currentQ = questions[currentQuestionIndex] || {};
+    const isCurrentAnswered = testAnswers[currentQ.id] !== undefined && testAnswers[currentQ.id] !== '';
+    const answeredCount = questions.filter(q => testAnswers[q.id] !== undefined && testAnswers[q.id] !== '').length;
+    const progressPercent = totalQ > 0 ? Math.round(((currentQuestionIndex + (isCurrentAnswered ? 1 : 0)) / totalQ) * 100) : 0;
 
     return (
       <div style={{ 
         minHeight: '100vh', 
-        backgroundColor: 'var(--bg-primary)', 
+        background: 'var(--page-bg)', 
+        backgroundColor: 'var(--bg-primary)',
         paddingBottom: '60px',
         display: 'flex',
         flexDirection: 'column',
-        alignItems: 'center'
-      }}>
+        alignItems: 'center',
+        position: 'relative',
+        overflow: 'hidden'
+      }} className="animate-fade">
         
+        {/* Cielo Estrellado Oficial de EquilibrIA */}
+        <StarryBackground isLogin={false} />
+
         {/* Recompensa XP Animada estilo Duolingo */}
         {showXpReward && (
           <div style={{
@@ -676,22 +717,100 @@ const MemberDashboard = ({ initialTab }) => {
           </div>
         )}
 
-        {/* Cabecera Fija Duolingo */}
+        {/* Modal de Confirmación antes de Finalizar */}
+        {showConfirmModal && (
+          <div style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: 'rgba(0,0,0,0.65)',
+            backdropFilter: 'blur(8px)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 10000,
+            padding: '20px'
+          }} className="animate-fade">
+            <div className="glass-card" style={{
+              maxWidth: '460px',
+              width: '100%',
+              padding: '32px 28px',
+              textAlign: 'center',
+              borderRadius: '24px',
+              border: '2px solid var(--border)',
+              boxShadow: 'var(--shadow-lg)'
+            }}>
+              <div style={{
+                width: '60px',
+                height: '60px',
+                borderRadius: '50%',
+                backgroundColor: 'var(--primary-light)',
+                color: 'var(--primary)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                margin: '0 auto 16px'
+              }}>
+                <Sparkles size={30} />
+              </div>
+
+              <h3 style={{ fontSize: '20px', fontWeight: '900', marginBottom: '8px' }}>
+                ¿Deseas finalizar el test?
+              </h3>
+
+              <p style={{ fontSize: '13.5px', color: 'var(--text-secondary)', lineHeight: '1.5', marginBottom: '24px' }}>
+                Has respondido las preguntas de la evaluación. Una vez enviado, tus respuestas serán procesadas de forma confidencial y recibirás tu diagnóstico con <strong>+50 XP</strong>.
+              </p>
+
+              {evalErrorMsg && (
+                <div style={{ backgroundColor: 'var(--danger-light)', color: 'var(--danger)', padding: '10px', borderRadius: '12px', marginBottom: '16px', fontSize: '12.5px', fontWeight: '700' }}>
+                  {evalErrorMsg}
+                </div>
+              )}
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                <button
+                  type="button"
+                  onClick={() => setShowConfirmModal(false)}
+                  className="btn btn-secondary"
+                  style={{ padding: '12px', borderRadius: '14px', fontWeight: '800' }}
+                  disabled={evalSubmitLoading}
+                >
+                  Revisar
+                </button>
+                <button
+                  type="button"
+                  onClick={handleSubmitTestForm}
+                  className="btn btn-primary"
+                  style={{ padding: '12px', borderRadius: '14px', fontWeight: '900', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
+                  disabled={evalSubmitLoading}
+                >
+                  {evalSubmitLoading ? <Loader className="animate-spin" size={16} /> : <><span>Sí, Enviar</span><CheckCircle2 size={16} /></>}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Cabecera Fija Superior con Progreso y Gamificación */}
         <div style={{
           width: '100%',
           backgroundColor: 'var(--bg-secondary)',
           borderBottom: '1px solid var(--border)',
-          padding: '14px 28px',
+          padding: '12px 28px',
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center',
           boxShadow: 'var(--shadow-sm)',
           position: 'sticky',
           top: 0,
-          zIndex: 100
+          zIndex: 100,
+          backdropFilter: 'blur(10px)'
         }}>
           <button 
-            onClick={() => { setActiveView('dashboard'); setSelectedEval(null); }}
+            onClick={() => { setActiveView('dashboard'); setSelectedEval(null); setTestStep('intro'); }}
             style={{
               display: 'flex',
               alignItems: 'center',
@@ -701,14 +820,14 @@ const MemberDashboard = ({ initialTab }) => {
               color: 'var(--text-primary)',
               cursor: 'pointer',
               fontWeight: '800',
-              fontSize: '13.5px'
+              fontSize: '13px'
             }}
           >
-            <ArrowLeft size={18} />
-            <span>Volver al Dashboard</span>
+            <ArrowLeft size={16} />
+            <span>Salir del Test</span>
           </button>
           
-          <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
             <span className="duo-streak-badge">
               <Flame size={14} />
               <span>{streakDays} DÍAS</span>
@@ -719,102 +838,196 @@ const MemberDashboard = ({ initialTab }) => {
               <span>{xpPoints} XP</span>
             </span>
 
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginLeft: '10px' }}>
-              <span style={{ fontSize: '12px', color: 'var(--text-secondary)', fontWeight: '700' }}>
-                {progressPercent}%
-              </span>
-              <div style={{ width: '130px', height: '10px', backgroundColor: 'var(--bg-primary)', borderRadius: '6px', overflow: 'hidden', border: '1px solid var(--border)' }}>
-                <div style={{ width: `${progressPercent}%`, height: '100%', backgroundColor: 'var(--primary)', transition: 'width 0.3s ease' }} />
+            {testStep === 'question' && totalQ > 0 && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginLeft: '6px' }}>
+                <span style={{ fontSize: '12px', color: 'var(--text-secondary)', fontWeight: '800' }}>
+                  {progressPercent}%
+                </span>
+                <div style={{ width: '120px', height: '8px', backgroundColor: 'var(--bg-primary)', borderRadius: '6px', overflow: 'hidden', border: '1px solid var(--border)' }}>
+                  <div style={{ width: `${progressPercent}%`, height: '100%', backgroundColor: 'var(--primary)', transition: 'width 0.3s ease' }} />
+                </div>
               </div>
-            </div>
+            )}
           </div>
         </div>
 
-        {/* Contenedor Principal estilo Duolingo */}
-        <div style={{ width: '100%', maxWidth: '820px', padding: '24px 18px', display: 'grid', gap: '16px' }}>
+        {/* CONTENEDOR PRINCIPAL CENTRADO Y AMPLIO EN PC */}
+        <div style={{ 
+          width: '100%', 
+          maxWidth: '1060px', 
+          margin: 'auto 0',
+          padding: '40px 24px', 
+          position: 'relative', 
+          zIndex: 10,
+          display: 'flex',
+          flexDirection: 'column',
+          justifyContent: 'center'
+        }}>
           
-          {/* Mascot "Equi el Búho" */}
-          {renderEquiMascot(progressPercent)}
+          {/* PASO 1: PANTALLA INTRODUCTORIA / ENCABEZADO DEL TEST */}
+          {testStep === 'intro' && (
+            <div className="animate-fade" style={{ display: 'grid', gridTemplateColumns: 'minmax(300px, 340px) 1fr', gap: '32px', alignItems: 'center' }}>
+              
+              {/* Mascota Colibrí en estado de bienvenida */}
+              <ColibriMascot 
+                mood="welcome" 
+                customMessage="¡Hola! Te acompañaré paso a paso en esta evaluación. Responde con calma y sinceridad. 🌿"
+                progressPercent={0}
+              />
 
-          {/* Tarjeta de Encabezado */}
-          <div style={{
-            backgroundColor: 'var(--bg-secondary)',
-            borderRadius: '18px',
-            border: '2px solid var(--border)',
-            borderBottom: '6px solid var(--primary)',
-            boxShadow: 'var(--shadow)',
-            padding: '28px 32px'
-          }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '12px' }}>
-              <span style={{ fontSize: '11px', fontWeight: '900', padding: '4px 10px', borderRadius: '20px', backgroundColor: 'var(--primary-light)', color: 'var(--primary)', textTransform: 'uppercase' }}>
-                {selectedEval.category}
-              </span>
-              <span style={{ fontSize: '11.5px', color: 'var(--text-muted)', fontWeight: '700' }}>Evaluación Gamificada</span>
-            </div>
-            
-            <h1 style={{ fontSize: '26px', fontWeight: '900', color: 'var(--text-primary)', letterSpacing: '-0.5px' }}>
-              {selectedEval.title}
-            </h1>
-            
-            <p style={{ fontSize: '14px', color: 'var(--text-secondary)', marginTop: '8px', lineHeight: '1.5' }}>
-              {selectedEval.description || 'Selecciona tus opciones con emoticonos interactivos o habla directamente a tu micrófono. Ganas puntos XP al completar.'}
-            </p>
-          </div>
+              {/* Tarjeta de Encabezado */}
+              <div className="glass-card" style={{
+                padding: '40px 36px',
+                borderRadius: '24px',
+                border: '2px solid var(--border)',
+                borderBottom: '6px solid var(--primary)',
+                boxShadow: 'var(--shadow-lg)'
+              }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
+                  <span style={{ fontSize: '11px', fontWeight: '900', padding: '4px 12px', borderRadius: '20px', backgroundColor: 'var(--primary-light)', color: 'var(--primary)', textTransform: 'uppercase' }}>
+                    {selectedEval.category}
+                  </span>
+                  <span style={{ fontSize: '12px', color: 'var(--text-muted)', fontWeight: '700' }}>
+                    Evaluación de Bienestar
+                  </span>
+                </div>
+                
+                <h1 style={{ fontSize: '24px', fontWeight: '900', color: 'var(--text-primary)', letterSpacing: '-0.5px', marginBottom: '10px' }}>
+                  {selectedEval.title}
+                </h1>
+                
+                <p style={{ fontSize: '14px', color: 'var(--text-secondary)', lineHeight: '1.6', marginBottom: '24px' }}>
+                  {selectedEval.description || 'Evaluación guiada de bienestar emocional con preguntas dinámicas interactivas. Tus reflexiones nos permitirán ofrecerte mejores recomendaciones.'}
+                </p>
 
-          {/* Formulario de Preguntas Gamificado */}
-          <form onSubmit={handleSubmitTestForm} style={{ display: 'grid', gap: '20px' }}>
-            
-            {questions.map((q, idx) => {
-              const isQRecording = isRecording && activeRecordingQId === q.id;
-              const isAnswered = testAnswers[q.id] !== undefined;
+                {/* Chips de Información del Test */}
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px', marginBottom: '28px' }}>
+                  <div style={{ backgroundColor: 'var(--bg-secondary)', border: '1px solid var(--border)', padding: '8px 14px', borderRadius: '12px', fontSize: '12.5px', fontWeight: '800', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <span>📋</span>
+                    <span>{totalQ} preguntas interactivas</span>
+                  </div>
+                  <div style={{ backgroundColor: 'var(--bg-secondary)', border: '1px solid var(--border)', padding: '8px 14px', borderRadius: '12px', fontSize: '12.5px', fontWeight: '800', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <span>⏱️</span>
+                    <span>~{Math.max(2, Math.round(totalQ * 0.6))} minutos estimados</span>
+                  </div>
+                  <div style={{ backgroundColor: 'var(--primary-light)', color: 'var(--primary)', padding: '8px 14px', borderRadius: '12px', fontSize: '12.5px', fontWeight: '900', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <Zap size={14} />
+                    <span>+50 XP de recompensa</span>
+                  </div>
+                </div>
 
-              return (
-                <div 
-                  key={q.id || idx}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setTestStep('question');
+                    setCurrentQuestionIndex(0);
+                    setMascotMood('thinking');
+                  }}
+                  className="btn btn-primary"
                   style={{
-                    backgroundColor: 'var(--bg-secondary)',
+                    width: '100%',
+                    padding: '16px 24px',
+                    fontSize: '15px',
                     borderRadius: '16px',
-                    border: '2px solid var(--border)',
-                    borderLeft: isAnswered ? '6px solid var(--success)' : '2px solid var(--border)',
-                    boxShadow: 'var(--shadow-sm)',
-                    padding: '26px 30px'
+                    fontWeight: '900',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '10px',
+                    boxShadow: 'var(--shadow-md)'
                   }}
                 >
-                  {/* Enunciado */}
-                  <h3 style={{ fontSize: '15.5px', fontWeight: '900', color: 'var(--text-primary)', display: 'flex', gap: '10px', marginBottom: '18px', lineHeight: '1.4' }}>
-                    <span style={{ width: '28px', height: '28px', borderRadius: '50%', backgroundColor: 'var(--primary-light)', color: 'var(--primary)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: '13px', fontWeight: '900', flexShrink: 0 }}>
-                      {idx + 1}
-                    </span>
-                    {q.question}
-                  </h3>
+                  <span>Comenzar Evaluación</span>
+                  <ChevronRight size={18} />
+                </button>
+              </div>
 
-                  {/* PREGUNTA TIPO TEXTO / VOZ EN VIVO */}
-                  {q.type === 'text' && (
+            </div>
+          )}
+
+          {/* PASO 2: PREGUNTAS INDIVIDUALES (UNA A LA VEZ) */}
+          {testStep === 'question' && currentQ && (
+            <div className="animate-fade" style={{ display: 'grid', gridTemplateColumns: 'minmax(300px, 340px) 1fr', gap: '32px', alignItems: 'flex-start' }}>
+              
+              {/* Mascota Colibrí en el lateral */}
+              <div style={{ position: 'sticky', top: '80px' }}>
+                <ColibriMascot 
+                  mood={mascotMood}
+                  progressPercent={progressPercent}
+                />
+              </div>
+
+              {/* Tarjeta de la Pregunta Actual */}
+              <div className="glass-card" style={{
+                padding: '38px 36px',
+                borderRadius: '24px',
+                border: '2px solid var(--border)',
+                borderLeft: isCurrentAnswered ? '6px solid var(--success)' : '2px solid var(--border)',
+                boxShadow: 'var(--shadow-md)'
+              }}>
+                {/* Header de la Pregunta */}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '18px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <span style={{
+                      width: '32px',
+                      height: '32px',
+                      borderRadius: '50%',
+                      backgroundColor: isCurrentAnswered ? 'var(--success-light)' : 'var(--primary-light)',
+                      color: isCurrentAnswered ? 'var(--success)' : 'var(--primary)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      fontWeight: '900',
+                      fontSize: '13.5px'
+                    }}>
+                      {currentQuestionIndex + 1}
+                    </span>
+                    <span style={{ fontSize: '12px', fontWeight: '800', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                      Pregunta {currentQuestionIndex + 1} de {totalQ}
+                    </span>
+                  </div>
+
+                  {isCurrentAnswered && (
+                    <span style={{ fontSize: '11px', fontWeight: '800', color: 'var(--success)', backgroundColor: 'var(--success-light)', padding: '3px 10px', borderRadius: '12px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                      <CheckCircle2 size={12} /> Respondida
+                    </span>
+                  )}
+                </div>
+
+                {/* Enunciado */}
+                <h2 style={{ fontSize: '18px', fontWeight: '900', color: 'var(--text-primary)', lineHeight: '1.45', marginBottom: '24px' }}>
+                  {currentQ.question}
+                </h2>
+
+                {/* COMPONENTES DE RESPUESTA POR TIPO */}
+                <div style={{ marginBottom: '32px' }}>
+                  
+                  {/* Tipo Texto con Dictado por Voz */}
+                  {currentQ.type === 'text' && (
                     <div>
                       <textarea
-                        rows="4"
+                        rows="5"
                         placeholder="Escribe tu reflexión o presiona 'Hablar por Micrófono' para dictar por voz en tiempo real..."
-                        value={testAnswers[q.id] || ''}
-                        onChange={(e) => handleAnswerChange(q.id, e.target.value)}
-                        required
-                        style={{ resize: 'vertical', width: '100%', marginBottom: '14px', borderRadius: '12px', padding: '14px', fontSize: '13.5px' }}
+                        value={testAnswers[currentQ.id] || ''}
+                        onChange={(e) => handleAnswerChange(currentQ.id, e.target.value)}
+                        style={{ resize: 'vertical', width: '100%', marginBottom: '14px', borderRadius: '14px', padding: '14px', fontSize: '14px', lineHeight: '1.5' }}
                       />
 
                       <div>
-                        {isQRecording ? (
+                        {isRecording && activeRecordingQId === currentQ.id ? (
                           <button
                             type="button"
                             onClick={stopRecordingSim}
                             className="btn"
-                            style={{ backgroundColor: 'var(--danger)', color: '#fff', fontSize: '13px', padding: '8px 16px', borderRadius: '24px' }}
+                            style={{ backgroundColor: 'var(--danger)', color: '#fff', fontSize: '13px', padding: '8px 18px', borderRadius: '24px' }}
                           >
                             <Square size={14} />
-                            <span>Detener Voz en Vivo ({recordingSeconds}s)</span>
+                            <span>Detener Grabación ({recordingSeconds}s)</span>
                           </button>
                         ) : (
                           <button
                             type="button"
-                            onClick={() => startRecordingSim(q.id)}
+                            onClick={() => startRecordingSim(currentQ.id)}
                             className="duo-pill"
                           >
                             <Mic size={15} style={{ color: 'var(--primary)' }} />
@@ -825,24 +1038,24 @@ const MemberDashboard = ({ initialTab }) => {
                     </div>
                   )}
 
-                  {/* PREGUNTA ESCALA NUMÉRICA 1 A 5 Ó 1 A 10 (SÓLO NÚMEROS) */}
-                  {(q.type === 'scale_1_5' || q.type === 'scale_1_10') && (
-                    <div style={{ marginTop: '8px' }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px', fontSize: '12px', fontWeight: '800', color: 'var(--text-muted)' }}>
+                  {/* Escala Numérica 1 a 5 o 1 a 10 */}
+                  {(currentQ.type === 'scale_1_5' || currentQ.type === 'scale_1_10') && (
+                    <div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '12px', fontSize: '12px', fontWeight: '800', color: 'var(--text-muted)' }}>
                         <span>Mínimo (1)</span>
-                        <span>{q.type === 'scale_1_10' ? 'Máximo (10)' : 'Máximo (5)'}</span>
+                        <span>{currentQ.type === 'scale_1_10' ? 'Máximo (10)' : 'Máximo (5)'}</span>
                       </div>
                       
-                      <div style={{ display: 'grid', gridTemplateColumns: q.type === 'scale_1_10' ? 'repeat(5, 1fr)' : 'repeat(5, 1fr)', gap: '10px' }}>
-                        {(q.type === 'scale_1_10' ? [1, 2, 3, 4, 5, 6, 7, 8, 9, 10] : [1, 2, 3, 4, 5]).map((val) => {
-                          const isSelected = testAnswers[q.id] === val;
+                      <div style={{ display: 'grid', gridTemplateColumns: currentQ.type === 'scale_1_10' ? 'repeat(5, 1fr)' : 'repeat(5, 1fr)', gap: '10px' }}>
+                        {(currentQ.type === 'scale_1_10' ? [1, 2, 3, 4, 5, 6, 7, 8, 9, 10] : [1, 2, 3, 4, 5]).map((val) => {
+                          const isSelected = testAnswers[currentQ.id] === val;
                           return (
                             <button
                               key={val}
                               type="button"
-                              onClick={() => handleAnswerChange(q.id, val)}
+                              onClick={() => handleAnswerChange(currentQ.id, val)}
                               className={`duo-card ${isSelected ? 'selected' : ''}`}
-                              style={{ justifyContent: 'center', padding: '14px 8px', fontSize: '16px', fontWeight: '900' }}
+                              style={{ justifyContent: 'center', padding: '16px 8px', fontSize: '17px', fontWeight: '900', borderRadius: '14px' }}
                             >
                               <span>{val}</span>
                             </button>
@@ -852,12 +1065,12 @@ const MemberDashboard = ({ initialTab }) => {
                     </div>
                   )}
 
-                  {/* PREGUNTA ESCALA DE 5 EMOJIS DE ÁNIMO (emoji_scale_5) */}
-                  {q.type === 'emoji_scale_5' && (
-                    <div style={{ marginTop: '8px' }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px', fontSize: '12px', fontWeight: '800', color: 'var(--text-muted)' }}>
-                        <span>😡 Muy Malo</span>
-                        <span>😁 Excelente</span>
+                  {/* Escala de 5 Emojis de Ánimo */}
+                  {currentQ.type === 'emoji_scale_5' && (
+                    <div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '12px', fontSize: '12px', fontWeight: '800', color: 'var(--text-muted)' }}>
+                        <span>😡 Muy Bajo / Difícil</span>
+                        <span>😁 Excelente / Pleno</span>
                       </div>
                       
                       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '10px' }}>
@@ -868,17 +1081,17 @@ const MemberDashboard = ({ initialTab }) => {
                           { emoji: '🙂', label: 'Tranquilo' },
                           { emoji: '😁', label: 'Excelente' }
                         ].map((item, eIdx) => {
-                          const isSelected = testAnswers[q.id] === item.label || testAnswers[q.id] === item.emoji;
+                          const isSelected = testAnswers[currentQ.id] === `${item.emoji} ${item.label}` || testAnswers[currentQ.id] === item.label;
                           return (
                             <button
                               key={eIdx}
                               type="button"
-                              onClick={() => handleAnswerChange(q.id, `${item.emoji} ${item.label}`)}
+                              onClick={() => handleAnswerChange(currentQ.id, `${item.emoji} ${item.label}`)}
                               className={`duo-card ${isSelected ? 'selected' : ''}`}
-                              style={{ justifyContent: 'center', padding: '12px 6px', flexDirection: 'column', gap: '6px' }}
+                              style={{ justifyContent: 'center', padding: '14px 6px', flexDirection: 'column', gap: '6px', borderRadius: '16px' }}
                             >
-                              <span style={{ fontSize: '28px' }}>{item.emoji}</span>
-                              <span style={{ fontSize: '11.5px', fontWeight: '800' }}>{item.label}</span>
+                              <span style={{ fontSize: '30px' }}>{item.emoji}</span>
+                              <span style={{ fontSize: '11px', fontWeight: '800' }}>{item.label}</span>
                             </button>
                           );
                         })}
@@ -886,65 +1099,122 @@ const MemberDashboard = ({ initialTab }) => {
                     </div>
                   )}
 
-                  {/* PREGUNTA TIPO DIBUJO / CANVAS */}
-                  {q.type === 'drawing' && (
-                    <div style={{ marginTop: '10px' }}>
+                  {/* Dibujo / Canvas */}
+                  {currentQ.type === 'drawing' && (
+                    <div>
                       <DrawingCanvas 
-                        savedImage={testAnswers[q.id] || ''}
-                        onSaveDrawing={(dataUrl) => handleAnswerChange(q.id, dataUrl)}
+                        savedImage={testAnswers[currentQ.id] || ''}
+                        onSaveDrawing={(dataUrl) => handleAnswerChange(currentQ.id, dataUrl)}
                       />
                     </div>
                   )}
 
-                  {/* PREGUNTA BOOLEANA (SÍ / NO ESTILO DUOLINGO) */}
-                  {q.type === 'boolean' && (
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginTop: '10px' }}>
+                  {/* Opción Booleana (Sí / No) */}
+                  {currentQ.type === 'boolean' && (
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
                       <button
                         type="button"
-                        onClick={() => handleAnswerChange(q.id, 'Sí')}
-                        className={`duo-card ${testAnswers[q.id] === 'Sí' ? 'selected' : ''}`}
-                        style={{ justifyContent: 'center', padding: '16px', fontSize: '15px', fontWeight: '900' }}
+                        onClick={() => handleAnswerChange(currentQ.id, 'Sí')}
+                        className={`duo-card ${testAnswers[currentQ.id] === 'Sí' ? 'selected' : ''}`}
+                        style={{ justifyContent: 'center', padding: '18px', fontSize: '15px', fontWeight: '900', borderRadius: '14px' }}
                       >
-                        <ThumbsUp size={18} />
+                        <ThumbsUp size={20} />
                         <span>Sí</span>
                       </button>
 
                       <button
                         type="button"
-                        onClick={() => handleAnswerChange(q.id, 'No')}
-                        className={`duo-card ${testAnswers[q.id] === 'No' ? 'selected' : ''}`}
-                        style={{ justifyContent: 'center', padding: '16px', fontSize: '15px', fontWeight: '900' }}
+                        onClick={() => handleAnswerChange(currentQ.id, 'No')}
+                        className={`duo-card ${testAnswers[currentQ.id] === 'No' ? 'selected' : ''}`}
+                        style={{ justifyContent: 'center', padding: '18px', fontSize: '15px', fontWeight: '900', borderRadius: '14px' }}
                       >
-                        <ThumbsDown size={18} />
+                        <ThumbsDown size={20} />
                         <span>No</span>
                       </button>
                     </div>
                   )}
-                </div>
-              );
-            })}
 
-            {/* Panel de Botones de Envío */}
-            <div style={{ display: 'flex', gap: '16px', marginTop: '12px' }}>
-              <button 
-                type="submit" 
-                className="btn btn-primary" 
-                disabled={evalSubmitLoading || answeredCount < questions.length} 
-                style={{ flex: 1, padding: '14px 28px', fontSize: '15px', borderRadius: '14px', fontWeight: '900' }}
-              >
-                {evalSubmitLoading ? <Loader className="animate-spin" size={18} /> : 'Finalizar Test y Ganar +50 XP ⚡'}
-              </button>
-              <button 
-                type="button" 
-                onClick={() => { setActiveView('dashboard'); setSelectedEval(null); }}
-                className="btn btn-secondary"
-                style={{ padding: '14px 28px', fontSize: '15px', borderRadius: '14px' }}
-              >
-                Cancelar
-              </button>
+                  {/* Opciones de Selección Única */}
+                  {currentQ.type === 'single_choice' && Array.isArray(currentQ.options) && (
+                    <div style={{ display: 'grid', gap: '10px' }}>
+                      {currentQ.options.map((opt, oIdx) => {
+                        const isSelected = testAnswers[currentQ.id] === opt;
+                        return (
+                          <button
+                            key={oIdx}
+                            type="button"
+                            onClick={() => handleAnswerChange(currentQ.id, opt)}
+                            className={`duo-card ${isSelected ? 'selected' : ''}`}
+                            style={{ padding: '14px 18px', fontSize: '14px', fontWeight: '800', textAlign: 'left', borderRadius: '14px' }}
+                          >
+                            <span>{opt}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+
+                {/* BARRA DE NAVEGACIÓN INFERIOR (ANTERIOR / SIGUIENTE) */}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: '20px', borderTop: '1px solid var(--border)' }}>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (currentQuestionIndex > 0) {
+                        setCurrentQuestionIndex(prev => prev - 1);
+                        setMascotMood('thinking');
+                      } else {
+                        setTestStep('intro');
+                        setMascotMood('welcome');
+                      }
+                    }}
+                    className="btn btn-secondary"
+                    style={{ padding: '12px 20px', borderRadius: '14px', fontWeight: '800', fontSize: '13.5px', display: 'flex', alignItems: 'center', gap: '6px' }}
+                  >
+                    <ChevronLeft size={16} />
+                    <span>{currentQuestionIndex === 0 ? 'Volver al Inicio' : 'Anterior'}</span>
+                  </button>
+
+                  {currentQuestionIndex < totalQ - 1 ? (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (!isCurrentAnswered) return;
+                        setCurrentQuestionIndex(prev => prev + 1);
+                        if (currentQuestionIndex + 1 === totalQ - 1) {
+                          setMascotMood('almost_done');
+                        } else {
+                          setMascotMood('thinking');
+                        }
+                      }}
+                      className="btn btn-primary"
+                      disabled={!isCurrentAnswered}
+                      style={{ padding: '12px 24px', borderRadius: '14px', fontWeight: '900', fontSize: '13.5px', display: 'flex', alignItems: 'center', gap: '6px' }}
+                    >
+                      <span>Siguiente</span>
+                      <ChevronRight size={16} />
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (!isCurrentAnswered) return;
+                        setShowConfirmModal(true);
+                      }}
+                      className="btn btn-primary"
+                      disabled={!isCurrentAnswered}
+                      style={{ padding: '12px 24px', borderRadius: '14px', fontWeight: '900', fontSize: '13.5px', display: 'flex', alignItems: 'center', gap: '6px', backgroundColor: 'var(--success)', borderColor: 'var(--success)' }}
+                    >
+                      <span>Finalizar Test</span>
+                      <CheckCircle2 size={16} />
+                    </button>
+                  )}
+                </div>
+
+              </div>
+
             </div>
-            
-          </form>
+          )}
 
         </div>
       </div>
@@ -1759,7 +2029,16 @@ const MemberDashboard = ({ initialTab }) => {
                           </button>
                         ) : (
                           <button
-                            onClick={() => { setSelectedEval(ev); setTestAnswers({}); setEvalSuccessMsg(''); setEvalErrorMsg(''); setActiveView('fill_test'); }}
+                            onClick={() => {
+                              setSelectedEval(ev);
+                              setTestAnswers({});
+                              setTestStep('intro');
+                              setCurrentQuestionIndex(0);
+                              setMascotMood('welcome');
+                              setEvalSuccessMsg('');
+                              setEvalErrorMsg('');
+                              setActiveView('fill_test');
+                            }}
                             className="duo-pill selected"
                             style={{ fontSize: '12px' }}
                           >
@@ -1847,8 +2126,24 @@ const MemberDashboard = ({ initialTab }) => {
             <div className="chat-container" style={{ height: '420px' }}>
               <div className="chat-messages">
                 {chatMessages.map((msg, index) => (
-                  <div key={index} className={`chat-bubble ${msg.sender}`}>
+                  <div 
+                    key={index} 
+                    className={`chat-bubble ${msg.sender}`}
+                    style={msg.is_emergency ? { border: '2px solid var(--danger)', backgroundColor: 'var(--danger-light)', color: 'var(--text-primary)' } : {}}
+                  >
                     <p style={{ whiteSpace: 'pre-line' }}>{msg.text}</p>
+                    {msg.citations && msg.citations.length > 0 && (
+                      <div style={{ marginTop: '10px', paddingTop: '8px', borderTop: '1px solid rgba(0,0,0,0.1)', fontSize: '11px', opacity: 0.85 }}>
+                        <strong>📚 Fuentes de referencia:</strong>
+                        <ul style={{ margin: '4px 0 0 16px', padding: 0 }}>
+                          {msg.citations.map((c, cIdx) => (
+                            <li key={cIdx}>
+                              {c.title} {c.source && `• ${c.source}`}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
                   </div>
                 ))}
                 {chatLoading && <div className="chat-bubble ai"><Loader className="animate-spin" size={14} /> Gemini está respondiendo...</div>}

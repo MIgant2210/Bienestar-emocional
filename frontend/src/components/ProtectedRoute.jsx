@@ -1,4 +1,5 @@
 import React, { useContext } from 'react';
+import { Navigate } from 'react-router-dom';
 import { AuthContext } from '../contexts/AuthContext';
 import Unauthorized403 from '../pages/Unauthorized403';
 
@@ -18,7 +19,8 @@ const MODULE_ACCESS_MATRIX = {
   ai_plans: ['superadmin', 'admin_institucion', 'profesional_apoyo', 'lider_depto'],
   chat_ia: ['superadmin', 'admin_institucion', 'profesional_apoyo', 'lider_depto', 'miembro'],
   wellbeing: ['superadmin', 'admin_institucion', 'profesional_apoyo', 'lider_depto', 'miembro'],
-  settings: ['superadmin', 'admin_institucion', 'profesional_apoyo', 'lider_depto', 'miembro']
+  settings: ['superadmin', 'admin_institucion', 'profesional_apoyo', 'lider_depto', 'miembro'],
+  culture: ['superadmin']
 };
 
 export const hasModuleAccess = (role, moduleKey) => {
@@ -46,8 +48,7 @@ const ProtectedRoute = ({ module, children, onGoHome }) => {
   }
 
   if (!user) {
-    window.location.href = '/login';
-    return null;
+    return <Navigate to="/login" replace />;
   }
 
   if (module && !hasModuleAccess(user.role, module)) {

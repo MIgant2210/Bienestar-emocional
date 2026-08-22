@@ -9,14 +9,29 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Restaurar sesión persistida al cargar la aplicación
-    const savedToken = localStorage.getItem('token');
-    const savedUser = localStorage.getItem('user');
-    if (savedToken && savedUser) {
-      setToken(savedToken);
-      setUser(JSON.parse(savedUser));
-    }
-    setLoading(false);
+    const verifySession = async () => {
+      const savedToken = localStorage.getItem('token');
+      if (savedToken) {
+        try {
+          const res = await api.get('/auth/me');
+          if (res.data) {
+            setToken(savedToken);
+            setUser(res.data);
+            localStorage.setItem('user', JSON.stringify(res.data));
+          } else {
+            logout();
+          }
+        } catch (err) {
+          // Token expirado o inválido -> Limpiar sesión y forzar pantalla de login
+          logout();
+        }
+      } else {
+        logout();
+      }
+      setLoading(false);
+    };
+
+    verifySession();
   }, []);
 
   const login = async (email, password) => {

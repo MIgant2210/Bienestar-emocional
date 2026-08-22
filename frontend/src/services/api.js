@@ -23,13 +23,15 @@ api.interceptors.request.use(
 api.interceptors.response.use(
   (response) => response,
   (error) => {
-    if (error.response && error.response.status === 401) {
-      // Sesión expirada o no autorizada
+    if (error.response && (error.response.status === 401 || (error.response.status === 403 && error.response.data?.message?.includes('Token')))) {
+      // Sesión expirada o no autorizada -> Limpiar credenciales
       localStorage.removeItem('token');
       localStorage.removeItem('user');
       
       // Evitar bucles infinitos de redirección
-      if (window.location.pathname !== '/login' && window.location.pathname !== '/register') {
+      const publicPaths = ['/login', '/registro', '/register', '/verificar-correo'];
+      const isPublic = publicPaths.some(p => window.location.pathname.startsWith(p));
+      if (!isPublic) {
         window.location.href = '/login';
       }
     }

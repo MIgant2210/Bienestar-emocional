@@ -3,7 +3,7 @@ import {
   Brain, Activity, Calendar, Sparkles, BookOpen, Clock, HeartHandshake,
   TrendingUp, Shield, AlertCircle, CheckCircle2, Mic, Square, Send, 
   Search, Book, ArrowRight, UserCheck, HelpCircle, ChevronRight, Eye,
-  ShieldCheck, Loader, RefreshCw
+  ShieldCheck, Loader, RefreshCw, Zap, Award, Heart, ShieldAlert
 } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 import { useNavigate } from 'react-router-dom';
@@ -274,7 +274,7 @@ const MyWellbeing = ({ onNavigateToTab }) => {
       </div>
 
       {/* Sub-Navegación Unificada de Mi Bienestar */}
-      <div className="tab-container" style={{ width: '100%', overflowX: 'auto', flexWrap: 'nowrap' }}>
+      <div className="tab-container" style={{ width: '100%', flexWrap: 'wrap', gap: '8px' }}>
         {[
           { id: 'estado_actual', label: 'Estado Actual', icon: Activity },
           { id: 'historial', label: 'Historial de Bienestar', icon: Clock },
@@ -317,32 +317,33 @@ const MyWellbeing = ({ onNavigateToTab }) => {
         <div className="animate-fade" style={{ display: 'grid', gap: '20px' }}>
           
           {/* Banner Preventivo de Orientación */}
+          {/* Banner Preventivo de Orientación Compacto */}
           <div className="glass-card" style={{
-            padding: '20px 24px',
-            borderLeft: `5px solid ${summary?.status_tone === 'danger' ? 'var(--danger)' : summary?.status_tone === 'warning' ? 'var(--warning)' : 'var(--success)'}`,
+            padding: '14px 20px',
+            borderLeft: `4px solid ${summary?.status_tone === 'danger' ? 'var(--danger)' : summary?.status_tone === 'warning' ? 'var(--warning)' : 'var(--success)'}`,
             display: 'flex',
             justifyContent: 'space-between',
             alignItems: 'center',
             flexWrap: 'wrap',
-            gap: '16px'
+            gap: '12px'
           }}>
             <div>
-              <span style={{ fontSize: '11px', fontWeight: '800', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+              <span style={{ fontSize: '10px', fontWeight: '800', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
                 Diagnóstico Preventivo Orientativo
               </span>
-              <h3 style={{ fontSize: '17px', fontWeight: '900', color: 'var(--text-primary)', marginTop: '2px', marginBottom: '6px' }}>
+              <h3 style={{ fontSize: '15px', fontWeight: '900', color: 'var(--text-primary)', marginTop: '2px', marginBottom: '3px' }}>
                 {summary?.status_label || 'Bienestar en observación'}
               </h3>
-              <p style={{ fontSize: '12.5px', color: 'var(--text-secondary)', lineHeight: '1.5', maxWidth: '750px' }}>
+              <p style={{ fontSize: '12px', color: 'var(--text-secondary)', lineHeight: '1.4', maxWidth: '750px', margin: 0 }}>
                 {summary?.guidance}
               </p>
             </div>
 
-            <div style={{ display: 'flex', gap: '10px' }}>
+            <div style={{ display: 'flex', gap: '8px' }}>
               <button
                 onClick={() => setActiveSection('recursos')}
                 className="btn btn-secondary"
-                style={{ padding: '8px 16px', borderRadius: '10px', fontSize: '12px', fontWeight: '700' }}
+                style={{ padding: '6px 12px', borderRadius: '8px', fontSize: '11.5px', fontWeight: '700' }}
               >
                 Ver Recursos
               </button>
@@ -352,54 +353,120 @@ const MyWellbeing = ({ onNavigateToTab }) => {
                   else navigate('/agenda-citas');
                 }}
                 className="btn btn-primary"
-                style={{ padding: '8px 16px', borderRadius: '10px', fontSize: '12px', fontWeight: '700' }}
+                style={{ padding: '6px 14px', borderRadius: '8px', fontSize: '11.5px', fontWeight: '700' }}
               >
                 Solicitar Cita
               </button>
             </div>
           </div>
 
-          {/* Grid de 4 Indicadores Clave Preventivos */}
-          <div className="grid grid-4">
-            <div className="glass-card" style={{ padding: '16px' }}>
-              <span style={{ fontSize: '11px', color: 'var(--text-secondary)', fontWeight: '800' }}>ESTRÉS ESTIMADO</span>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginTop: '6px' }}>
-                <h3 style={{ fontSize: '24px', fontWeight: '900', color: summary?.averages?.stress > 60 ? 'var(--danger)' : 'var(--success)' }}>
+          {/* Grid Compacto de 4 Indicadores Clave Preventivos */}
+          <div className="grid grid-4" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '14px' }}>
+            
+            {/* 1. Estrés Estimado */}
+            <div className="glass-card" style={{ padding: '14px 18px', borderRadius: '16px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <div style={{ width: '24px', height: '24px', borderRadius: '8px', backgroundColor: summary?.averages?.stress > 60 ? 'var(--danger-light)' : 'var(--success-light)', color: summary?.averages?.stress > 60 ? 'var(--danger)' : 'var(--success)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <ShieldAlert size={13} />
+                  </div>
+                  <span style={{ fontSize: '11px', color: 'var(--text-secondary)', fontWeight: '800', letterSpacing: '0.4px' }}>ESTRÉS</span>
+                </div>
+                <span style={{ fontSize: '10px', fontWeight: '800', padding: '2px 6px', borderRadius: '6px', backgroundColor: 'var(--bg-primary)', color: 'var(--text-muted)' }}>
+                  Promedio
+                </span>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginTop: '2px' }}>
+                <h3 style={{ fontSize: '22px', fontWeight: '900', color: summary?.averages?.stress > 60 ? 'var(--danger)' : 'var(--text-primary)', margin: 0 }}>
                   {summary?.averages?.stress || 0}%
                 </h3>
-                <span style={{ fontSize: '11px', fontWeight: '700', color: 'var(--text-muted)' }}>Promedio</span>
+                <span style={{ fontSize: '11px', fontWeight: '700', color: summary?.averages?.stress > 60 ? 'var(--danger)' : 'var(--success)' }}>
+                  {summary?.averages?.stress > 60 ? 'Elevado' : 'Controlado'}
+                </span>
+              </div>
+              <div style={{ height: '4px', width: '100%', backgroundColor: 'var(--border)', borderRadius: '4px', overflow: 'hidden', marginTop: '4px' }}>
+                <div style={{ height: '100%', width: `${Math.min(100, summary?.averages?.stress || 0)}%`, backgroundColor: summary?.averages?.stress > 60 ? 'var(--danger)' : 'var(--success)', borderRadius: '4px', transition: 'width 0.4s ease' }} />
               </div>
             </div>
 
-            <div className="glass-card" style={{ padding: '16px' }}>
-              <span style={{ fontSize: '11px', color: 'var(--text-secondary)', fontWeight: '800' }}>MOTIVACIÓN</span>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginTop: '6px' }}>
-                <h3 style={{ fontSize: '24px', fontWeight: '900', color: summary?.averages?.motivation > 50 ? 'var(--success)' : 'var(--warning)' }}>
+            {/* 2. Motivación */}
+            <div className="glass-card" style={{ padding: '14px 18px', borderRadius: '16px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <div style={{ width: '24px', height: '24px', borderRadius: '8px', backgroundColor: summary?.averages?.motivation >= 50 ? 'var(--success-light)' : 'var(--warning-light)', color: summary?.averages?.motivation >= 50 ? 'var(--success)' : 'var(--warning)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <Award size={13} />
+                  </div>
+                  <span style={{ fontSize: '11px', color: 'var(--text-secondary)', fontWeight: '800', letterSpacing: '0.4px' }}>MOTIVACIÓN</span>
+                </div>
+                <span style={{ fontSize: '10px', fontWeight: '800', padding: '2px 6px', borderRadius: '6px', backgroundColor: 'var(--bg-primary)', color: 'var(--text-muted)' }}>
+                  Energía
+                </span>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginTop: '2px' }}>
+                <h3 style={{ fontSize: '22px', fontWeight: '900', color: summary?.averages?.motivation >= 50 ? 'var(--success)' : 'var(--warning)', margin: 0 }}>
                   {summary?.averages?.motivation || 0}%
                 </h3>
-                <span style={{ fontSize: '11px', fontWeight: '700', color: 'var(--text-muted)' }}>Energía</span>
+                <span style={{ fontSize: '11px', fontWeight: '700', color: summary?.averages?.motivation >= 50 ? 'var(--success)' : 'var(--warning)' }}>
+                  {summary?.averages?.motivation >= 50 ? 'Óptima' : 'Baja'}
+                </span>
+              </div>
+              <div style={{ height: '4px', width: '100%', backgroundColor: 'var(--border)', borderRadius: '4px', overflow: 'hidden', marginTop: '4px' }}>
+                <div style={{ height: '100%', width: `${Math.min(100, summary?.averages?.motivation || 0)}%`, backgroundColor: summary?.averages?.motivation >= 50 ? 'var(--success)' : 'var(--warning)', borderRadius: '4px', transition: 'width 0.4s ease' }} />
               </div>
             </div>
 
-            <div className="glass-card" style={{ padding: '16px' }}>
-              <span style={{ fontSize: '11px', color: 'var(--text-secondary)', fontWeight: '800' }}>AGOTAMIENTO</span>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginTop: '6px' }}>
-                <h3 style={{ fontSize: '24px', fontWeight: '900', color: summary?.averages?.burnout > 60 ? 'var(--warning)' : 'var(--success)' }}>
+            {/* 3. Agotamiento */}
+            <div className="glass-card" style={{ padding: '14px 18px', borderRadius: '16px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <div style={{ width: '24px', height: '24px', borderRadius: '8px', backgroundColor: summary?.averages?.burnout > 60 ? 'var(--danger-light)' : 'var(--success-light)', color: summary?.averages?.burnout > 60 ? 'var(--danger)' : 'var(--success)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <Activity size={13} />
+                  </div>
+                  <span style={{ fontSize: '11px', color: 'var(--text-secondary)', fontWeight: '800', letterSpacing: '0.4px' }}>AGOTAMIENTO</span>
+                </div>
+                <span style={{ fontSize: '10px', fontWeight: '800', padding: '2px 6px', borderRadius: '6px', backgroundColor: 'var(--bg-primary)', color: 'var(--text-muted)' }}>
+                  Fatiga
+                </span>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginTop: '2px' }}>
+                <h3 style={{ fontSize: '22px', fontWeight: '900', color: summary?.averages?.burnout > 60 ? 'var(--warning)' : 'var(--text-primary)', margin: 0 }}>
                   {summary?.averages?.burnout || 0}%
                 </h3>
-                <span style={{ fontSize: '11px', fontWeight: '700', color: 'var(--text-muted)' }}>Fatiga</span>
+                <span style={{ fontSize: '11px', fontWeight: '700', color: summary?.averages?.burnout > 60 ? 'var(--warning)' : 'var(--success)' }}>
+                  {summary?.averages?.burnout > 60 ? 'Atención' : 'Bajo'}
+                </span>
+              </div>
+              <div style={{ height: '4px', width: '100%', backgroundColor: 'var(--border)', borderRadius: '4px', overflow: 'hidden', marginTop: '4px' }}>
+                <div style={{ height: '100%', width: `${Math.min(100, summary?.averages?.burnout || 0)}%`, backgroundColor: summary?.averages?.burnout > 60 ? 'var(--warning)' : 'var(--success)', borderRadius: '4px', transition: 'width 0.4s ease' }} />
               </div>
             </div>
 
-            <div className="glass-card" style={{ padding: '16px' }}>
-              <span style={{ fontSize: '11px', color: 'var(--text-secondary)', fontWeight: '800' }}>BIENESTAR GENERAL</span>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginTop: '6px' }}>
-                <h3 style={{ fontSize: '24px', fontWeight: '900', color: 'var(--primary)' }}>
+            {/* 4. Bienestar General */}
+            <div className="glass-card" style={{ padding: '14px 18px', borderRadius: '16px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <div style={{ width: '24px', height: '24px', borderRadius: '8px', backgroundColor: 'var(--primary-light)', color: 'var(--primary)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <Heart size={13} />
+                  </div>
+                  <span style={{ fontSize: '11px', color: 'var(--text-secondary)', fontWeight: '800', letterSpacing: '0.4px' }}>BIENESTAR</span>
+                </div>
+                <span style={{ fontSize: '10px', fontWeight: '800', padding: '2px 6px', borderRadius: '6px', backgroundColor: 'var(--bg-primary)', color: 'var(--primary)' }}>
+                  Balance
+                </span>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginTop: '2px' }}>
+                <h3 style={{ fontSize: '22px', fontWeight: '900', color: 'var(--primary)', margin: 0 }}>
                   {summary?.averages?.general_wellbeing || 0}%
                 </h3>
-                <span style={{ fontSize: '11px', fontWeight: '700', color: 'var(--text-muted)' }}>Balance</span>
+                <span style={{ fontSize: '11px', fontWeight: '700', color: 'var(--primary)' }}>
+                  General
+                </span>
+              </div>
+              <div style={{ height: '4px', width: '100%', backgroundColor: 'var(--border)', borderRadius: '4px', overflow: 'hidden', marginTop: '4px' }}>
+                <div style={{ height: '100%', width: `${Math.min(100, summary?.averages?.general_wellbeing || 0)}%`, backgroundColor: 'var(--primary)', borderRadius: '4px', transition: 'width 0.4s ease' }} />
               </div>
             </div>
+
           </div>
 
           {/* Formulario de Reflexión Diaria */}
@@ -976,21 +1043,23 @@ const MyWellbeing = ({ onNavigateToTab }) => {
               </div>
             </div>
 
-            {/* Categorías */}
-            <div style={{ display: 'flex', gap: '6px', overflowX: 'auto', paddingBottom: '4px', scrollbarWidth: 'none' }}>
+            {/* Categorías de Recursos */}
+            <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center' }}>
               {resourceCategories.map(cat => (
                 <button
                   key={cat}
+                  type="button"
                   onClick={() => setSelectedCategory(cat)}
-                  className="duo-pill"
+                  className={`duo-pill ${selectedCategory === cat ? 'selected' : ''}`}
                   style={{
-                    padding: '6px 12px',
+                    padding: '6px 14px',
                     fontSize: '11.5px',
                     fontWeight: selectedCategory === cat ? '800' : '600',
                     backgroundColor: selectedCategory === cat ? 'var(--primary)' : 'var(--bg-primary)',
-                    color: selectedCategory === cat ? '#fff' : 'var(--text-secondary)',
+                    color: selectedCategory === cat ? '#ffffff' : 'var(--text-secondary)',
                     borderColor: selectedCategory === cat ? 'var(--primary)' : 'var(--border)',
-                    whiteSpace: 'nowrap'
+                    cursor: 'pointer',
+                    transition: 'all 0.15s ease'
                   }}
                 >
                   {cat}
