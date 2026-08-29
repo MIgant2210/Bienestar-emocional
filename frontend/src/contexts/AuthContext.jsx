@@ -4,9 +4,16 @@ import api from '../services/api';
 export const AuthContext = createContext();
 
 export const AuthProvider = ({ children }) => {
-  const [user, setUser] = useState(null);
-  const [token, setToken] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const [user, setUser] = useState(() => {
+    try {
+      const savedUser = localStorage.getItem('user');
+      return savedUser ? JSON.parse(savedUser) : null;
+    } catch {
+      return null;
+    }
+  });
+  const [token, setToken] = useState(() => localStorage.getItem('token') || null);
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     const verifySession = async () => {
@@ -28,7 +35,6 @@ export const AuthProvider = ({ children }) => {
       } else {
         logout();
       }
-      setLoading(false);
     };
 
     verifySession();

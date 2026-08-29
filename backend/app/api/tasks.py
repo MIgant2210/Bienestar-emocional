@@ -64,6 +64,8 @@ def create_task(current_user):
     assigned_type = data.get('assigned_type', 'all') # 'all', 'department', 'individual'
     assigned_target = data.get('assigned_target')    # Nombre de depto o correo
     assigned_email = data.get('assigned_email') or (assigned_target if assigned_type == 'individual' else None)
+    raw_resource_id = data.get('resource_id')
+    resource_id = raw_resource_id if raw_resource_id and str(raw_resource_id).strip() else None
     
     if not title:
         return jsonify({'message': 'El título de la tarea es obligatorio.'}), 400
@@ -71,9 +73,15 @@ def create_task(current_user):
     if category not in ['Bienestar', 'Académica', 'Laboral']:
         return jsonify({'message': 'Categoría inválida. Use Bienestar, Académica o Laboral.'}), 400
         
-    institution_id = current_user.institution_id
+    institution_id = current_user.institution_id or data.get('institution_id')
     if not institution_id:
-        return jsonify({'message': 'El usuario no tiene una institución vinculada.'}), 400
+        if current_user.role == 'superadmin':
+            from app.models.institution import Institution
+            first_inst = Institution.query.first()
+            if first_inst:
+                institution_id = first_inst.id
+        if not institution_id:
+            return jsonify({'message': 'El usuario no tiene una institución vinculada.'}), 400
         
     assigned_user_id = None
     if assigned_type == 'individual' and assigned_email:
@@ -103,7 +111,8 @@ def create_task(current_user):
         institution_id=institution_id,
         created_by=current_user.id,
         assigned_type=assigned_type,
-        assigned_target=assigned_target
+        assigned_target=assigned_target,
+        resource_id=resource_id
     )
     
     try:

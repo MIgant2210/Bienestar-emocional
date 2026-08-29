@@ -30,22 +30,7 @@ export const hasModuleAccess = (role, moduleKey) => {
 };
 
 const ProtectedRoute = ({ module, children, onGoHome }) => {
-  const { user, loading } = useContext(AuthContext);
-
-  if (loading) {
-    return (
-      <div style={{
-        display: 'flex',
-        justifyContent: 'center',
-        alignItems: 'center',
-        minHeight: '100vh',
-        backgroundColor: 'var(--bg-primary)',
-        color: 'var(--text-secondary)'
-      }}>
-        Cargando verificación de seguridad RBAC...
-      </div>
-    );
-  }
+  const { user } = useContext(AuthContext);
 
   if (!user) {
     return <Navigate to="/login" replace />;

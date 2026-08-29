@@ -18,25 +18,28 @@ const AdminDashboard = lazy(() => import('./pages/AdminDashboard'));
 const Settings = lazy(() => import('./pages/Settings'));
 const MyWellbeing = lazy(() => import('./pages/MyWellbeing'));
 
-const PageLoader = () => (
+export const PageLoader = () => (
   <div style={{
     display: 'flex',
     flexDirection: 'column',
     justifyContent: 'center',
     alignItems: 'center',
     minHeight: '60vh',
-    gap: '12px',
+    gap: '14px',
     color: 'var(--text-secondary)',
     fontSize: '13px'
   }}>
-    <div className="animate-spin" style={{
-      width: '28px',
-      height: '28px',
-      border: '3px solid var(--border)',
-      borderTopColor: 'var(--primary)',
-      borderRadius: '50%'
-    }} />
-    <span>Cargando módulo...</span>
+    <div style={{ position: 'relative', width: '48px', height: '48px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <div className="animate-spin" style={{
+        position: 'absolute',
+        inset: 0,
+        border: '3px solid var(--border)',
+        borderTopColor: 'var(--primary)',
+        borderRadius: '50%'
+      }} />
+      <img src="/logo.png" alt="EquilibrIA" style={{ width: '26px', height: '26px', objectFit: 'contain', opacity: 0.9 }} />
+    </div>
+    <span style={{ fontSize: '12px', fontWeight: '700', color: 'var(--text-secondary)' }}>Cargando plataforma...</span>
   </div>
 );
 
@@ -66,22 +69,7 @@ const RootRedirect = () => {
 };
 
 const NavigationHandler = () => {
-  const { user, loading } = useContext(AuthContext);
-
-  if (loading) {
-    return (
-      <div style={{
-        display: 'flex',
-        justifyContent: 'center',
-        alignItems: 'center',
-        minHeight: '100vh',
-        backgroundColor: 'var(--bg-primary)',
-        color: 'var(--text-secondary)'
-      }}>
-        Cargando verificación de sesión...
-      </div>
-    );
-  }
+  const { user } = useContext(AuthContext);
 
   return (
     <Suspense fallback={<PageLoader />}>

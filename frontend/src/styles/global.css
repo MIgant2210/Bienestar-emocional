@@ -153,6 +153,13 @@
   transition: transform var(--transition-fast), box-shadow var(--transition-fast), border-color var(--transition-fast);
 }
 
+.glass-card.has-dropdown,
+.glass-card-overflow-visible,
+.glass-card:has(.custom-select-container),
+.glass-card:has(button[aria-expanded="true"]) {
+  overflow: visible !important;
+}
+
 .glass-card::after {
   content: '';
   position: absolute;

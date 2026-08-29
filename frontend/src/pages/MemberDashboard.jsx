@@ -66,10 +66,22 @@ const MemberDashboard = ({ initialTab }) => {
 
   // Scroll ref for appointments
   const apptFormRef = useRef(null);
+  const paletteMenuRef = useRef(null);
   
   // State para menú de paletas y notificaciones
   const [showPaletteMenu, setShowPaletteMenu] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
+
+  useEffect(() => {
+    if (!showPaletteMenu) return;
+    const handleOutsidePalette = (e) => {
+      if (paletteMenuRef.current && !paletteMenuRef.current.contains(e.target)) {
+        setShowPaletteMenu(false);
+      }
+    };
+    document.addEventListener('mousedown', handleOutsidePalette);
+    return () => document.removeEventListener('mousedown', handleOutsidePalette);
+  }, [showPaletteMenu]);
 
   // View state: 'dashboard' o 'fill_test'
   const [activeView, setActiveView] = useState('dashboard');
@@ -87,6 +99,13 @@ const MemberDashboard = ({ initialTab }) => {
   const [taskViewMode, setTaskViewMode] = useState('list'); // 'list' o 'kanban'
   const [draggedTaskId, setDraggedTaskId] = useState(null);
   const [dragOverCol, setDragOverCol] = useState(null);
+  const [targetWellbeingResourceId, setTargetWellbeingResourceId] = useState(null);
+
+  const handleOpenTaskResource = (resId) => {
+    setTargetWellbeingResourceId(resId);
+    setSelectedTaskModal(null);
+    handleTabChange('bienestar');
+  };
 
   // Gamificación / Duolingo Style States (Calculados 100% dinámicamente desde la BD)
   const [streakDays, setStreakDays] = useState(1);
@@ -204,11 +223,16 @@ const MemberDashboard = ({ initialTab }) => {
     }
   };
 
+  const cleanEvalTitle = (title) => {
+    if (!title) return '';
+    return title.replace(/^\[Plantilla(?:\s+Express)?\]\s*/i, '').replace(/^Plantilla\s+/i, '').trim();
+  };
+
   const fetchTasks = async () => {
     setTasksLoading(true);
     try {
       const response = await api.get('/tasks');
-      setTasks(response.data);
+      setTasks(response.data || []);
     } catch (err) {
       console.error('Error al cargar tareas:', err);
     } finally {
@@ -220,7 +244,7 @@ const MemberDashboard = ({ initialTab }) => {
     setEvaluationsLoading(true);
     try {
       const response = await api.get('/evaluations');
-      setEvaluations(response.data);
+      setEvaluations(response.data || []);
     } catch (err) {
       console.error('Error al cargar cuestionarios:', err);
     } finally {
@@ -257,7 +281,7 @@ const MemberDashboard = ({ initialTab }) => {
   };
 
   const fetchMembers = async () => {
-    if (!user) return;
+    if (!user || user.role === 'miembro') return;
     try {
       const response = await api.get('/institutions/members');
       setMembers(response.data || []);
@@ -356,7 +380,7 @@ const MemberDashboard = ({ initialTab }) => {
       if (data.tasks) setTasks(data.tasks);
       if (data.evaluations) setEvaluations(data.evaluations);
       if (data.xp !== undefined) setXpPoints(data.xp);
-      if (data.streak !== undefined) setStreak(data.streak);
+      if (data.streak !== undefined) setStreakDays(data.streak);
     } catch (err) {
       console.warn('Fallback a llamadas individuales:', err);
       fetchHistory();
@@ -368,8 +392,16 @@ const MemberDashboard = ({ initialTab }) => {
   useEffect(() => {
     fetchDashboardBundle();
     // Cargas diferidas para módulos secundarios
-    Promise.allSettled([fetchRewards(), fetchAppointments(), fetchKudos(), fetchMembers()]);
+    Promise.allSettled([fetchRewards(), fetchAppointments(), fetchKudos(), fetchMembers(), fetchTasks()]);
   }, []);
+
+  useEffect(() => {
+    if (activeTab === 'tareas' || activeTab === 'tasks') {
+      fetchTasks();
+    } else if (activeTab === 'evaluations' || activeTab === 'tests') {
+      fetchEvaluations();
+    }
+  }, [activeTab]);
 
   useEffect(() => {
     if (activeTab === 'chat_ia') {
@@ -1278,7 +1310,7 @@ const MemberDashboard = ({ initialTab }) => {
           </div>
 
           {/* Botón Selector de Paletas de Colores 🎨 */}
-          <div style={{ position: 'relative' }}>
+          <div ref={paletteMenuRef} style={{ position: 'relative' }}>
             <button 
               onClick={() => { setShowPaletteMenu(!showPaletteMenu); setShowNotifications(false); }}
               className="theme-toggle"
@@ -1371,7 +1403,14 @@ const MemberDashboard = ({ initialTab }) => {
 
         {/* TAB 1: MI BIENESTAR INTEGRAL */}
         {activeTab === 'bienestar' && (
-          <MyWellbeing onNavigateToTab={(tab) => handleTabChange(tab)} />
+          <MyWellbeing 
+            onNavigateToTab={(tab) => handleTabChange(tab)} 
+            initialResourceId={targetWellbeingResourceId}
+            onResourceCompleted={() => {
+              fetchTasks();
+              setTargetWellbeingResourceId(null);
+            }}
+          />
         )}
 
         {/* TAB 2: TAREAS (VISTA LISTA Y TABLERO KANBAN INTERACTIVO) */}
@@ -1409,7 +1448,7 @@ const MemberDashboard = ({ initialTab }) => {
               }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '12px' }}>
                   <div>
-                    <div style={{ display: 'flex', gap: '6px', marginBottom: '6px' }}>
+                    <div style={{ display: 'flex', gap: '6px', marginBottom: '6px', flexWrap: 'wrap' }}>
                       <span style={{ fontSize: '10px', fontWeight: '800', padding: '2px 8px', borderRadius: '10px', backgroundColor: 'var(--primary-light)', color: 'var(--primary)' }}>
                         {selectedTaskModal.category || 'Bienestar'}
                       </span>
@@ -1430,6 +1469,35 @@ const MemberDashboard = ({ initialTab }) => {
                 <p style={{ fontSize: '13px', color: 'var(--text-secondary)', lineHeight: '1.5', marginBottom: '16px', backgroundColor: 'var(--bg-secondary)', padding: '12px', borderRadius: '10px', border: '1px solid var(--border)' }}>
                   {selectedTaskModal.description || 'Instrucción: Completa esta actividad para promover tu bienestar e integrarla en tu rutina personal.'}
                 </p>
+
+                {/* Recurso de Bienestar Vinculado con Acción Directa */}
+                {selectedTaskModal.resource && (
+                  <div style={{ backgroundColor: 'rgba(99, 102, 241, 0.08)', border: '1.5px solid var(--primary)', borderRadius: '14px', padding: '14px 16px', marginBottom: '16px' }}>
+                    <div style={{ fontSize: '11px', fontWeight: '900', color: 'var(--primary)', textTransform: 'uppercase', marginBottom: '4px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <Sparkles size={14} /> Recurso de Bienestar Vinculado:
+                    </div>
+                    <div style={{ fontSize: '13.5px', fontWeight: '800', color: 'var(--text-primary)', marginBottom: '4px' }}>
+                      {selectedTaskModal.resource.title} ({selectedTaskModal.resource.resource_type})
+                    </div>
+                    <p style={{ fontSize: '12px', color: 'var(--text-secondary)', marginBottom: '12px' }}>
+                      Al abrir y completar este recurso en el reproductor interactivo de bienestar, esta tarea se validará y completará automáticamente (+20 XP).
+                    </p>
+                    {selectedTaskModal.status !== 'completada' ? (
+                      <button
+                        type="button"
+                        onClick={() => handleOpenTaskResource(selectedTaskModal.resource.id || selectedTaskModal.resource_id)}
+                        className="btn btn-primary"
+                        style={{ width: '100%', padding: '10px 14px', fontSize: '12.5px', fontWeight: '900', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
+                      >
+                        <Play size={14} /> Realizar Recurso Ahora en Mi Bienestar
+                      </button>
+                    ) : (
+                      <span style={{ fontSize: '12px', color: 'var(--success)', fontWeight: '800', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <CheckCircle2 size={16} /> Ya completaste y validaste este recurso con éxito
+                      </span>
+                    )}
+                  </div>
+                )}
 
                 <div style={{ marginBottom: '16px' }}>
                   <label style={{ fontSize: '11px', fontWeight: '800', color: 'var(--primary)', display: 'block', marginBottom: '6px', textTransform: 'uppercase' }}>
@@ -1571,6 +1639,29 @@ const MemberDashboard = ({ initialTab }) => {
                                   </p>
                                 )}
 
+                                {/* Recurso de Bienestar Vinculado */}
+                                {task.resource && (
+                                  <div style={{ marginTop: '6px', padding: '6px 8px', borderRadius: '8px', backgroundColor: 'var(--primary-light)', border: '1px solid rgba(99, 102, 241, 0.2)' }}>
+                                    <div style={{ fontSize: '10px', fontWeight: '900', color: 'var(--primary)', display: 'flex', alignItems: 'center', gap: '4px', marginBottom: task.status !== 'completada' ? '5px' : '0' }}>
+                                      <span>🧘</span>
+                                      <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{task.resource.title}</span>
+                                    </div>
+                                    {task.status !== 'completada' && (
+                                      <button
+                                        type="button"
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          handleOpenTaskResource(task.resource.id || task.resource_id);
+                                        }}
+                                        className="btn btn-primary"
+                                        style={{ width: '100%', padding: '4px 6px', fontSize: '10px', fontWeight: '900', borderRadius: '6px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}
+                                      >
+                                        <Play size={10} /> Realizar Recurso
+                                      </button>
+                                    )}
+                                  </div>
+                                )}
+
                                 <div style={{ display: 'flex', gap: '4px', marginTop: '8px', alignItems: 'center', justifyContent: 'space-between' }}>
                                   {col.key === 'completed' ? (
                                     <span style={{ fontSize: '10px', color: 'var(--success)', fontWeight: '800' }}>+20 XP Ganados ⚡</span>
@@ -1607,19 +1698,36 @@ const MemberDashboard = ({ initialTab }) => {
                       </button>
                       
                       <div>
-                        <div style={{ display: 'flex', gap: '6px', marginBottom: '4px', alignItems: 'center' }}>
+                        <div style={{ display: 'flex', gap: '6px', marginBottom: '4px', alignItems: 'center', flexWrap: 'wrap' }}>
                           <span style={{ fontSize: '9px', fontWeight: '800', padding: '2px 6px', borderRadius: '8px', backgroundColor: 'var(--primary-light)', color: 'var(--primary)' }}>{task.category || 'Bienestar'}</span>
                           <span style={{ fontSize: '9px', fontWeight: '800', padding: '2px 6px', borderRadius: '8px', backgroundColor: 'var(--bg-primary)', color: 'var(--text-secondary)' }}>{task.priority === 'Alta' ? '🔴 Alta' : task.priority === 'Baja' ? '🟢 Baja' : '🟡 Media'}</span>
                           <span style={{ fontSize: '9px', fontWeight: '800', color: 'var(--text-muted)' }}>⏱️ {task.estimated_minutes || 15} min</span>
+                          {task.resource && (
+                            <span style={{ fontSize: '9.5px', fontWeight: '800', padding: '2px 8px', borderRadius: '8px', backgroundColor: 'var(--primary-light)', color: 'var(--primary)', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                              🧘 Vinculada a: {task.resource.title}
+                            </span>
+                          )}
                         </div>
                         <h4 style={{ fontSize: '14px', fontWeight: '800', textDecoration: task.status === 'completada' ? 'line-through' : 'none', color: task.status === 'completada' ? 'var(--text-muted)' : 'var(--text-primary)' }}>{task.title}</h4>
                         {task.description && <p style={{ fontSize: '12px', color: 'var(--text-secondary)', marginTop: '2px' }}>{task.description}</p>}
                       </div>
                     </div>
 
-                    <button onClick={() => { setSelectedTaskModal(task); setTaskSubmissionNote(task.submission_notes || ''); }} className="duo-pill" style={{ padding: '6px 12px', fontSize: '11.5px' }}>
-                      <span>Ver Detalles / Entregar</span>
-                    </button>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      {task.resource && task.status !== 'completada' && (
+                        <button
+                          type="button"
+                          onClick={() => handleOpenTaskResource(task.resource.id || task.resource_id)}
+                          className="btn btn-primary"
+                          style={{ padding: '6px 12px', fontSize: '11.5px', fontWeight: '900', borderRadius: '8px', display: 'flex', alignItems: 'center', gap: '4px' }}
+                        >
+                          <Play size={12} /> Realizar Recurso
+                        </button>
+                      )}
+                      <button onClick={() => { setSelectedTaskModal(task); setTaskSubmissionNote(task.submission_notes || ''); }} className="duo-pill" style={{ padding: '6px 12px', fontSize: '11.5px' }}>
+                        <span>Ver Detalles / Entregar</span>
+                      </button>
+                    </div>
                   </div>
                 ))}
               </div>
@@ -2015,7 +2123,7 @@ const MemberDashboard = ({ initialTab }) => {
                               </span>
                             )}
                           </div>
-                          <h4 style={{ fontSize: '14.5px', fontWeight: '800' }}>{ev.title}</h4>
+                          <h4 style={{ fontSize: '14.5px', fontWeight: '800' }}>{cleanEvalTitle(ev.title)}</h4>
                           {ev.description && <p style={{ fontSize: '12px', color: 'var(--text-secondary)', marginTop: '2px' }}>{ev.description}</p>}
                         </div>
 
@@ -2074,7 +2182,7 @@ const MemberDashboard = ({ initialTab }) => {
                       <div>
                         <div style={{ marginBottom: '16px', pb: '10px', borderBottom: '1px solid var(--border)' }}>
                           <span style={{ fontSize: '10px', fontWeight: '800', color: 'var(--success)', textTransform: 'uppercase' }}>Análisis Procesado por Gemini AI</span>
-                          <h4 style={{ fontSize: '15px', fontWeight: '800', marginTop: '2px' }}>{selectedEval.title}</h4>
+                          <h4 style={{ fontSize: '15px', fontWeight: '800', marginTop: '2px' }}>{cleanEvalTitle(selectedEval.title)}</h4>
                         </div>
                         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px', marginBottom: '16px' }}>
                           <div style={{ padding: '10px', backgroundColor: 'var(--bg-secondary)', borderRadius: 'var(--radius-sm)', textAlign: 'center', border: '1px solid var(--border)' }}>

@@ -16,6 +16,7 @@ class Task(db.Model):
     user_id = db.Column(db.UUID(as_uuid=True), db.ForeignKey('users.id', ondelete='CASCADE'), nullable=True)
     institution_id = db.Column(db.UUID(as_uuid=True), db.ForeignKey('institutions.id', ondelete='CASCADE'), nullable=False)
     created_by = db.Column(db.UUID(as_uuid=True), db.ForeignKey('users.id', ondelete='SET NULL'), nullable=True)
+    resource_id = db.Column(db.UUID(as_uuid=True), db.ForeignKey('resources.id', ondelete='SET NULL'), nullable=True)
     
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     
@@ -35,6 +36,7 @@ class Task(db.Model):
     # Relaciones adicionales para facilidad en consultas
     assigned_user = db.relationship('User', foreign_keys=[user_id], backref=db.backref('assigned_tasks', lazy=True))
     creator = db.relationship('User', foreign_keys=[created_by], backref=db.backref('created_tasks', lazy=True))
+    resource = db.relationship('Resource', foreign_keys=[resource_id], backref=db.backref('linked_tasks', lazy=True))
     
     def to_dict(self):
         return {
@@ -52,6 +54,8 @@ class Task(db.Model):
             'board_column': self.board_column or 'todo',
             'completed_at': self.completed_at.isoformat() if self.completed_at else None,
             'user_id': str(self.user_id) if self.user_id else None,
+            'resource_id': str(self.resource_id) if self.resource_id else None,
+            'resource': self.resource.to_dict() if self.resource else None,
             'assigned_type': self.assigned_type or 'all',
             'assigned_target': self.assigned_target,
             'assigned_user_name': f"{self.assigned_user.first_name} {self.assigned_user.last_name}" if self.assigned_user else ("Todos" if self.assigned_type == 'all' else f"{self.assigned_type}: {self.assigned_target}"),

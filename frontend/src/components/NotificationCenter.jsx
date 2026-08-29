@@ -1,5 +1,8 @@
-import React, { useState, useEffect } from 'react';
-import { Bell, Check, Filter, Sparkles, Calendar, ClipboardList, Trophy, Heart, Shield, CheckCheck, ArrowRight, ExternalLink } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { 
+  Bell, Check, Filter, Sparkles, Calendar, ClipboardList, 
+  Trophy, Heart, Shield, CheckCheck, ArrowRight, ExternalLink, X 
+} from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import api from '../services/api';
 
@@ -8,8 +11,8 @@ const CATEGORY_CONFIG = {
   bienestar: { label: 'Bienestar', icon: Sparkles, color: 'var(--accent)' },
   tests: { label: 'Tests', icon: Calendar, color: 'var(--primary)' },
   citas: { label: 'Citas', icon: Calendar, color: 'var(--success)' },
-  tareas: { label: 'Tareas', icon: ClipboardList, color: 'var(--warning)' },
-  gamificacion: { label: 'Gamificación', icon: Trophy, color: '#f59e0b' },
+  tareas: { label: 'Tareas', icon: ClipboardList, color: '#f59e0b' },
+  gamificacion: { label: 'Gamificación', icon: Trophy, color: '#eab308' },
   kudos: { label: 'Kudos', icon: Heart, color: '#ec4899' },
   sistema: { label: 'Sistema', icon: Shield, color: 'var(--text-secondary)' },
   seguridad: { label: 'Seguridad', icon: Shield, color: 'var(--danger)' }
@@ -21,6 +24,7 @@ const NotificationCenter = ({ isOpen, onClose }) => {
   const [unreadCount, setUnreadCount] = useState(0);
   const [activeCategory, setActiveCategory] = useState('all');
   const [loading, setLoading] = useState(false);
+  const popoverRef = useRef(null);
 
   const fetchNotifications = async (cat = activeCategory) => {
     try {
@@ -39,13 +43,32 @@ const NotificationCenter = ({ isOpen, onClose }) => {
     }
   }, [isOpen, activeCategory]);
 
+  // Cerrar al hacer clic fuera del popover
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const handleOutsideClick = (e) => {
+      if (popoverRef.current && !popoverRef.current.contains(e.target)) {
+        const bellTrigger = e.target.closest('button[title*="Notificaciones"]');
+        if (!bellTrigger && typeof onClose === 'function') {
+          onClose();
+        }
+      }
+    };
+
+    document.addEventListener('mousedown', handleOutsideClick);
+    return () => {
+      document.removeEventListener('mousedown', handleOutsideClick);
+    };
+  }, [isOpen, onClose]);
+
   const handleMarkAsRead = async (notifId, linkUrl) => {
     try {
       await api.put(`/notifications/${notifId}/read`);
       setNotifications(prev => prev.map(n => n.id === notifId ? { ...n, is_read: true } : n));
       setUnreadCount(prev => Math.max(0, prev - 1));
       if (linkUrl) {
-        onClose();
+        if (typeof onClose === 'function') onClose();
         navigate(linkUrl);
       }
     } catch (err) {
@@ -67,20 +90,21 @@ const NotificationCenter = ({ isOpen, onClose }) => {
 
   return (
     <div 
+      ref={popoverRef}
       className="notification-popover animate-fade"
       style={{
         position: 'absolute',
         top: '55px',
         right: '0',
-        width: '400px',
+        width: '420px',
         maxWidth: '92vw',
         backgroundColor: 'var(--bg-secondary)',
-        border: '1px solid var(--border)',
-        borderRadius: '16px',
-        boxShadow: '0 20px 40px -10px rgba(0,0,0,0.3)',
-        zIndex: 9999,
+        border: '1.5px solid var(--border)',
+        borderRadius: '20px',
+        boxShadow: '0 25px 50px -12px rgba(0,0,0,0.35)',
+        zIndex: 99999,
         padding: '18px',
-        maxHeight: '540px',
+        maxHeight: '560px',
         display: 'flex',
         flexDirection: 'column'
       }}
@@ -113,35 +137,55 @@ const NotificationCenter = ({ isOpen, onClose }) => {
           )}
         </div>
 
-        {unreadCount > 0 && (
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          {unreadCount > 0 && (
+            <button
+              onClick={handleMarkAllRead}
+              style={{
+                background: 'transparent',
+                border: 'none',
+                color: 'var(--primary)',
+                fontSize: '11px',
+                fontWeight: '800',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '4px'
+              }}
+            >
+              <CheckCheck size={14} />
+              <span>Marcar leídas</span>
+            </button>
+          )}
+
           <button
-            onClick={handleMarkAllRead}
+            onClick={onClose}
             style={{
-              background: 'transparent',
+              background: 'none',
               border: 'none',
-              color: 'var(--primary)',
-              fontSize: '11px',
-              fontWeight: '800',
+              color: 'var(--text-muted)',
               cursor: 'pointer',
+              padding: '4px',
+              borderRadius: '6px',
               display: 'flex',
-              alignItems: 'center',
-              gap: '4px'
+              alignItems: 'center'
             }}
+            title="Cerrar notificaciones"
           >
-            <CheckCheck size={14} />
-            <span>Marcar leídas</span>
+            <X size={16} />
           </button>
-        )}
+        </div>
       </div>
 
-      {/* Filtro por Categorías */}
+      {/* Filtro por Categorías con soporte flexible y sin recortes */}
       <div style={{
         display: 'flex',
         gap: '6px',
-        overflowX: 'auto',
-        paddingBottom: '8px',
-        marginBottom: '10px',
-        scrollbarWidth: 'none'
+        flexWrap: 'wrap',
+        maxHeight: '74px',
+        overflowY: 'auto',
+        paddingBottom: '6px',
+        marginBottom: '10px'
       }}>
         {Object.entries(CATEGORY_CONFIG).map(([key, config]) => {
           const Icon = config.icon;
@@ -154,19 +198,19 @@ const NotificationCenter = ({ isOpen, onClose }) => {
                 display: 'flex',
                 alignItems: 'center',
                 gap: '5px',
-                padding: '5px 10px',
-                borderRadius: '20px',
-                fontSize: '11px',
-                fontWeight: isActive ? '800' : '600',
-                border: isActive ? '1px solid var(--primary)' : '1px solid var(--border)',
+                padding: '4px 9px',
+                borderRadius: '14px',
+                fontSize: '10.5px',
+                fontWeight: isActive ? '900' : '600',
+                border: isActive ? '1.5px solid var(--primary)' : '1px solid var(--border)',
                 backgroundColor: isActive ? 'var(--primary-light)' : 'var(--bg-primary)',
                 color: isActive ? 'var(--primary)' : 'var(--text-secondary)',
                 cursor: 'pointer',
                 whiteSpace: 'nowrap',
-                transition: 'all 0.2s ease'
+                transition: 'all 0.15s ease'
               }}
             >
-              <Icon size={12} />
+              <Icon size={11} style={{ color: isActive ? 'var(--primary)' : config.color }} />
               <span>{config.label}</span>
             </button>
           );
@@ -174,9 +218,9 @@ const NotificationCenter = ({ isOpen, onClose }) => {
       </div>
 
       {/* Lista de Notificaciones */}
-      <div style={{ overflowY: 'auto', flex: 1, display: 'grid', gap: '8px', paddingRight: '2px' }}>
+      <div style={{ overflowY: 'auto', flex: 1, display: 'grid', gap: '8px', paddingRight: '4px', maxHeight: '360px' }}>
         {notifications.length === 0 ? (
-          <div style={{ textAlign: 'center', padding: '32px 16px', color: 'var(--text-muted)' }}>
+          <div style={{ textAlign: 'center', padding: '36px 16px', color: 'var(--text-muted)' }}>
             <Bell size={32} style={{ opacity: 0.3, margin: '0 auto 8px' }} />
             <p style={{ fontSize: '12px', fontWeight: '600' }}>No hay notificaciones en esta categoría.</p>
           </div>
@@ -191,9 +235,9 @@ const NotificationCenter = ({ isOpen, onClose }) => {
                 onClick={() => handleMarkAsRead(notif.id, notif.link_url)}
                 style={{
                   padding: '12px',
-                  borderRadius: '10px',
+                  borderRadius: '12px',
                   backgroundColor: notif.is_read ? 'var(--bg-primary)' : 'var(--primary-light)',
-                  border: notif.is_read ? '1px solid var(--border)' : '1px solid var(--primary)',
+                  border: notif.is_read ? '1px solid var(--border)' : '1.5px solid var(--primary)',
                   cursor: 'pointer',
                   transition: 'all 0.2s ease',
                   position: 'relative'
@@ -214,7 +258,7 @@ const NotificationCenter = ({ isOpen, onClose }) => {
                     }}>
                       <Icon size={12} />
                     </div>
-                    <span style={{ fontSize: '10.5px', fontWeight: '800', textTransform: 'uppercase', color: catInfo.color }}>
+                    <span style={{ fontSize: '10px', fontWeight: '900', textTransform: 'uppercase', color: catInfo.color }}>
                       {catInfo.label}
                     </span>
                   </div>
@@ -275,7 +319,7 @@ const NotificationCenter = ({ isOpen, onClose }) => {
             border: 'none',
             color: 'var(--primary)',
             fontSize: '11px',
-            fontWeight: '700',
+            fontWeight: '800',
             cursor: 'pointer'
           }}
         >

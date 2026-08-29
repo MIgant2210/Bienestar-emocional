@@ -1,22 +1,87 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useContext } from 'react';
 import { 
   Brain, Activity, Calendar, Sparkles, BookOpen, Clock, HeartHandshake,
   TrendingUp, Shield, AlertCircle, CheckCircle2, Mic, Square, Send, 
-  Search, Book, ArrowRight, UserCheck, HelpCircle, ChevronRight, Eye,
-  ShieldCheck, Loader, RefreshCw, Zap, Award, Heart, ShieldAlert
+  Search, Book, ArrowRight, ArrowLeft, UserCheck, HelpCircle, ChevronRight, Eye,
+  ShieldCheck, Loader, RefreshCw, Zap, Award, Heart, ShieldAlert,
+  Bookmark, BookmarkCheck, Star, Volume2, Play, Plus, Edit, Type, 
+  ExternalLink, Filter, RotateCcw, CheckSquare, Lock, Phone, User, X, ArrowUpDown
 } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 import { useNavigate } from 'react-router-dom';
 import api from '../services/api';
+import { AuthContext } from '../contexts/AuthContext';
 import GamificationWidget from '../components/GamificationWidget';
 import ConsentModal from '../components/ConsentModal';
 import TestResponseViewer from '../components/TestResponseViewer';
+import ResourceAudioPlayer from '../components/ResourceAudioPlayer';
+import ResourceInteractivePlayer from '../components/ResourceInteractivePlayer';
+import ResourceAdminModal from '../components/ResourceAdminModal';
+import CustomSelect from '../components/CustomSelect';
 
-const MyWellbeing = ({ onNavigateToTab }) => {
+const RESOURCE_TYPE_OPTIONS = [
+  { value: 'Todos', label: 'Todos los Tipos (14)' },
+  { value: 'articulo', label: 'Lectura / Artículo' },
+  { value: 'ejercicio', label: 'Ejercicio / Pausa Activa' },
+  { value: 'checklist', label: 'Checklist Interactivo' },
+  { value: 'respiracion', label: 'Respiración Guiada' },
+  { value: 'reflexion', label: 'Reflexión Guiada' },
+  { value: 'registro_emocional', label: 'Registro Emocional' },
+  { value: 'audio', label: 'Audio / Meditación' },
+  { value: 'reto', label: 'Reto / Desafío' },
+  { value: 'diario', label: 'Diario Personal' },
+  { value: 'gratitud', label: 'Gratitud' },
+  { value: 'quiz', label: 'Quiz Educativo' },
+  { value: 'video', label: 'Video Educativo' },
+  { value: 'consejo', label: 'Consejo Rápido' },
+  { value: 'grounding', label: 'Grounding 5-4-3-2-1' }
+];
+
+const RESOURCE_SORT_OPTIONS = [
+  { value: 'recent', label: 'Más Recientes' },
+  { value: 'popular', label: 'Más Populares' },
+  { value: 'duration_asc', label: 'Menor Duración' },
+  { value: 'xp_desc', label: 'Mayor XP' },
+  { value: 'recommended', label: 'Recomendados para Mí' }
+];
+
+const RESOURCE_LEVEL_OPTIONS = [
+  { value: 'Todos', label: 'Todos los Niveles' },
+  { value: 'principiante', label: 'Principiante' },
+  { value: 'intermedio', label: 'Intermedio' },
+  { value: 'avanzado', label: 'Avanzado' }
+];
+
+const RESOURCE_DURATION_OPTIONS = [
+  { value: 'all', label: 'Cualquier Duración' },
+  { value: 'short', label: '≤ 5 minutos' },
+  { value: 'medium', label: '5 a 10 minutos' },
+  { value: 'long', label: '> 10 minutos' }
+];
+
+// Helper para formatear negritas y markdown limpio en el lector
+const renderFormattedText = (rawText) => {
+  if (!rawText) return null;
+  const parts = rawText.split(/(\*\*[^*]+\*\*)/g);
+  return parts.map((part, i) => {
+    if (part.startsWith('**') && part.endsWith('**')) {
+      return (
+        <strong key={i} style={{ color: 'var(--text-primary)', fontWeight: '800' }}>
+          {part.slice(2, -2)}
+        </strong>
+      );
+    }
+    return part;
+  });
+};
+
+const MyWellbeing = ({ onNavigateToTab, initialResourceId, onResourceCompleted }) => {
   const navigate = useNavigate();
+  const { user: authUser } = useContext(AuthContext) || {};
+  const isAdminOrSupport = authUser && ['superadmin', 'admin_institucion', 'profesional_apoyo'].includes(authUser.role);
 
   // Estados de Pestañas Internas de Mi Bienestar
-  const [activeSection, setActiveSection] = useState('estado_actual'); // 'estado_actual', 'historial', 'evaluaciones', 'tendencias', 'recomendaciones', 'recursos'
+  const [activeSection, setActiveSection] = useState(initialResourceId ? 'recursos' : 'estado_actual'); // 'estado_actual', 'historial', 'evaluaciones', 'tendencias', 'recomendaciones', 'recursos'
 
   // Estados de Datos
   const [summary, setSummary] = useState(null);
@@ -31,6 +96,18 @@ const MyWellbeing = ({ onNavigateToTab }) => {
   const [selectedCategory, setSelectedCategory] = useState('Todas');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedResource, setSelectedResource] = useState(null);
+
+  // Estados específicos de Recursos Interactivos y Accesibilidad
+  const [resourceTab, setResourceTab] = useState('all'); // 'all', 'favorites', 'in_progress', 'completed'
+  const [resourceTypeFilter, setResourceTypeFilter] = useState('Todos');
+  const [resourceLevelFilter, setResourceLevelFilter] = useState('Todos');
+  const [resourceDurationFilter, setResourceDurationFilter] = useState('all');
+  const [resourceSortBy, setResourceSortBy] = useState('recent');
+  const [fontSizeMode, setFontSizeMode] = useState('normal'); // 'small', 'normal', 'large'
+  const [activeParagraphIndex, setActiveParagraphIndex] = useState(-1);
+  const [showAdminModal, setShowAdminModal] = useState(false);
+  const [editingResource, setEditingResource] = useState(null);
+  const [celebrationToast, setCelebrationToast] = useState(null);
 
   // Estados de Formulario de Registro Emocional / Reflexión
   const [reflectionText, setReflectionText] = useState('');
@@ -93,13 +170,139 @@ const MyWellbeing = ({ onNavigateToTab }) => {
     }
   };
 
+  const fetchResources = async () => {
+    try {
+      let url = '/wellbeing/resources?';
+      if (selectedCategory && selectedCategory !== 'Todas') url += `category=${encodeURIComponent(selectedCategory)}&`;
+      if (searchQuery.trim()) url += `search=${encodeURIComponent(searchQuery.trim())}&`;
+      if (resourceTypeFilter && resourceTypeFilter !== 'Todos') url += `type=${encodeURIComponent(resourceTypeFilter)}&`;
+      if (resourceLevelFilter && resourceLevelFilter !== 'Todos') url += `level=${encodeURIComponent(resourceLevelFilter)}&`;
+      if (resourceDurationFilter && resourceDurationFilter !== 'all') url += `duration=${encodeURIComponent(resourceDurationFilter)}&`;
+      if (resourceSortBy && resourceSortBy !== 'recent') url += `sort_by=${encodeURIComponent(resourceSortBy)}&`;
+      if (resourceTab === 'favorites') url += `favorites_only=true&`;
+      if (resourceTab === 'in_progress') url += `status=en_progreso&`;
+      if (resourceTab === 'completed') url += `status=completado&`;
+
+      const res = await api.get(url);
+      setResources(res.data?.resources || []);
+      setRecommendedResources(res.data?.recommended || []);
+      if (res.data?.categories) {
+        setResourceCategories(['Todas', ...res.data.categories]);
+      }
+    } catch (err) {
+      console.error('Error cargando recursos:', err);
+    }
+  };
+
+  const handleToggleFavorite = async (e, resId) => {
+    if (e) e.stopPropagation();
+    try {
+      const res = await api.post(`/wellbeing/resources/${resId}/favorite`);
+      const isFav = res.data?.is_favorite;
+      setResources(prev => prev.map(r => r.id === resId ? { ...r, is_favorite: isFav } : r));
+      if (selectedResource && selectedResource.id === resId) {
+        setSelectedResource(prev => ({ ...prev, is_favorite: isFav }));
+      }
+    } catch (err) {
+      console.error('Error al alternar favorito:', err);
+    }
+  };
+
+  const handleCompleteResource = async (resId) => {
+    try {
+      const res = await api.post(`/wellbeing/resources/${resId}/complete`);
+      const { gamification, progress, completed_tasks_count } = res.data || {};
+
+      setResources(prev => prev.map(r => r.id === resId ? { ...r, progress: progress } : r));
+      if (selectedResource && selectedResource.id === resId) {
+        setSelectedResource(prev => ({ ...prev, progress: progress }));
+      }
+
+      if (completed_tasks_count > 0) {
+        setCelebrationToast({
+          message: `🎉 ¡Felicitaciones! Has completado el recurso y validado automáticamente ${completed_tasks_count} tarea(s) vinculada(s). (+${gamification?.xp_gained || 20} XP)`,
+          streak: gamification?.current_streak,
+          badges: gamification?.new_badges || []
+        });
+        setTimeout(() => setCelebrationToast(null), 7000);
+      } else if (gamification && !gamification.already_awarded && gamification.xp_gained > 0) {
+        setCelebrationToast({
+          message: `🎉 ¡Felicitaciones! Has completado el recurso y ganado +${gamification.xp_gained} XP.`,
+          streak: gamification.current_streak,
+          badges: gamification.new_badges || []
+        });
+        setTimeout(() => setCelebrationToast(null), 6000);
+      }
+
+      const sumRes = await api.get('/wellbeing/summary');
+      setSummary(sumRes.data);
+
+      if (onResourceCompleted) {
+        onResourceCompleted();
+      }
+    } catch (err) {
+      console.error('Error al completar recurso:', err);
+    }
+  };
+
+  const handleSaveInteractiveAnswers = async (resId, answers) => {
+    try {
+      const res = await api.post(`/wellbeing/resources/${resId}/interactive-submit`, { answers });
+      const updatedAnswers = res.data?.interactive_answers;
+      setResources(prev => prev.map(r => {
+        if (r.id === resId) {
+          return {
+            ...r,
+            progress: {
+              ...(r.progress || {}),
+              status: r.progress?.status === 'completado' ? 'completado' : 'en_progreso',
+              interactive_answers: updatedAnswers
+            }
+          };
+        }
+        return r;
+      }));
+      if (selectedResource && selectedResource.id === resId) {
+        setSelectedResource(prev => ({
+          ...prev,
+          progress: {
+            ...(prev.progress || {}),
+            status: prev.progress?.status === 'completado' ? 'completado' : 'en_progreso',
+            interactive_answers: updatedAnswers
+          }
+        }));
+      }
+    } catch (err) {
+      console.error('Error guardando respuestas interactivas:', err);
+    }
+  };
+
   useEffect(() => {
     fetchAllData();
   }, []);
 
   useEffect(() => {
+    if (initialResourceId && resources.length > 0) {
+      const found = resources.find(r => r.id === initialResourceId);
+      if (found) {
+        setActiveSection('recursos');
+        setSelectedResource(found);
+      }
+    }
+  }, [initialResourceId, resources]);
+
+  useEffect(() => {
     fetchHistory(historyPeriod);
   }, [historyPeriod]);
+
+  useEffect(() => {
+    if (activeSection === 'recursos') {
+      const timer = setTimeout(() => {
+        fetchResources();
+      }, 250);
+      return () => clearTimeout(timer);
+    }
+  }, [activeSection, selectedCategory, searchQuery, resourceTab, resourceTypeFilter, resourceLevelFilter, resourceDurationFilter, resourceSortBy]);
 
   // Manejo de Grabación de Voz con Verificación de Consentimiento
   const handleStartVoice = () => {
@@ -960,90 +1163,443 @@ const MyWellbeing = ({ onNavigateToTab }) => {
       )}
 
       {/* ======================================================== */}
-      {/* SECCIÓN F: CENTRO DE RECURSOS                           */}
+      {/* SECCIÓN F: CENTRO DE RECURSOS INTERACTIVO Y ACCESIBLE    */}
       {/* ======================================================== */}
       {activeSection === 'recursos' && (
         <div className="animate-fade" style={{ display: 'grid', gap: '18px' }}>
           
-          {/* Modal de Lectura de Recurso */}
-          {selectedResource && (
-            <div style={{
-              position: 'fixed',
-              top: 0,
-              left: 0,
-              right: 0,
-              bottom: 0,
-              backgroundColor: 'rgba(15, 23, 42, 0.75)',
-              backdropFilter: 'blur(6px)',
-              zIndex: 10000,
+          {/* Toast de Celebración de Gamificación / XP */}
+          {celebrationToast && (
+            <div className="animate-fade" style={{
+              backgroundColor: 'var(--success-light)',
+              border: '1px solid var(--success)',
+              borderRadius: '12px',
+              padding: '14px 18px',
               display: 'flex',
+              justifyContent: 'space-between',
               alignItems: 'center',
-              justifyContent: 'center',
-              padding: '20px'
+              boxShadow: '0 4px 15px rgba(16, 185, 129, 0.2)'
             }}>
-              <div className="glass-card animate-fade" style={{
-                maxWidth: '650px',
-                width: '100%',
-                backgroundColor: 'var(--bg-secondary)',
-                borderRadius: '18px',
-                padding: '28px',
-                maxHeight: '85vh',
-                overflowY: 'auto'
-              }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '14px' }}>
-                  <div>
-                    <span style={{ fontSize: '11px', fontWeight: '800', color: 'var(--primary)', textTransform: 'uppercase' }}>
-                      {selectedResource.category} • {selectedResource.resource_type}
-                    </span>
-                    <h3 style={{ fontSize: '18px', fontWeight: '900', color: 'var(--text-primary)', marginTop: '2px' }}>
-                      {selectedResource.title}
-                    </h3>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <Award size={24} style={{ color: 'var(--success)' }} />
+                <div>
+                  <div style={{ fontSize: '13.5px', fontWeight: '900', color: 'var(--text-primary)' }}>
+                    {celebrationToast.message}
                   </div>
-                  <button
-                    onClick={() => setSelectedResource(null)}
-                    style={{ background: 'none', border: 'none', color: 'var(--text-muted)', fontSize: '20px', cursor: 'pointer', fontWeight: 'bold' }}
-                  >
-                    ×
-                  </button>
-                </div>
-
-                <div style={{ fontSize: '11.5px', color: 'var(--text-muted)', marginBottom: '16px' }}>
-                  {selectedResource.author} • {selectedResource.reading_time_minutes} min de lectura
-                </div>
-
-                <div style={{ fontSize: '13.5px', color: 'var(--text-primary)', lineHeight: '1.7', backgroundColor: 'var(--bg-primary)', padding: '18px', borderRadius: '12px', border: '1px solid var(--border)', marginBottom: '20px' }}>
-                  {selectedResource.content}
-                </div>
-
-                <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-                  <button
-                    onClick={() => setSelectedResource(null)}
-                    className="btn btn-primary"
-                    style={{ padding: '8px 20px', borderRadius: '10px' }}
-                  >
-                    Cerrar Recurso
-                  </button>
+                  {celebrationToast.streak && (
+                    <div style={{ fontSize: '11.5px', color: 'var(--text-secondary)' }}>
+                      🔥 Tu racha de participación activa ahora es de <strong>{celebrationToast.streak} días</strong>.
+                    </div>
+                  )}
                 </div>
               </div>
+              <button
+                type="button"
+                onClick={() => setCelebrationToast(null)}
+                style={{ background: 'none', border: 'none', color: 'var(--text-muted)', fontSize: '18px', cursor: 'pointer', fontWeight: 'bold' }}
+              >
+                ×
+              </button>
             </div>
           )}
 
-          {/* Barra de Búsqueda y Filtros de Recursos */}
-          <div className="glass-card" style={{ padding: '18px' }}>
-            <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', marginBottom: '14px' }}>
-              <div style={{ flex: 1, position: 'relative', minWidth: '220px' }}>
-                <Search size={16} style={{ position: 'absolute', left: '12px', top: '12px', color: 'var(--text-muted)' }} />
+          {/* VISTA DIRECTA EN PÁGINA: Editor/Creación Administrativa de Recursos */}
+          {showAdminModal ? (
+            <ResourceAdminModal
+              resource={editingResource}
+              onClose={() => {
+                setShowAdminModal(false);
+                setEditingResource(null);
+              }}
+              onSaved={() => {
+                fetchResources();
+              }}
+            />
+          ) : selectedResource ? (
+            /* VISTA DIRECTA EN PÁGINA: Lectura e Interacción Directa con el Recurso (Sin Popups ni Fondos Oscuros) */
+            <div className="glass-card animate-fade" style={{
+              width: '100%',
+              backgroundColor: 'var(--bg-secondary)',
+              borderRadius: '20px',
+              padding: '28px',
+              border: '1.5px solid var(--border)',
+              boxShadow: 'var(--shadow-md)',
+              display: 'grid',
+              gap: '16px'
+            }}>
+              
+              {/* Barra Superior con Navegación Directa de Retorno */}
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px', borderBottom: '1px solid var(--border)', paddingBottom: '14px' }}>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSelectedResource(null);
+                    setActiveParagraphIndex(-1);
+                  }}
+                  className="btn btn-secondary"
+                  style={{ padding: '8px 16px', borderRadius: '10px', fontSize: '12.5px', fontWeight: '800', display: 'flex', alignItems: 'center', gap: '8px' }}
+                >
+                  <ArrowLeft size={16} />
+                  <span>Volver a todos los recursos</span>
+                </button>
+
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <button
+                    type="button"
+                    onClick={(e) => handleToggleFavorite(e, selectedResource.id)}
+                    className="btn btn-secondary"
+                    style={{ padding: '8px 14px', borderRadius: '10px', fontSize: '12px', fontWeight: '800', display: 'flex', alignItems: 'center', gap: '6px' }}
+                    title={selectedResource.is_favorite ? "Quitar de favoritos" : "Guardar en favoritos"}
+                  >
+                    {selectedResource.is_favorite ? <BookmarkCheck size={16} style={{ color: 'var(--primary)' }} /> : <Bookmark size={16} />}
+                    <span>{selectedResource.is_favorite ? 'Guardado en Favoritos' : 'Guardar en Favoritos'}</span>
+                  </button>
+
+                  {isAdminOrSupport && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setEditingResource(selectedResource);
+                        setShowAdminModal(true);
+                      }}
+                      className="btn btn-secondary"
+                      style={{ padding: '8px 12px', borderRadius: '10px', fontSize: '12px', fontWeight: '800', display: 'flex', alignItems: 'center', gap: '6px' }}
+                      title="Editar este recurso"
+                    >
+                      <Edit size={14} />
+                      <span>Editar</span>
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              {/* Encabezado Principal del Recurso */}
+              <div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', marginBottom: '8px' }}>
+                  <span style={{ fontSize: '10.5px', fontWeight: '800', color: 'var(--primary)', backgroundColor: 'var(--primary-light)', padding: '3px 9px', borderRadius: '6px', textTransform: 'uppercase' }}>
+                    {selectedResource.category}
+                  </span>
+                  <span style={{ fontSize: '10.5px', fontWeight: '800', color: 'var(--text-secondary)', backgroundColor: 'var(--bg-primary)', padding: '3px 9px', borderRadius: '6px', textTransform: 'uppercase' }}>
+                    {selectedResource.resource_type}
+                  </span>
+                  <span style={{ fontSize: '10.5px', fontWeight: '800', color: 'var(--accent)', backgroundColor: 'rgba(234, 179, 8, 0.12)', padding: '3px 9px', borderRadius: '6px' }}>
+                    ⭐ +{selectedResource.xp_reward || 15} XP al completar
+                  </span>
+                  {selectedResource.level && (
+                    <span style={{ fontSize: '10.5px', color: 'var(--text-muted)', backgroundColor: 'var(--bg-primary)', padding: '3px 9px', borderRadius: '6px' }}>
+                      Nivel: {selectedResource.level}
+                    </span>
+                  )}
+                </div>
+
+                <h2 style={{ fontSize: '22px', fontWeight: '900', color: 'var(--text-primary)', margin: '4px 0 8px', letterSpacing: '-0.3px' }}>
+                  {selectedResource.title}
+                </h2>
+
+                <div style={{ fontSize: '12px', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
+                  <span>👤 {selectedResource.author}</span>
+                  <span>⏱️ {selectedResource.reading_time_minutes} min estimados</span>
+                  {selectedResource.source_institution && (
+                    <span>🏛️ {selectedResource.source_institution}</span>
+                  )}
+                </div>
+              </div>
+
+              {/* Barra de Accesibilidad (Ajuste de Tamaño de Letra) */}
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '6px 14px', backgroundColor: 'var(--bg-primary)', borderRadius: '10px', fontSize: '11.5px', border: '1px solid var(--border)' }}>
+                <span style={{ color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <Type size={14} /> Tamaño de lectura:
+                </span>
+                <div style={{ display: 'flex', gap: '4px' }}>
+                  {[
+                    { id: 'small', label: 'A-', size: '12.5px' },
+                    { id: 'normal', label: 'A', size: '14.5px' },
+                    { id: 'large', label: 'A+', size: '16.5px' }
+                  ].map(f => (
+                    <button
+                      key={f.id}
+                      type="button"
+                      onClick={() => setFontSizeMode(f.id)}
+                      style={{
+                        padding: '3px 9px',
+                        borderRadius: '6px',
+                        border: '1px solid',
+                        borderColor: fontSizeMode === f.id ? 'var(--primary)' : 'var(--border)',
+                        backgroundColor: fontSizeMode === f.id ? 'var(--primary)' : 'transparent',
+                        color: fontSizeMode === f.id ? '#fff' : 'var(--text-secondary)',
+                        fontSize: '11px',
+                        fontWeight: '800',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      {f.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Lector en Voz Alta con Voces Juveniles, Preview y Filtro de Asteriscos */}
+              <ResourceAudioPlayer
+                content={selectedResource.content}
+                title={selectedResource.title}
+                onParagraphChange={(idx) => setActiveParagraphIndex(idx)}
+              />
+
+              {/* Módulo Interactivo Dinámico para los 15 Tipos de Recursos */}
+              <ResourceInteractivePlayer
+                resource={selectedResource}
+                userProgress={selectedResource.progress}
+                onSaveAnswers={(answers) => handleSaveInteractiveAnswers(selectedResource.id, answers)}
+                onComplete={() => handleCompleteResource(selectedResource.id)}
+              />
+
+              {/* Directorio de Ayuda y Contactos Institucionales */}
+              {selectedResource.category === 'Necesito ayuda' && (
+                <div style={{
+                  backgroundColor: 'rgba(59, 130, 246, 0.08)',
+                  border: '1px solid rgba(59, 130, 246, 0.25)',
+                  borderRadius: '14px',
+                  padding: '16px',
+                  display: 'grid',
+                  gap: '10px'
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#3b82f6', fontWeight: '900', fontSize: '13.5px' }}>
+                    <Phone size={16} /> Contactos y Asistencia Inmediata
+                  </div>
+                  <div style={{ display: 'grid', gap: '8px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', backgroundColor: 'var(--bg-secondary)', padding: '10px 14px', borderRadius: '10px' }}>
+                      <div>
+                        <div style={{ fontSize: '12.5px', fontWeight: '800', color: 'var(--text-primary)' }}>Línea Nacional de Salud Mental (MSPAS Guatemala)</div>
+                        <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Atención profesional y confidencial 24/7</div>
+                      </div>
+                      <a href="tel:1515" className="btn btn-primary" style={{ padding: '6px 14px', fontSize: '12px', textDecoration: 'none', fontWeight: '800' }}>
+                        Llamar 1515 / 1540
+                      </a>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', backgroundColor: 'var(--bg-secondary)', padding: '10px 14px', borderRadius: '10px' }}>
+                      <div>
+                        <div style={{ fontSize: '12.5px', fontWeight: '800', color: 'var(--text-primary)' }}>Orientación Psicológica Institucional</div>
+                        <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Sesión privada 1 a 1 en sede o virtual</div>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setSelectedResource(null);
+                          if (onNavigateToTab) onNavigateToTab('clinical_appointments');
+                          else navigate('/agenda-citas');
+                        }}
+                        className="btn btn-secondary"
+                        style={{ padding: '6px 14px', fontSize: '12px', fontWeight: '800' }}
+                      >
+                        Agendar Cita
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Contenido Completo del Recurso con Formateo Markdown Limpio */}
+              <div style={{
+                fontSize: fontSizeMode === 'large' ? '16.5px' : (fontSizeMode === 'small' ? '13px' : '14.5px'),
+                color: 'var(--text-primary)',
+                lineHeight: '1.8',
+                backgroundColor: 'var(--bg-primary)',
+                padding: '22px',
+                borderRadius: '14px',
+                border: '1px solid var(--border)'
+              }}>
+                {selectedResource.content.split(/\n+/).map((par, pIdx) => {
+                  const isCurrent = activeParagraphIndex === pIdx;
+                  return (
+                    <p
+                      key={pIdx}
+                      style={{
+                        margin: '0 0 14px 0',
+                        backgroundColor: isCurrent ? 'var(--primary-light)' : 'transparent',
+                        color: isCurrent ? 'var(--primary)' : 'inherit',
+                        fontWeight: isCurrent ? '700' : 'normal',
+                        padding: isCurrent ? '6px 10px' : '0',
+                        borderRadius: isCurrent ? '8px' : '0',
+                        transition: 'all 0.2s ease'
+                      }}
+                    >
+                      {renderFormattedText(par)}
+                    </p>
+                  );
+                })}
+              </div>
+
+              {/* Respaldo Institucional y Enlace Oficial */}
+              {selectedResource.source_url && (
+                <div style={{ fontSize: '11.5px', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <ExternalLink size={13} />
+                  <span>Fuente Oficial de Referencia:</span>
+                  <a
+                    href={selectedResource.source_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={{ color: 'var(--primary)', fontWeight: '700', textDecoration: 'none' }}
+                  >
+                    {selectedResource.source_institution || selectedResource.source_url} ↗
+                  </a>
+                </div>
+              )}
+
+              {/* Pie con Botón de Completitud */}
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px', borderTop: '1px solid var(--border)', paddingTop: '16px' }}>
+                <div>
+                  {selectedResource.progress?.status === 'completado' ? (
+                    <span style={{ fontSize: '12px', color: 'var(--success)', fontWeight: '800', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <CheckCircle2 size={16} /> Ya completaste este recurso
+                    </span>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => handleCompleteResource(selectedResource.id)}
+                      className="btn btn-primary"
+                      style={{ padding: '9px 20px', borderRadius: '10px', fontSize: '12.5px', fontWeight: '900', display: 'flex', alignItems: 'center', gap: '8px' }}
+                    >
+                      <Sparkles size={16} />
+                      <span>Marcar como Completado (+{selectedResource.xp_reward || 15} XP)</span>
+                    </button>
+                  )}
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSelectedResource(null);
+                    setActiveParagraphIndex(-1);
+                  }}
+                  className="btn btn-secondary"
+                  style={{ padding: '9px 22px', borderRadius: '10px', fontSize: '12.5px', fontWeight: '700' }}
+                >
+                  Volver al Catálogo
+                </button>
+              </div>
+
+            </div>
+          ) : (
+            /* VISTA DEL CATÁLOGO DE RECURSOS */
+            <>
+
+          {/* Subnavegación Superior del Centro de Recursos */}
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
+            <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+              {[
+                { id: 'all', label: `Todos (${resources.length})`, icon: BookOpen },
+                { id: 'favorites', label: '⭐ Guardados', icon: Bookmark },
+                { id: 'in_progress', label: '⏳ Continuar leyendo', icon: Clock },
+                { id: 'completed', label: '✅ Completados', icon: CheckCircle2 }
+              ].map(tab => {
+                const isCurrent = resourceTab === tab.id;
+                const Icon = tab.icon;
+                return (
+                  <button
+                    key={tab.id}
+                    type="button"
+                    onClick={() => setResourceTab(tab.id)}
+                    style={{
+                      padding: '8px 14px',
+                      borderRadius: '10px',
+                      fontSize: '12px',
+                      fontWeight: isCurrent ? '800' : '600',
+                      backgroundColor: isCurrent ? 'var(--primary)' : 'var(--bg-secondary)',
+                      color: isCurrent ? '#ffffff' : 'var(--text-secondary)',
+                      border: '1px solid',
+                      borderColor: isCurrent ? 'var(--primary)' : 'var(--border)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                      cursor: 'pointer',
+                      transition: 'all 0.15s ease'
+                    }}
+                  >
+                    <Icon size={14} />
+                    <span>{tab.label}</span>
+                  </button>
+                );
+              })}
+            </div>
+
+            {isAdminOrSupport && (
+              <button
+                type="button"
+                onClick={() => {
+                  setEditingResource(null);
+                  setShowAdminModal(true);
+                }}
+                className="btn btn-primary"
+                style={{ padding: '8px 16px', borderRadius: '10px', fontSize: '12px', fontWeight: '800', display: 'flex', alignItems: 'center', gap: '6px' }}
+              >
+                <Plus size={14} />
+                <span>+ Nuevo Recurso</span>
+              </button>
+            )}
+          </div>
+
+          {/* Barra de Búsqueda y Filtros con CustomSelect (Con overflow visible para no recortar menús) */}
+          <div className="glass-card has-dropdown" style={{ padding: '18px', display: 'grid', gap: '14px', position: 'relative', zIndex: 50, overflow: 'visible' }}>
+            
+            {/* Fila 1: Búsqueda, Filtros y Ordenamiento con CustomSelect */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '12px', alignItems: 'center' }}>
+              <div style={{ position: 'relative', minWidth: '200px' }}>
+                <Search size={16} style={{ position: 'absolute', left: '14px', top: '13px', color: 'var(--text-muted)' }} />
                 <input
                   type="text"
-                  placeholder="Buscar recursos, guías o ejercicios..."
+                  placeholder="Buscar por título, autor o tema..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  style={{ paddingLeft: '38px', fontSize: '12.5px' }}
+                  style={{ paddingLeft: '40px', fontSize: '12.5px', width: '100%', height: '42px', borderRadius: '12px' }}
+                />
+              </div>
+
+              {/* Filtro por Tipo con CustomSelect */}
+              <div>
+                <CustomSelect
+                  options={RESOURCE_TYPE_OPTIONS}
+                  value={resourceTypeFilter}
+                  onChange={(val) => setResourceTypeFilter(val)}
+                  placeholder="Tipo de Recurso"
+                  icon={Filter}
+                />
+              </div>
+
+              {/* Filtro por Nivel con CustomSelect */}
+              <div>
+                <CustomSelect
+                  options={RESOURCE_LEVEL_OPTIONS}
+                  value={resourceLevelFilter}
+                  onChange={(val) => setResourceLevelFilter(val)}
+                  placeholder="Nivel de Dificultad"
+                  icon={Sparkles}
+                />
+              </div>
+
+              {/* Filtro por Duración con CustomSelect */}
+              <div>
+                <CustomSelect
+                  options={RESOURCE_DURATION_OPTIONS}
+                  value={resourceDurationFilter}
+                  onChange={(val) => setResourceDurationFilter(val)}
+                  placeholder="Duración"
+                  icon={Clock}
+                />
+              </div>
+
+              {/* Ordenamiento de Recursos */}
+              <div>
+                <CustomSelect
+                  options={RESOURCE_SORT_OPTIONS}
+                  value={resourceSortBy}
+                  onChange={(val) => setResourceSortBy(val)}
+                  placeholder="Ordenar por"
+                  icon={ArrowUpDown}
                 />
               </div>
             </div>
 
-            {/* Categorías de Recursos */}
+            {/* Fila 2: Categorías de Recursos Oficiales con wrap limpio */}
             <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center' }}>
               {resourceCategories.map(cat => (
                 <button
@@ -1066,54 +1622,195 @@ const MyWellbeing = ({ onNavigateToTab }) => {
                 </button>
               ))}
             </div>
+
           </div>
 
-          {/* Grid de Recursos */}
+          {/* Sección de Recomendados Inteligentes para el Usuario */}
+          {recommendedResources.length > 0 && resourceTab === 'all' && selectedCategory === 'Todas' && !searchQuery && (
+            <div className="glass-card" style={{ padding: '18px', backgroundColor: 'rgba(99, 102, 241, 0.05)', border: '1px solid rgba(99, 102, 241, 0.2)' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
+                <Sparkles size={16} style={{ color: 'var(--primary)' }} />
+                <h4 style={{ fontSize: '13.5px', fontWeight: '900', color: 'var(--text-primary)', margin: 0 }}>
+                  Recomendados para tu equilibrio diario
+                </h4>
+              </div>
+              <div className="grid grid-3" style={{ gap: '12px' }}>
+                {recommendedResources.map(rec => (
+                  <div
+                    key={'rec_' + rec.id}
+                    onClick={() => setSelectedResource(rec)}
+                    style={{
+                      backgroundColor: 'var(--bg-secondary)',
+                      border: '1px solid var(--border)',
+                      borderRadius: '12px',
+                      padding: '14px',
+                      cursor: 'pointer',
+                      transition: 'all 0.2s ease',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      justifyContent: 'space-between'
+                    }}
+                  >
+                    <div>
+                      <span style={{ fontSize: '10px', fontWeight: '800', color: 'var(--primary)', backgroundColor: 'var(--primary-light)', padding: '2px 6px', borderRadius: '4px' }}>
+                        {rec.category}
+                      </span>
+                      <h5 style={{ fontSize: '13px', fontWeight: '800', color: 'var(--text-primary)', margin: '6px 0 4px' }}>
+                        {rec.title}
+                      </h5>
+                    </div>
+                    <div style={{ fontSize: '11px', color: 'var(--text-muted)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '8px' }}>
+                      <span>⏱️ {rec.reading_time_minutes} min</span>
+                      <span style={{ color: 'var(--primary)', fontWeight: '800' }}>Explorar ➔</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Grid Principal de Recursos */}
           <div className="grid grid-2">
-            {filteredResources.length === 0 ? (
-              <div style={{ gridColumn: 'span 2', textAlign: 'center', padding: '40px 20px', color: 'var(--text-muted)' }}>
-                <Book size={32} style={{ opacity: 0.3, margin: '0 auto 10px' }} />
-                <p style={{ fontSize: '13px', fontWeight: '600' }}>No se encontraron recursos que coincidan con tu búsqueda.</p>
+            {resources.length === 0 ? (
+              <div style={{ gridColumn: 'span 2', textAlign: 'center', padding: '50px 20px', color: 'var(--text-muted)' }}>
+                <Book size={36} style={{ opacity: 0.3, margin: '0 auto 12px' }} />
+                <h4 style={{ fontSize: '14px', fontWeight: '800', color: 'var(--text-secondary)', marginBottom: '4px' }}>
+                  No se encontraron recursos
+                </h4>
+                <p style={{ fontSize: '12.5px', margin: 0 }}>
+                  Prueba cambiando los términos de búsqueda o seleccionando otra categoría.
+                </p>
               </div>
             ) : (
-              filteredResources.map(res => (
-                <div key={res.id} className="glass-card" style={{ padding: '18px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
-                  <div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                      <span style={{ fontSize: '10.5px', fontWeight: '800', color: 'var(--primary)', backgroundColor: 'var(--primary-light)', padding: '2px 8px', borderRadius: '6px', textTransform: 'uppercase' }}>
-                        {res.category}
-                      </span>
-                      <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
-                        {res.reading_time_minutes} min
-                      </span>
+              resources.map(res => {
+                const isFav = res.is_favorite;
+                const isCompleted = res.progress?.status === 'completado';
+                const isInProgress = res.progress?.status === 'en_progreso';
+                const progressPct = res.progress?.progress_percent || 0;
+
+                return (
+                  <div
+                    key={res.id}
+                    className="glass-card"
+                    style={{
+                      padding: '18px',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      justifyContent: 'space-between',
+                      position: 'relative',
+                      border: isCompleted ? '1px solid rgba(16, 185, 129, 0.4)' : '1px solid var(--border)'
+                    }}
+                  >
+                    <div>
+                      {/* Cabecera de la Tarjeta */}
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '8px' }}>
+                        <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', alignItems: 'center' }}>
+                          <span style={{ fontSize: '10px', fontWeight: '800', color: 'var(--primary)', backgroundColor: 'var(--primary-light)', padding: '2px 8px', borderRadius: '6px', textTransform: 'uppercase' }}>
+                            {res.category}
+                          </span>
+                          <span style={{ fontSize: '10px', fontWeight: '800', color: 'var(--text-muted)', backgroundColor: 'var(--bg-primary)', padding: '2px 6px', borderRadius: '6px', textTransform: 'uppercase' }}>
+                            {res.resource_type}
+                          </span>
+                          {res.interactive_type !== 'none' && (
+                            <span style={{ fontSize: '10px', fontWeight: '800', color: '#3b82f6', backgroundColor: 'rgba(59, 130, 246, 0.12)', padding: '2px 6px', borderRadius: '6px' }}>
+                              Interactivo
+                            </span>
+                          )}
+                        </div>
+
+                        {/* Botón Favorito */}
+                        <button
+                          type="button"
+                          onClick={(e) => handleToggleFavorite(e, res.id)}
+                          style={{ background: 'none', border: 'none', cursor: 'pointer', color: isFav ? 'var(--primary)' : 'var(--text-muted)', padding: '2px' }}
+                          title={isFav ? "Quitar de favoritos" : "Guardar en favoritos"}
+                          aria-label="Alternar favorito"
+                        >
+                          {isFav ? <BookmarkCheck size={18} fill="currentColor" /> : <Bookmark size={18} />}
+                        </button>
+                      </div>
+
+                      {/* Título y Descripción */}
+                      <h4 style={{ fontSize: '14.5px', fontWeight: '900', color: 'var(--text-primary)', marginBottom: '6px', lineHeight: '1.3' }}>
+                        {res.title}
+                      </h4>
+
+                      <p style={{ fontSize: '12px', color: 'var(--text-secondary)', lineHeight: '1.45', marginBottom: '14px' }}>
+                        {res.description}
+                      </p>
+
+                      {/* Metadatos: Nivel, Duración, XP */}
+                      <div style={{ display: 'flex', gap: '12px', fontSize: '11px', color: 'var(--text-muted)', marginBottom: '12px', flexWrap: 'wrap' }}>
+                        <span>⏱️ {res.reading_time_minutes} min</span>
+                        <span>📊 {res.level || 'Principiante'}</span>
+                        <span style={{ color: 'var(--accent)', fontWeight: '800' }}>⭐ +{res.xp_reward || 15} XP</span>
+                      </div>
+
+                      {/* Barra de Progreso */}
+                      {(isInProgress || isCompleted) && (
+                        <div style={{ marginBottom: '12px' }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '10.5px', color: isCompleted ? 'var(--success)' : 'var(--primary)', fontWeight: '800', marginBottom: '3px' }}>
+                            <span>{isCompleted ? 'Completado' : 'En progreso'}</span>
+                            <span>{isCompleted ? '100%' : `${progressPct}%`}</span>
+                          </div>
+                          <div style={{ width: '100%', height: '4px', backgroundColor: 'var(--border)', borderRadius: '4px', overflow: 'hidden' }}>
+                            <div style={{
+                              height: '100%',
+                              width: isCompleted ? '100%' : `${progressPct}%`,
+                              backgroundColor: isCompleted ? 'var(--success)' : 'var(--primary)'
+                            }} />
+                          </div>
+                        </div>
+                      )}
                     </div>
 
-                    <h4 style={{ fontSize: '14.5px', fontWeight: '900', color: 'var(--text-primary)', marginBottom: '6px' }}>
-                      {res.title}
-                    </h4>
+                    {/* Pie de la Tarjeta */}
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid var(--border)', paddingTop: '10px' }}>
+                      <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
+                        {res.source_institution || res.author}
+                      </span>
 
-                    <p style={{ fontSize: '12px', color: 'var(--text-secondary)', lineHeight: '1.4', marginBottom: '14px' }}>
-                      {res.description}
-                    </p>
-                  </div>
+                      <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+                        {isAdminOrSupport && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setEditingResource(res);
+                              setShowAdminModal(true);
+                            }}
+                            className="btn btn-secondary"
+                            style={{ padding: '6px 10px', fontSize: '11px' }}
+                            title="Editar recurso"
+                          >
+                            <Edit size={13} />
+                          </button>
+                        )}
 
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid var(--border)', paddingTop: '10px' }}>
-                    <span style={{ fontSize: '10.5px', color: 'var(--text-muted)' }}>
-                      {res.resource_type.toUpperCase()}
-                    </span>
-                    <button
-                      onClick={() => setSelectedResource(res)}
-                      className="btn btn-secondary"
-                      style={{ padding: '6px 12px', fontSize: '11.5px', fontWeight: '800' }}
-                    >
-                      <Eye size={13} />
-                      <span>Leer Contenido</span>
-                    </button>
+                        <button
+                          type="button"
+                          onClick={() => setSelectedResource(res)}
+                          className="btn btn-secondary"
+                          style={{
+                            padding: '6px 14px',
+                            fontSize: '11.5px',
+                            fontWeight: '800',
+                            borderColor: isCompleted ? 'var(--success)' : 'var(--border)'
+                          }}
+                        >
+                          <Eye size={13} />
+                          <span>{isCompleted ? 'Revisar' : (isInProgress ? 'Continuar' : 'Explorar')}</span>
+                        </button>
+                      </div>
+                    </div>
+
                   </div>
-                </div>
-              ))
+                );
+              })
             )}
           </div>
+
+          </>
+          )}
 
         </div>
       )}
@@ -1123,3 +1820,4 @@ const MyWellbeing = ({ onNavigateToTab }) => {
 };
 
 export default MyWellbeing;
+

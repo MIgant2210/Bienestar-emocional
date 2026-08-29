@@ -23,6 +23,7 @@ import ColibriMascot from '../components/ColibriMascot';
 import StarryBackground from '../components/StarryBackground';
 import MyProgress from './MyProgress';
 import MyWellbeing from './MyWellbeing';
+import InstitutionalReportView from '../components/reports/InstitutionalReportView';
 import { useNavigate } from 'react-router-dom';
 import { hasModuleAccess } from '../components/ProtectedRoute';
 
@@ -53,6 +54,11 @@ const AdminDashboard = ({ initialTab = 'analytics' }) => {
   const [systemAlert, setSystemAlert] = useState({ show: false, type: 'info', title: '', message: '' });
   const showAlert = (type, title, message) => {
     setSystemAlert({ show: true, type, title, message });
+  };
+
+  const cleanEvalTitle = (title) => {
+    if (!title) return '';
+    return title.replace(/^\[Plantilla(?:\s+Express)?\]\s*/i, '').replace(/^Plantilla\s+/i, '').trim();
   };
 
   // Selected Submission Modal State (por colaborador individual)
@@ -135,6 +141,19 @@ const AdminDashboard = ({ initialTab = 'analytics' }) => {
 
   // Paletas & Edición de Usuario
   const [showPaletteMenu, setShowPaletteMenu] = useState(false);
+  const paletteMenuRef = useRef(null);
+
+  useEffect(() => {
+    if (!showPaletteMenu) return;
+    const handleOutsidePalette = (e) => {
+      if (paletteMenuRef.current && !paletteMenuRef.current.contains(e.target)) {
+        setShowPaletteMenu(false);
+      }
+    };
+    document.addEventListener('mousedown', handleOutsidePalette);
+    return () => document.removeEventListener('mousedown', handleOutsidePalette);
+  }, [showPaletteMenu]);
+
   const [editingUser, setEditingUser] = useState(null);
   const [editFirstName, setEditFirstName] = useState('');
   const [editLastName, setEditLastName] = useState('');
@@ -237,11 +256,17 @@ const AdminDashboard = ({ initialTab = 'analytics' }) => {
   const [selectedReportId, setSelectedReportId] = useState('reporte_1_clima');
   const [allReportsData, setAllReportsData] = useState(null);
   const [reportsLoading, setReportsLoading] = useState(false);
+  const [reportScope, setReportScope] = useState('institution'); // 'institution', 'department', 'user'
+  const [reportTargetUserId, setReportTargetUserId] = useState('');
+  const [reportTargetUserObj, setReportTargetUserObj] = useState(null);
   const [reportStartDate, setReportStartDate] = useState('');
   const [reportEndDate, setReportEndDate] = useState('');
+  const [reportQuickRange, setReportQuickRange] = useState('');
   const [reportDeptFilter, setReportDeptFilter] = useState('todos');
   const [reportStatusFilter, setReportStatusFilter] = useState('todos');
   const [reportRoleFilter, setReportRoleFilter] = useState('todos');
+  const [reportRiskFilter, setReportRiskFilter] = useState('todos');
+  const [reportPriorityFilter, setReportPriorityFilter] = useState('todos');
   
   // Chatbot IA States for Admin/SuperAdmin
   const [chatMessages, setChatMessages] = useState([
@@ -275,6 +300,23 @@ const AdminDashboard = ({ initialTab = 'analytics' }) => {
 
   const [loading, setLoading] = useState(true);
   const [showPrivacyNotice, setShowPrivacyNotice] = useState(true);
+  const [privacyCountdown, setPrivacyCountdown] = useState(20);
+
+  // Auto-cierre del aviso de confidencialidad a los 20 segundos
+  useEffect(() => {
+    if (!showPrivacyNotice) return;
+    const interval = setInterval(() => {
+      setPrivacyCountdown(prev => {
+        if (prev <= 1) {
+          setShowPrivacyNotice(false);
+          clearInterval(interval);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [showPrivacyNotice]);
 
   // Form States: Tasks
   const [taskTitle, setTaskTitle] = useState('');
@@ -285,6 +327,8 @@ const AdminDashboard = ({ initialTab = 'analytics' }) => {
   const [taskDueDate, setTaskDueDate] = useState('');
   const [taskAssignedType, setTaskAssignedType] = useState('all');
   const [taskAssignedTarget, setTaskAssignedTarget] = useState('');
+  const [taskResourceId, setTaskResourceId] = useState('');
+  const [availableResources, setAvailableResources] = useState([]);
   const [createLoading, setCreateLoading] = useState(false);
   const [createError, setCreateError] = useState('');
   const [createSuccess, setCreateSuccess] = useState('');
@@ -451,9 +495,10 @@ const AdminDashboard = ({ initialTab = 'analytics' }) => {
       setLoading(false);
     }
 
-    // 2. Cargar instituciones y sugerencias en background ligero
+    // 2. Cargar instituciones, sugerencias, evaluaciones y plantillas precargadas
     try {
       fetchInstitutionsAll();
+      fetchTemplates();
       api.get('/institutions/suggestions').then(res => { if (res.data) setSuggestions(res.data); }).catch(() => {});
       api.get('/evaluations').then(res => { if (res.data) setEvaluations(res.data); }).catch(() => {});
     } catch (err) {
@@ -461,16 +506,43 @@ const AdminDashboard = ({ initialTab = 'analytics' }) => {
     }
   };
 
-  const fetchInstitutionsAll = async () => {
+  const fetchResourcesList = async () => {
     try {
-      const res = await api.get('/institutions/all');
-      const instData = res.data || [];
-      setAllInstitutions(instData);
-      if (instData.length > 0 && !selectedInstForDepts) {
-        setSelectedInstForDepts(user?.role === 'superadmin' ? instData[0].id : (user?.institution_id || instData[0].id));
+      const res = await api.get('/wellbeing/resources');
+      if (res.data && res.data.resources) {
+        setAvailableResources(res.data.resources);
       }
     } catch (err) {
-      console.error('Error al cargar instituciones:', err);
+      console.warn('Error al cargar catálogo de recursos:', err);
+    }
+  };
+
+  const fetchTemplates = async () => {
+    try {
+      const res = await api.get('/evaluations/templates');
+      if (res.data && Array.isArray(res.data)) {
+        setTemplates(res.data);
+      }
+    } catch (err) {
+      console.error('Error al cargar plantillas de evaluación:', err);
+    }
+  };
+
+  const fetchInstitutionsAll = async () => {
+    if (!user) return;
+    try {
+      if (user.role === 'superadmin' || user.role === 'admin_institucion') {
+        const res = await api.get('/institutions/all');
+        const instData = res.data || [];
+        setAllInstitutions(instData);
+        if (instData.length > 0 && !selectedInstForDepts) {
+          setSelectedInstForDepts(user.role === 'superadmin' ? instData[0].id : (user.institution_id || instData[0].id));
+        }
+      } else if (user.institution_id) {
+        setSelectedInstForDepts(user.institution_id);
+      }
+    } catch (err) {
+      console.warn('Instituciones no disponibles para este rol:', err);
     }
   };
 
@@ -488,7 +560,7 @@ const AdminDashboard = ({ initialTab = 'analytics' }) => {
   };
 
   const fetchInvitationsForInst = async (instId) => {
-    if (!instId) return;
+    if (!instId || (user && user.role !== 'superadmin' && user.role !== 'admin_institucion')) return;
     setInvLoading(true);
     try {
       const res = await api.get(`/institutions/${instId}/invitations`);
@@ -503,6 +575,18 @@ const AdminDashboard = ({ initialTab = 'analytics' }) => {
   useEffect(() => {
     fetchDashboardData();
   }, []);
+
+  useEffect(() => {
+    if (activeTab === 'tasks') {
+      fetchResourcesList();
+    }
+  }, [activeTab]);
+
+  useEffect(() => {
+    if (activeTab === 'evaluations' || evalSubTab === 'templates') {
+      fetchTemplates();
+    }
+  }, [activeTab, evalSubTab]);
 
   useEffect(() => {
     if (activeTab === 'culture') {
@@ -797,7 +881,8 @@ const AdminDashboard = ({ initialTab = 'analytics' }) => {
       estimated_minutes: taskEstMinutes,
       due_date: taskDueDate || null,
       assigned_type: taskAssignedType,
-      assigned_target: taskAssignedTarget
+      assigned_target: taskAssignedTarget,
+      resource_id: taskResourceId || null
     };
 
     try {
@@ -807,6 +892,7 @@ const AdminDashboard = ({ initialTab = 'analytics' }) => {
       setTaskDesc('');
       setTaskDueDate('');
       setTaskAssignedTarget('');
+      setTaskResourceId('');
       
       const tasksRes = await api.get('/tasks');
       setTasks(tasksRes.data);
@@ -1127,16 +1213,21 @@ const AdminDashboard = ({ initialTab = 'analytics' }) => {
     }
   };
 
-  // Obtener la Suite de 10 Reportes del Sistema con Filtros Avanzados
+  // Obtener la Suite de 10 Reportes del Sistema con Filtros Avanzados y Alcance
   const fetchAllReports = async () => {
     setReportsLoading(true);
     try {
       const params = {};
+      if (reportScope) params.scope = reportScope;
+      if (reportScope === 'user' && reportTargetUserId) params.user_id = reportTargetUserId;
+      if (reportQuickRange) params.quick_range = reportQuickRange;
       if (reportStartDate) params.start_date = reportStartDate;
       if (reportEndDate) params.end_date = reportEndDate;
       if (reportDeptFilter && reportDeptFilter !== 'todos') params.department = reportDeptFilter;
       if (reportStatusFilter && reportStatusFilter !== 'todos') params.status = reportStatusFilter;
       if (reportRoleFilter && reportRoleFilter !== 'todos') params.role = reportRoleFilter;
+      if (reportRiskFilter && reportRiskFilter !== 'todos') params.risk_level = reportRiskFilter;
+      if (reportPriorityFilter && reportPriorityFilter !== 'todos') params.priority = reportPriorityFilter;
 
       const res = await api.get('/reports/all', { params });
       setAllReportsData(res.data);
@@ -1147,171 +1238,66 @@ const AdminDashboard = ({ initialTab = 'analytics' }) => {
     }
   };
 
+  const handleReportFilterChange = (field, val, valObj = null) => {
+    if (field === 'scope') {
+      setReportScope(val);
+      if (val === 'institution') {
+        setReportDeptFilter('todos');
+        setReportTargetUserId('');
+        setReportTargetUserObj(null);
+      } else if (val === 'department') {
+        setReportTargetUserId('');
+        setReportTargetUserObj(null);
+      }
+    } else if (field === 'user_id') {
+      setReportTargetUserId(val);
+      if (valObj) setReportTargetUserObj(valObj);
+    } else if (field === 'start_date') {
+      setReportStartDate(val);
+      setReportQuickRange('');
+    } else if (field === 'end_date') {
+      setReportEndDate(val);
+      setReportQuickRange('');
+    } else if (field === 'department') {
+      setReportDeptFilter(val);
+    } else if (field === 'status') {
+      setReportStatusFilter(val);
+    } else if (field === 'role') {
+      setReportRoleFilter(val);
+    } else if (field === 'risk_level') {
+      setReportRiskFilter(val);
+    } else if (field === 'priority') {
+      setReportPriorityFilter(val);
+    }
+  };
+
+  const handleReportQuickRange = (rangeId) => {
+    setReportQuickRange(rangeId);
+    setReportStartDate('');
+    setReportEndDate('');
+  };
+
+  const handleClearReportFilters = () => {
+    setReportStartDate('');
+    setReportEndDate('');
+    setReportQuickRange('');
+    setReportScope('institution');
+    setReportDeptFilter('todos');
+    setReportTargetUserId('');
+    setReportTargetUserObj(null);
+    setReportStatusFilter('todos');
+    setReportRoleFilter('todos');
+    setReportRiskFilter('todos');
+    setReportPriorityFilter('todos');
+  };
+
   useEffect(() => {
     if (activeTab === 'reports') {
       fetchAllReports();
     } else if (activeTab === 'institutions') {
       fetchInstitutionsAll();
     }
-  }, [activeTab, reportStartDate, reportEndDate, reportDeptFilter, reportStatusFilter, reportRoleFilter]);
-
-  // Exportar Reporte en PDF Ejecutivo con Plantilla Impresa Oficial
-  const handleExportPDF = () => {
-    if (!allReportsData) return;
-    const currentReport = allReportsData[selectedReportId] || {};
-    const filters = allReportsData.filtros_aplicados || {};
-    const detailList = currentReport.detalle || currentReport.detalle_catalogo || [];
-
-    const printWin = window.open('', '_blank');
-    if (!printWin) return;
-
-    // Generar filas de la tabla de detalles en HTML formateado corporativo
-    const tableRowsHtml = detailList.length === 0
-      ? `<tr><td colspan="5" style="text-align:center; padding:18px; color:#64748b;">No hay registros detallados disponibles para la consulta seleccionada.</td></tr>`
-      : detailList.map((item, idx) => `
-        <tr style="border-bottom:1px solid #e2e8f0;">
-          <td style="padding:10px; font-weight:700;">${idx + 1}</td>
-          <td style="padding:10px; font-weight:700; color:#0f172a;">${item.title || item.user_name || item.action || item.suggestion || item.reason || item.receiver_name || `Registro #${idx+1}`}</td>
-          <td style="padding:10px; color:#475569;">${item.user_department || item.receiver_dept || item.department || item.category || item.role || 'General'}</td>
-          <td style="padding:10px;"><span style="background:#e0e7ff; color:#4338ca; padding:3px 8px; border-radius:12px; font-size:11px; font-weight:700;">${item.status || item.risk_level || item.board_column || item.sentiment || 'Activo'}</span></td>
-          <td style="padding:10px; color:#64748b;">${item.created_at ? new Date(item.created_at).toLocaleDateString() : item.date_time ? new Date(item.date_time).toLocaleDateString() : 'N/A'}</td>
-        </tr>
-      `).join('');
-
-    const htmlContent = `
-      <!DOCTYPE html>
-      <html>
-      <head>
-        <title>EquilibrIA - ${currentReport.titulo || 'Informe Oficial'}</title>
-        <style>
-          @page { size: letter; margin: 15mm; }
-          body { font-family: 'Segoe UI', Arial, sans-serif; color: #1e293b; background: #ffffff; margin: 0; padding: 24px; }
-          .header-bar { display: flex; justify-content: space-between; align-items: center; border-bottom: 3px solid #6366f1; padding-bottom: 16px; margin-bottom: 24px; }
-          .brand-title { font-size: 24px; font-weight: 900; color: #4f46e5; letter-spacing: -0.5px; }
-          .brand-sub { font-size: 12px; color: #64748b; font-weight: 600; }
-          .doc-badge { background: #e0e7ff; color: #4338ca; border: 1px solid #c7d2fe; padding: 4px 12px; border-radius: 20px; font-weight: 800; font-size: 11px; }
-          .doc-title { font-size: 20px; font-weight: 900; color: #0f172a; margin-bottom: 12px; }
-          .meta-box { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 14px 18px; margin-bottom: 24px; display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; font-size: 12px; }
-          .section-title { font-size: 14px; font-weight: 800; color: #334155; margin-bottom: 12px; border-left: 4px solid #6366f1; padding-left: 8px; }
-          .kpi-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 24px; }
-          .kpi-card { background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 12px; padding: 12px; text-align: center; }
-          .kpi-num { font-size: 22px; font-weight: 900; color: #4f46e5; margin-top: 4px; }
-          table { width: 100%; border-collapse: collapse; margin-bottom: 30px; font-size: 12px; }
-          th { background: #f1f5f9; color: #475569; font-weight: 800; padding: 10px; text-align: left; border-bottom: 2px solid #cbd5e1; }
-          .signature-section { margin-top: 40px; page-break-inside: avoid; display: flex; justify-content: space-between; align-items: flex-end; border-top: 1px solid #e2e8f0; padding-top: 30px; }
-          .sig-box { width: 55%; }
-          .sig-line { border-top: 2px solid #0f172a; width: 85%; margin-top: 40px; margin-bottom: 8px; }
-          .stamp-box { border: 2px dashed #6366f1; background: #e0e7ff; color: #4338ca; padding: 16px; border-radius: 12px; text-align: center; font-size: 11px; font-weight: 800; width: 35%; }
-          .footer { font-size: 10px; color: #94a3b8; text-align: center; margin-top: 30px; }
-        </style>
-      </head>
-      <body>
-        <div class="header-bar">
-          <div>
-            <div class="brand-title">EquilibrIA Platform</div>
-            <div class="brand-sub">Sistema de Análisis de Bienestar Emocional e Información Institucional</div>
-          </div>
-          <div class="doc-badge">DOCUMENTO OFICIAL AUDITADO</div>
-        </div>
-
-        <div class="doc-title">${currentReport.titulo || 'Informe Consolidados de Bienestar'}</div>
-
-        <div class="meta-box">
-          <div><strong>Institución Emisora:</strong> ${allReportsData.institucion || 'EquilibrIA Central'}</div>
-          <div><strong>Fecha de Emisión:</strong> ${allReportsData.fecha_generacion}</div>
-          <div><strong>Rango de Consulta:</strong> ${filters.fecha_inicio || 'Todo el Historial'} al ${filters.fecha_fin || 'Fecha Actual'}</div>
-          <div><strong>Filtro de Departamento:</strong> ${filters.departamento || 'Todos'}</div>
-        </div>
-
-        <div class="section-title">Consolidado de Indicadores Ejecutivos</div>
-        <div class="kpi-grid">
-          <div class="kpi-card">
-            <div style="font-size:11px; color:#64748b; font-weight:700;">REGISTROS ANALIZADOS</div>
-            <div class="kpi-num">${detailList.length}</div>
-          </div>
-          <div class="kpi-card">
-            <div style="font-size:11px; color:#64748b; font-weight:700;">ESTADO DE REVISIÓN</div>
-            <div class="kpi-num" style="font-size:15px; margin-top:8px; color:#10b981;">AUDITADO</div>
-          </div>
-          <div class="kpi-card">
-            <div style="font-size:11px; color:#64748b; font-weight:700;">VALIDEZ LEGAL</div>
-            <div class="kpi-num" style="font-size:15px; margin-top:8px; color:#6366f1;">VIGENTE</div>
-          </div>
-          <div class="kpi-card">
-            <div style="font-size:11px; color:#64748b; font-weight:700;">NIVEL DE ACCESO</div>
-            <div class="kpi-num" style="font-size:15px; margin-top:8px; color:#f59e0b;">CONFIDENCIAL</div>
-          </div>
-        </div>
-
-        <div class="section-title">Detalle Consolidado de Registros en el Reporte</div>
-        <table>
-          <thead>
-            <tr>
-              <th>#</th>
-              <th>CONCEPTO / REGISTRO</th>
-              <th>CATEGORÍA / DEPARTAMENTO</th>
-              <th>ESTADO</th>
-              <th>FECHA REGISTRO</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${tableRowsHtml}
-          </tbody>
-        </table>
-
-        <div class="signature-section">
-          <div class="sig-box">
-            <div style="font-size:11px; font-weight:800; color:#64748b;">AUTORIZACIÓN Y CERTIFICACIÓN INSTITUCIONAL</div>
-            <div class="sig-line"></div>
-            <div style="font-size:13px; font-weight:900; color:#0f172a;">Dra. Sofía Ramírez</div>
-            <div style="font-size:12px; color:#475569; font-weight:600;">Dirección de Bienestar Emocional & Salud Institucional</div>
-            <div style="font-size:11px; color:#94a3b8;">EquilibrIA Platform Certificación Oficial</div>
-          </div>
-
-          <div class="stamp-box">
-            <div style="font-size:12px; font-weight:900; margin-bottom:4px;">SELLO INSTITUCIONAL DE VALIDACIÓN</div>
-            Documento procesado de conformidad con normativas de confidencialidad y salud ocupacional.
-          </div>
-        </div>
-
-        <div class="footer">
-          Informe Oficial Confidencial • Generado automáticamente por EquilibrIA Platform Engine
-        </div>
-
-        <script>
-          window.onload = function() { window.print(); }
-        </script>
-      </body>
-      </html>
-    `;
-
-    printWin.document.write(htmlContent);
-    printWin.document.close();
-  };
-
-  const handleExportCSV = () => {
-    if (!allReportsData) return;
-    const currentReport = allReportsData[selectedReportId] || {};
-    const jsonStr = "data:text/csv;charset=utf-8," + encodeURIComponent(JSON.stringify(currentReport, null, 2));
-    const downloadAnchor = document.createElement('a');
-    downloadAnchor.setAttribute("href", jsonStr);
-    downloadAnchor.setAttribute("download", `${selectedReportId}_${new Date().toISOString().slice(0,10)}.csv`);
-    document.body.appendChild(downloadAnchor);
-    downloadAnchor.click();
-    downloadAnchor.remove();
-  };
-
-  const handleExportJSON = () => {
-    if (!allReportsData) return;
-    const currentReport = allReportsData[selectedReportId] || {};
-    const jsonStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(currentReport, null, 2));
-    const downloadAnchor = document.createElement('a');
-    downloadAnchor.setAttribute("href", jsonStr);
-    downloadAnchor.setAttribute("download", `${selectedReportId}_${new Date().toISOString().slice(0,10)}.json`);
-    document.body.appendChild(downloadAnchor);
-    downloadAnchor.click();
-    downloadAnchor.remove();
-  };
+  }, [activeTab, reportScope, reportTargetUserId, reportStartDate, reportEndDate, reportQuickRange, reportDeptFilter, reportStatusFilter, reportRoleFilter, reportRiskFilter, reportPriorityFilter]);
 
   // RENDER DE CALENDARIO FUTURISTA DE PROGRAMACIÓN
   const getDaysInMonth = (year, month) => {
@@ -2137,7 +2123,7 @@ const AdminDashboard = ({ initialTab = 'analytics' }) => {
           </div>
 
           {/* Botón Selector de Paletas de Colores 🎨 */}
-          <div style={{ position: 'relative' }}>
+          <div ref={paletteMenuRef} style={{ position: 'relative' }}>
             <button 
               onClick={() => { setShowPaletteMenu(!showPaletteMenu); setShowNotifications(false); }}
               className="theme-toggle"
@@ -2244,7 +2230,7 @@ const AdminDashboard = ({ initialTab = 'analytics' }) => {
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
               <ShieldAlert size={22} style={{ color: 'var(--primary)', flexShrink: 0 }} />
               <span>
-                <strong>Aviso de Confidencialidad</strong>: La información de bienestar es anónima y agregada. (Se cerrará en 20s)
+                <strong>Aviso de Confidencialidad</strong>: La información de bienestar es anónima y agregada. (Se cerrará en {privacyCountdown}s)
               </span>
             </div>
             <button onClick={() => setShowPrivacyNotice(false)} aria-label="Cerrar aviso" style={{ border: 'none', background: 'transparent', color: 'var(--text-muted)', cursor: 'pointer', fontSize: '18px', fontWeight: 'bold', lineHeight: 1 }}>×</button>
@@ -2432,6 +2418,43 @@ const AdminDashboard = ({ initialTab = 'analytics' }) => {
               {createSuccess && <div style={{ backgroundColor: 'var(--success-light)', border: '1px solid var(--success)', color: 'var(--success)', padding: '10px', borderRadius: 'var(--radius-sm)', fontSize: '12.5px', marginBottom: '14px' }}>{createSuccess}</div>}
 
               <form onSubmit={handleCreateTask}>
+                {/* Selector de Recurso de Bienestar para Validación Automática */}
+                <div style={{ backgroundColor: 'var(--bg-primary)', padding: '14px 16px', borderRadius: '14px', border: '1.5px solid var(--primary-light)', marginBottom: '16px' }}>
+                  <label style={{ fontSize: '11.5px', fontWeight: '900', color: 'var(--primary)', display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '8px', textTransform: 'uppercase' }}>
+                    <Sparkles size={14} /> Vincular Recurso de Bienestar (Validación Interactiva):
+                  </label>
+                  <CustomSelect
+                    options={[
+                      { value: '', label: 'Ninguno (Tarea Manual)', sublabel: 'El usuario la marca como completada manualmente' },
+                      ...availableResources.map(r => ({
+                        value: r.id,
+                        label: `${r.title} (${r.resource_type})`,
+                        sublabel: `${r.category} • ~${r.reading_time_minutes} min • +${r.xp_reward || 15} XP`,
+                        icon: '🧘'
+                      }))
+                    ]}
+                    value={taskResourceId}
+                    onChange={(val) => {
+                      setTaskResourceId(val);
+                      if (val) {
+                        const found = availableResources.find(r => r.id === val);
+                        if (found) {
+                          if (!taskTitle) setTaskTitle(`Completar: ${found.title}`);
+                          if (!taskDesc) setTaskDesc(`Realizar la actividad de bienestar "${found.title}" (${found.resource_type}) en el reproductor interactivo.`);
+                          setTaskEstMinutes(found.reading_time_minutes || 15);
+                          setTaskCategory('Bienestar');
+                        }
+                      }
+                    }}
+                    placeholder="Seleccionar recurso interactivo o lectura..."
+                  />
+                  {taskResourceId && (
+                    <div style={{ fontSize: '11px', color: 'var(--success)', fontWeight: '800', marginTop: '8px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                      <CheckCircle2 size={13} /> Al completar el recurso, la tarea se validará y completará automáticamente (+20 XP).
+                    </div>
+                  )}
+                </div>
+
                 <div className="form-group" style={{ marginBottom: '14px' }}>
                   <label>Título de la Tarea</label>
                   <input type="text" placeholder="Ej. Pausa activa de respiración consciente" value={taskTitle} onChange={(e) => setTaskTitle(e.target.value)} required />
@@ -2618,6 +2641,13 @@ const AdminDashboard = ({ initialTab = 'analytics' }) => {
                         </div>
                         <h4 style={{ fontSize: '14px', fontWeight: '800' }}>{task.title}</h4>
                         {task.description && <p style={{ fontSize: '12px', color: 'var(--text-secondary)', marginTop: '4px' }}>{task.description}</p>}
+                        {task.resource && (
+                          <div style={{ marginTop: '6px' }}>
+                            <span style={{ fontSize: '10.5px', fontWeight: '800', padding: '2px 8px', borderRadius: '6px', backgroundColor: 'var(--primary-light)', color: 'var(--primary)', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                              🧘 Vinculada a Recurso: <strong>{task.resource.title}</strong> ({task.resource.resource_type})
+                            </span>
+                          </div>
+                        )}
                       </div>
                       <button onClick={() => handleDeleteTask(task.id)} className="theme-toggle" style={{ color: 'var(--danger)', border: '1px solid var(--border)', width: '30px', height: '30px' }} title="Eliminar"><Trash2 size={13} /></button>
                     </div>
@@ -2901,7 +2931,7 @@ const AdminDashboard = ({ initialTab = 'analytics' }) => {
                                     <Target size={8} /> {ev.assigned_type === 'all' ? 'Todos' : ev.assigned_type === 'department' ? `Depto: ${ev.assigned_target}` : `Individual: ${ev.assigned_target}`}
                                   </span>
                                 </div>
-                                <h4 style={{ fontSize: '14px', fontWeight: '800' }}>{ev.title}</h4>
+                                <h4 style={{ fontSize: '14px', fontWeight: '800' }}>{cleanEvalTitle(ev.title)}</h4>
                               </div>
                               <button onClick={() => handleDeleteEvaluation(ev.id)} className="theme-toggle" style={{ color: 'var(--danger)', border: '1px solid var(--border)', width: '28px', height: '28px' }} title="Eliminar"><Trash2 size={12} /></button>
                             </div>
@@ -2953,7 +2983,7 @@ const AdminDashboard = ({ initialTab = 'analytics' }) => {
                       <div className="animate-fade">
                         <div style={{ marginBottom: '16px', borderBottom: '1px solid var(--border)', paddingBottom: '10px' }}>
                           <span style={{ fontSize: '10px', fontWeight: '800', color: 'var(--primary)', textTransform: 'uppercase' }}>Analíticas del Cuestionario</span>
-                          <h4 style={{ fontSize: '15px', fontWeight: '800', marginTop: '2px' }}>{selectedTestAnalytics.title}</h4>
+                          <h4 style={{ fontSize: '15px', fontWeight: '800', marginTop: '2px' }}>{cleanEvalTitle(selectedTestAnalytics.title)}</h4>
                           <span style={{ fontSize: '11.5px', color: 'var(--text-secondary)', display: 'block', marginTop: '2px' }}>Respuestas procesadas por IA: <strong>{selectedTestAnalytics.total_responses}</strong></span>
                         </div>
 
@@ -3027,10 +3057,24 @@ const AdminDashboard = ({ initialTab = 'analytics' }) => {
                     </p>
                   </div>
                   <span style={{ fontSize: '11px', fontWeight: '800', padding: '4px 10px', borderRadius: '10px', backgroundColor: 'var(--primary-light)', color: 'var(--primary)' }}>
-                    6 Plantillas Disponibles
+                    {templates.length > 0 ? `${templates.length} Plantillas Disponibles` : 'Cargando...'}
                   </span>
                 </div>
 
+                {templates.length === 0 ? (
+                  <div style={{ textAlign: 'center', padding: '40px 20px', color: 'var(--text-muted)' }}>
+                    <div className="animate-spin" style={{ width: '28px', height: '28px', border: '3px solid var(--border)', borderTopColor: 'var(--primary)', borderRadius: '50%', margin: '0 auto 12px' }} />
+                    <h4 style={{ fontSize: '13.5px', fontWeight: '800', marginBottom: '8px', color: 'var(--text-secondary)' }}>Obteniendo banco de plantillas de evaluación...</h4>
+                    <button 
+                      type="button" 
+                      onClick={fetchTemplates}
+                      className="btn btn-secondary" 
+                      style={{ padding: '6px 14px', fontSize: '12px', borderRadius: '8px' }}
+                    >
+                      Recargar Banco de Plantillas
+                    </button>
+                  </div>
+                ) : (
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '20px' }}>
                   {templates.map((tpl) => {
                     const config = templateTargets[tpl.id] || { type: 'all', target: '' };
@@ -3104,6 +3148,7 @@ const AdminDashboard = ({ initialTab = 'analytics' }) => {
                     );
                   })}
                 </div>
+                )}
               </div>
             )}
 
@@ -4252,486 +4297,28 @@ const AdminDashboard = ({ initialTab = 'analytics' }) => {
 
         {/* TAB 7: CENTRO DE 10 REPORTES DEL SISTEMA CON EXPORTACIÓN MULTIFORMATO (PDF, CSV, JSON) */}
         {activeTab === 'reports' && (
-          <div className="animate-fade" style={{ display: 'grid', gap: '20px' }}>
-            
-            {/* Header del Centro de Reportes */}
-            <div className="glass-card" style={{ overflow: 'visible' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '14px', marginBottom: '16px' }}>
-                <div>
-                  <h3 style={{ fontSize: '18px', fontWeight: '900', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <FileSpreadsheet size={20} style={{ color: 'var(--primary)' }} /> Centro Avanzado de Reportes e Informes Institucionales (10 Reportes)
-                  </h3>
-                  <p style={{ fontSize: '12.5px', color: 'var(--text-secondary)', marginTop: '4px' }}>
-                    Selecciona cualquier reporte consolidado y expórtalo en PDF oficial para imprimir, CSV para Excel o JSON estructurado.
-                  </p>
-                </div>
-
-                {/* Botones de Exportación Multiformato sin Emojis */}
-                <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-                  <button 
-                    type="button"
-                    onClick={handleExportPDF} 
-                    className="btn btn-primary"
-                    style={{ padding: '8px 14px', fontSize: '12px', borderRadius: '12px', display: 'flex', alignItems: 'center', gap: '6px', fontWeight: '800' }}
-                  >
-                    <Printer size={15} /> Exportar en PDF (Impresión)
-                  </button>
-                  <button 
-                    type="button"
-                    onClick={handleExportCSV} 
-                    className="duo-pill"
-                    style={{ padding: '8px 14px', fontSize: '12px', display: 'flex', alignItems: 'center', gap: '6px' }}
-                  >
-                    <Download size={14} /> Exportar en CSV (Excel)
-                  </button>
-                  <button 
-                    type="button"
-                    onClick={handleExportJSON} 
-                    className="duo-pill"
-                    style={{ padding: '8px 14px', fontSize: '12px', display: 'flex', alignItems: 'center', gap: '6px' }}
-                  >
-                    <FileSpreadsheet size={14} /> Exportar en JSON
-                  </button>
-                </div>
-              </div>
-
-              {/* BARRA DE FILTROS AVANZADOS DE REPORTES */}
-              <div style={{ 
-                backgroundColor: 'var(--bg-secondary)', 
-                borderRadius: '16px', 
-                border: '1px solid var(--border)', 
-                padding: '16px 20px', 
-                marginBottom: '20px',
-                display: 'grid',
-                gap: '12px',
-                overflow: 'visible'
-              }}>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '10px' }}>
-                  <span style={{ fontSize: '13px', fontWeight: '800', display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--primary)' }}>
-                    <Sliders size={16} /> Filtros Avanzados de Consulta e Informes
-                  </span>
-                  
-                  {/* Presets Rápidos de Fecha sin Emojis */}
-                  <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        const now = new Date();
-                        const sevenDaysAgo = new Date(now.setDate(now.getDate() - 7)).toISOString().slice(0, 10);
-                        setReportStartDate(sevenDaysAgo);
-                        setReportEndDate(new Date().toISOString().slice(0, 10));
-                      }}
-                      className="duo-pill"
-                      style={{ padding: '4px 10px', fontSize: '11px', display: 'flex', alignItems: 'center', gap: '4px' }}
-                    >
-                      <Zap size={12} /> Últimos 7 Días
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        const now = new Date();
-                        const thirtyDaysAgo = new Date(now.setDate(now.getDate() - 30)).toISOString().slice(0, 10);
-                        setReportStartDate(thirtyDaysAgo);
-                        setReportEndDate(new Date().toISOString().slice(0, 10));
-                      }}
-                      className="duo-pill"
-                      style={{ padding: '4px 10px', fontSize: '11px', display: 'flex', alignItems: 'center', gap: '4px' }}
-                    >
-                      <Calendar size={12} /> Últimos 30 Días
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        const currentYear = new Date().getFullYear();
-                        setReportStartDate(`${currentYear}-01-01`);
-                        setReportEndDate(new Date().toISOString().slice(0, 10));
-                      }}
-                      className="duo-pill"
-                      style={{ padding: '4px 10px', fontSize: '11px', display: 'flex', alignItems: 'center', gap: '4px' }}
-                    >
-                      <Calendar size={12} /> Este Año
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setReportStartDate('');
-                        setReportEndDate('');
-                        setReportDeptFilter('todos');
-                        setReportStatusFilter('todos');
-                        setReportRoleFilter('todos');
-                      }}
-                      className="duo-pill"
-                      style={{ padding: '4px 10px', fontSize: '11px', color: 'var(--accent)', display: 'flex', alignItems: 'center', gap: '4px' }}
-                    >
-                      <RotateCcw size={12} /> Limpiar Filtros
-                    </button>
-                  </div>
-                </div>
-
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '12px' }}>
-                  {/* Fecha Inicio */}
-                  <div>
-                    <label style={{ fontSize: '11px', fontWeight: '800', color: 'var(--text-secondary)', display: 'block', marginBottom: '4px' }}>
-                      FECHA INICIO
-                    </label>
-                    <CustomDatePicker 
-                      value={reportStartDate} 
-                      onChange={(val) => setReportStartDate(val)} 
-                      placeholder="Desde (YYYY-MM-DD)" 
-                    />
-                  </div>
-
-                  {/* Fecha Fin */}
-                  <div>
-                    <label style={{ fontSize: '11px', fontWeight: '800', color: 'var(--text-secondary)', display: 'block', marginBottom: '4px' }}>
-                      FECHA FIN
-                    </label>
-                    <CustomDatePicker 
-                      value={reportEndDate} 
-                      onChange={(val) => setReportEndDate(val)} 
-                      placeholder="Hasta (YYYY-MM-DD)" 
-                    />
-                  </div>
-
-                  {/* Departamento */}
-                  <div>
-                    <label style={{ fontSize: '11px', fontWeight: '800', color: 'var(--text-secondary)', display: 'block', marginBottom: '4px' }}>
-                      DEPARTAMENTO
-                    </label>
-                    <CustomSelect
-                      value={reportDeptFilter}
-                      onChange={(val) => setReportDeptFilter(typeof val === 'string' ? val : val?.target?.value || 'todos')}
-                      options={[
-                        { value: 'todos', label: 'Todos los Departamentos' },
-                        { value: 'General', label: 'General' },
-                        { value: 'Recursos Humanos', label: 'Recursos Humanos' },
-                        { value: 'Tecnología', label: 'Tecnología / TI' },
-                        { value: 'Operaciones', label: 'Operaciones' },
-                        { value: 'Ventas', label: 'Ventas' },
-                        { value: 'Finanzas', label: 'Finanzas' },
-                        { value: 'Salud y Apoyo', label: 'Salud y Bienestar' }
-                      ]}
-                    />
-                  </div>
-
-                  {/* Estado / Condición */}
-                  <div>
-                    <label style={{ fontSize: '11px', fontWeight: '800', color: 'var(--text-secondary)', display: 'block', marginBottom: '4px' }}>
-                      ESTADO / RIESGO
-                    </label>
-                    <CustomSelect
-                      value={reportStatusFilter}
-                      onChange={(val) => setReportStatusFilter(typeof val === 'string' ? val : val?.target?.value || 'todos')}
-                      options={[
-                        { value: 'todos', label: 'Todos los Estados' },
-                        { value: 'pendiente', label: 'Pendientes / Riesgo' },
-                        { value: 'completada', label: 'Completadas / Atendidas' }
-                      ]}
-                    />
-                  </div>
-                </div>
-              </div>
-
-              {/* Selector de los 10 Reportes del Sistema sin Emojis */}
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '8px' }}>
-                {[
-                  { id: 'reporte_1_clima', title: '1. Clima & Indicadores', Icon: BarChart3 },
-                  { id: 'reporte_2_alertas', title: '2. Alertas & Prioridades', Icon: AlertTriangle },
-                  { id: 'reporte_3_tareas', title: '3. Cumplimiento de Tareas', Icon: CheckSquare },
-                  { id: 'reporte_4_citas', title: '4. Citas Clínicas de Apoyo', Icon: Calendar },
-                  { id: 'reporte_5_kudos', title: '5. Muro de Gratitud & Kudos', Icon: Heart },
-                  { id: 'reporte_6_gamificacion', title: '6. Gamificación & XP', Icon: Award },
-                  { id: 'reporte_7_usuarios', title: '7. Directorio de Usuarios', Icon: Users },
-                  { id: 'reporte_8_tests', title: '8. Tests Estandarizados', Icon: ClipboardList },
-                  { id: 'reporte_9_auditoria', title: '9. Auditoría de Seguridad', Icon: ShieldCheck },
-                  { id: 'reporte_10_sugerencias', title: '10. Estrategia de IA Gemini', Icon: Sparkles }
-                ].map(r => {
-                  const IconComp = r.Icon || FileSpreadsheet;
-                  const isSelected = (selectedReportId || 'reporte_1_clima') === r.id;
-                  return (
-                    <button
-                      key={r.id}
-                      type="button"
-                      onClick={() => setSelectedReportId(r.id)}
-                      className={`duo-card ${isSelected ? 'selected' : ''}`}
-                      style={{ padding: '10px 12px', justifyContent: 'flex-start', gap: '8px', fontSize: '12px' }}
-                    >
-                      <IconComp size={16} style={{ color: isSelected ? 'var(--primary)' : 'var(--text-muted)' }} />
-                      <span style={{ fontWeight: '800' }}>{r.title}</span>
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-
-            {/* Vista Previa Interactiva del Documento Ejecutivo Oficial (Cero JSON) */}
-            <div className="glass-card">
-              {reportsLoading ? (
-                <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '10px', padding: '40px', color: 'var(--primary)' }}>
-                  <Loader className="animate-spin" size={24} />
-                  <span style={{ fontWeight: '800', fontSize: '13px' }}>Cargando informe consolidado...</span>
-                </div>
-              ) : !allReportsData ? (
-                <div style={{ textAlign: 'center', padding: '30px', color: 'var(--text-muted)' }}>
-                  <p style={{ fontSize: '13px' }}>No hay datos de reportes cargados aún.</p>
-                  <button onClick={fetchAllReports} className="btn btn-primary" style={{ marginTop: '10px', padding: '6px 14px', fontSize: '12px' }}>
-                    Cargar Informes
-                  </button>
-                </div>
-              ) : (
-                <div className="animate-fade" style={{ display: 'grid', gap: '20px' }}>
-                  {(() => {
-                    const safeReportId = selectedReportId || 'reporte_1_clima';
-                    const currentRep = (allReportsData && allReportsData[safeReportId]) || {};
-                    const filters = (allReportsData && allReportsData.filtros_aplicados) || {};
-                    const detailList = Array.isArray(currentRep.detalle) ? currentRep.detalle : (Array.isArray(currentRep.detalle_catalogo) ? currentRep.detalle_catalogo : []);
-
-                    return (
-                      <div style={{ display: 'grid', gap: '20px' }}>
-                        {/* ENCABEZADO INSTITUCIONAL */}
-                        <div style={{
-                          borderBottom: '2px solid var(--primary)',
-                          paddingBottom: '16px',
-                          display: 'flex',
-                          justifyContent: 'space-between',
-                          alignItems: 'center',
-                          flexWrap: 'wrap',
-                          gap: '12px'
-                        }}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
-                            <img src="/logo.png" alt="Logo EquilibrIA" style={{ height: '44px', objectFit: 'contain' }} />
-                            <div>
-                              <span style={{ fontSize: '10px', fontWeight: '900', color: 'var(--primary)', letterSpacing: '1px', textTransform: 'uppercase' }}>
-                                DOCUMENTO OFICIAL INSTITUCIONAL • CONFIDENCIAL
-                              </span>
-                              <h2 style={{ fontSize: '18px', fontWeight: '900', color: 'var(--text-primary)', marginTop: '2px' }}>
-                                {currentRep.titulo || 'Informe Consolidado de Bienestar'}
-                              </h2>
-                            </div>
-                          </div>
-
-                          <div style={{ textAlign: 'right' }}>
-                            <span className="duo-pill" style={{ backgroundColor: 'var(--primary-light)', color: 'var(--primary)', fontWeight: '900', fontSize: '11px' }}>
-                              CÓDIGO: EQ-REP-{safeReportId.toUpperCase()}
-                            </span>
-                            <p style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '4px' }}>
-                              Emisión: {allReportsData?.fecha_generacion || new Date().toLocaleString()}
-                            </p>
-                          </div>
-                        </div>
-
-                        {/* FICHA TÉCNICA DEL INFORME */}
-                        <div style={{
-                          backgroundColor: 'var(--bg-secondary)',
-                          borderRadius: '14px',
-                          border: '1px solid var(--border)',
-                          padding: '14px 18px',
-                          display: 'grid',
-                          gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
-                          gap: '12px',
-                          fontSize: '12px'
-                        }}>
-                          <div>
-                            <span style={{ color: 'var(--text-muted)', fontWeight: '600', display: 'block' }}>Institución Emisora:</span>
-                            <p style={{ fontWeight: '800', color: 'var(--text-primary)', marginTop: '2px' }}>{allReportsData?.institucion || 'EquilibrIA Central'}</p>
-                          </div>
-                          <div>
-                            <span style={{ color: 'var(--text-muted)', fontWeight: '600', display: 'block' }}>Rango de Fechas:</span>
-                            <p style={{ fontWeight: '800', color: 'var(--text-primary)', marginTop: '2px' }}>{filters?.fecha_inicio || 'Inicio'} al {filters?.fecha_fin || 'Actual'}</p>
-                          </div>
-                          <div>
-                            <span style={{ color: 'var(--text-muted)', fontWeight: '600', display: 'block' }}>Filtro Departamento:</span>
-                            <p style={{ fontWeight: '800', color: 'var(--text-primary)', marginTop: '2px' }}>{filters?.departamento || 'Todos'}</p>
-                          </div>
-                          <div>
-                            <span style={{ color: 'var(--text-muted)', fontWeight: '600', display: 'block' }}>Estado de Consulta:</span>
-                            <p style={{ fontWeight: '800', color: 'var(--text-primary)', marginTop: '2px' }}>{filters?.estado || 'Todos'}</p>
-                          </div>
-                        </div>
-
-                        {/* MÉTRICAS CLAVE / RESUMEN EJECUTIVO */}
-                        <div>
-                          <h4 style={{ fontSize: '13px', fontWeight: '800', color: 'var(--text-secondary)', marginBottom: '10px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                            Consolidado de Indicadores Ejecutivos
-                          </h4>
-                          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '12px' }}>
-                            {selectedReportId === 'reporte_1_clima' && (
-                              <>
-                                <div className="futuristic-card-item">
-                                  <span style={{ fontSize: '11px', color: 'var(--text-muted)', fontWeight: '700' }}>ESTRÉS PROMEDIO</span>
-                                  <h3 style={{ fontSize: '22px', fontWeight: '900', color: '#ef4444', marginTop: '4px' }}>{currentRep.estres_promedio}%</h3>
-                                </div>
-                                <div className="futuristic-card-item">
-                                  <span style={{ fontSize: '11px', color: 'var(--text-muted)', fontWeight: '700' }}>MOTIVACIÓN PROMEDIO</span>
-                                  <h3 style={{ fontSize: '22px', fontWeight: '900', color: '#10b981', marginTop: '4px' }}>{currentRep.motivacion_promedio}%</h3>
-                                </div>
-                                <div className="futuristic-card-item">
-                                  <span style={{ fontSize: '11px', color: 'var(--text-muted)', fontWeight: '700' }}>RIESGO DE BURNOUT</span>
-                                  <h3 style={{ fontSize: '22px', fontWeight: '900', color: '#f59e0b', marginTop: '4px' }}>{currentRep.burnout_promedio}%</h3>
-                                </div>
-                                <div className="futuristic-card-item">
-                                  <span style={{ fontSize: '11px', color: 'var(--text-muted)', fontWeight: '700' }}>TOTAL REFLEXIONES</span>
-                                  <h3 style={{ fontSize: '22px', fontWeight: '900', color: 'var(--primary)', marginTop: '4px' }}>{currentRep.total_reflexiones}</h3>
-                                </div>
-                              </>
-                            )}
-
-                            {selectedReportId === 'reporte_2_alertas' && (
-                              <>
-                                <div className="futuristic-card-item">
-                                  <span style={{ fontSize: '11px', color: 'var(--text-muted)', fontWeight: '700' }}>TOTAL ALERTAS</span>
-                                  <h3 style={{ fontSize: '22px', fontWeight: '900', color: 'var(--primary)', marginTop: '4px' }}>{currentRep.total_alertas}</h3>
-                                </div>
-                                <div className="futuristic-card-item">
-                                  <span style={{ fontSize: '11px', color: 'var(--text-muted)', fontWeight: '700' }}>ALERTAS PENDIENTES</span>
-                                  <h3 style={{ fontSize: '22px', fontWeight: '900', color: '#ef4444', marginTop: '4px' }}>{currentRep.pendientes}</h3>
-                                </div>
-                                <div className="futuristic-card-item">
-                                  <span style={{ fontSize: '11px', color: 'var(--text-muted)', fontWeight: '700' }}>ALERTAS ATENDIDAS</span>
-                                  <h3 style={{ fontSize: '22px', fontWeight: '900', color: '#10b981', marginTop: '4px' }}>{currentRep.atendidas}</h3>
-                                </div>
-                              </>
-                            )}
-
-                            {selectedReportId === 'reporte_3_tareas' && (
-                              <>
-                                <div className="futuristic-card-item">
-                                  <span style={{ fontSize: '11px', color: 'var(--text-muted)', fontWeight: '700' }}>TOTAL TAREAS</span>
-                                  <h3 style={{ fontSize: '22px', fontWeight: '900', color: 'var(--primary)', marginTop: '4px' }}>{currentRep.total_tareas}</h3>
-                                </div>
-                                <div className="futuristic-card-item">
-                                  <span style={{ fontSize: '11px', color: 'var(--text-muted)', fontWeight: '700' }}>POR HACER</span>
-                                  <h3 style={{ fontSize: '22px', fontWeight: '900', color: '#f59e0b', marginTop: '4px' }}>{currentRep.por_hacer}</h3>
-                                </div>
-                                <div className="futuristic-card-item">
-                                  <span style={{ fontSize: '11px', color: 'var(--text-muted)', fontWeight: '700' }}>EN PROCESO</span>
-                                  <h3 style={{ fontSize: '22px', fontWeight: '900', color: '#3b82f6', marginTop: '4px' }}>{currentRep.en_proceso}</h3>
-                                </div>
-                                <div className="futuristic-card-item">
-                                  <span style={{ fontSize: '11px', color: 'var(--text-muted)', fontWeight: '700' }}>COMPLETADAS</span>
-                                  <h3 style={{ fontSize: '22px', fontWeight: '900', color: '#10b981', marginTop: '4px' }}>{currentRep.completadas}</h3>
-                                </div>
-                              </>
-                            )}
-
-                            {selectedReportId !== 'reporte_1_clima' && selectedReportId !== 'reporte_2_alertas' && selectedReportId !== 'reporte_3_tareas' && (
-                              <>
-                                <div className="futuristic-card-item">
-                                  <span style={{ fontSize: '11px', color: 'var(--text-muted)', fontWeight: '700' }}>REGISTROS TOTALES</span>
-                                  <h3 style={{ fontSize: '22px', fontWeight: '900', color: 'var(--primary)', marginTop: '4px' }}>{detailList.length}</h3>
-                                </div>
-                                <div className="futuristic-card-item">
-                                  <span style={{ fontSize: '11px', color: 'var(--text-muted)', fontWeight: '700' }}>ESTADO DE AUDITORÍA</span>
-                                  <h3 style={{ fontSize: '16px', fontWeight: '900', color: '#10b981', marginTop: '8px' }}>AUDITADO OK</h3>
-                                </div>
-                                <div className="futuristic-card-item">
-                                  <span style={{ fontSize: '11px', color: 'var(--text-muted)', fontWeight: '700' }}>VALIDEZ INSTITUCIONAL</span>
-                                  <h3 style={{ fontSize: '16px', fontWeight: '900', color: 'var(--primary)', marginTop: '8px' }}>VIGENTE</h3>
-                                </div>
-                              </>
-                            )}
-                          </div>
-                        </div>
-
-                        {/* TABLA FORMATEADA CON EL DETALLE DE HALLAZGOS */}
-                        <div style={{ backgroundColor: 'var(--bg-secondary)', borderRadius: '14px', border: '1px solid var(--border)', padding: '16px', overflowX: 'auto' }}>
-                          <h4 style={{ fontSize: '13px', fontWeight: '800', marginBottom: '12px', color: 'var(--text-primary)' }}>
-                            Detalle Consolidado de Registros en el Reporte
-                          </h4>
-
-                          {detailList.length === 0 ? (
-                            <div style={{ textAlign: 'center', padding: '24px', color: 'var(--text-muted)', fontSize: '13px' }}>
-                              No hay registros detallados disponibles para este rango de consulta o filtros seleccionados.
-                            </div>
-                          ) : (
-                            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px', textAlign: 'left' }}>
-                              <thead>
-                                <tr style={{ borderBottom: '2px solid var(--border)', color: 'var(--text-muted)' }}>
-                                  <th style={{ padding: '8px 12px' }}>#</th>
-                                  <th style={{ padding: '8px 12px' }}>CONCEPTO / TITULO</th>
-                                  <th style={{ padding: '8px 12px' }}>CATEGORIA / DEPARTAMENTO</th>
-                                  <th style={{ padding: '8px 12px' }}>ESTADO</th>
-                                  <th style={{ padding: '8px 12px' }}>FECHA REGISTRO</th>
-                                </tr>
-                              </thead>
-                              <tbody>
-                                {detailList.map((item, idx) => (
-                                  <tr key={idx} style={{ borderBottom: '1px solid var(--border)' }}>
-                                    <td style={{ padding: '10px 12px', fontWeight: '700' }}>{idx + 1}</td>
-                                    <td style={{ padding: '10px 12px', fontWeight: '700', color: 'var(--text-primary)' }}>
-                                      {item.title || item.user_name || item.action || item.suggestion || item.reason || item.receiver_name || `Registro #${idx+1}`}
-                                    </td>
-                                    <td style={{ padding: '10px 12px', color: 'var(--text-secondary)' }}>
-                                      {item.user_department || item.receiver_dept || item.department || item.category || item.role || 'General'}
-                                    </td>
-                                    <td style={{ padding: '10px 12px' }}>
-                                      <span className="duo-pill" style={{ padding: '2px 8px', fontSize: '10.5px' }}>
-                                        {item.status || item.risk_level || item.board_column || item.sentiment || 'Activo'}
-                                      </span>
-                                    </td>
-                                    <td style={{ padding: '10px 12px', color: 'var(--text-muted)' }}>
-                                      {item.created_at ? new Date(item.created_at).toLocaleDateString() : item.date_time ? new Date(item.date_time).toLocaleDateString() : 'N/A'}
-                                    </td>
-                                  </tr>
-                                ))}
-                              </tbody>
-                            </table>
-                          )}
-                        </div>
-
-                        {/* SECCIÓN OFICIAL DE FIRMA Y CERTIFICACIÓN INSTITUCIONAL */}
-                        <div style={{
-                          backgroundColor: 'var(--bg-secondary)',
-                          borderRadius: '16px',
-                          border: '1.5px solid var(--border)',
-                          padding: '24px 28px',
-                          marginTop: '8px',
-                          display: 'grid',
-                          gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))',
-                          gap: '24px',
-                          alignItems: 'center'
-                        }}>
-                          <div>
-                            <span style={{ fontSize: '11px', fontWeight: '800', color: 'var(--text-muted)', textTransform: 'uppercase' }}>
-                              FIRMA AUTORIZADA DE EMISIÓN Y AUDITORÍA
-                            </span>
-                            <div style={{ marginTop: '36px', borderTop: '2px solid var(--text-primary)', paddingTop: '8px' }}>
-                              <p style={{ fontSize: '13.5px', fontWeight: '900', color: 'var(--text-primary)' }}>
-                                Dra. Sofía Ramírez
-                              </p>
-                              <p style={{ fontSize: '12px', color: 'var(--text-secondary)', fontWeight: '600' }}>
-                                Dirección de Bienestar Emocional & Salud Institucional
-                              </p>
-                              <p style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
-                                EquilibrIA Platform Certificación Oficial
-                              </p>
-                            </div>
-                          </div>
-
-                          <div style={{
-                            border: '2px dashed var(--primary)',
-                            borderRadius: '14px',
-                            padding: '16px 20px',
-                            textAlign: 'center',
-                            backgroundColor: 'var(--primary-light)'
-                          }}>
-                            <ShieldCheck size={28} style={{ color: 'var(--primary)', margin: '0 auto 6px auto' }} />
-                            <span style={{ fontSize: '11px', fontWeight: '900', color: 'var(--primary)', display: 'block', textTransform: 'uppercase' }}>
-                              SELLO INSTITUCIONAL DE VALIDACIÓN
-                            </span>
-                            <p style={{ fontSize: '11px', color: 'var(--text-secondary)', marginTop: '2px' }}>
-                              Documento verificado y procesado de conformidad con normativas de confidencialidad y salud ocupacional.
-                            </p>
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  })()}
-                </div>
-              )}
-            </div>
-
-          </div>
+          <InstitutionalReportView
+            allReportsData={allReportsData}
+            loading={reportsLoading}
+            selectedReportId={selectedReportId}
+            onSelectReport={(id) => setSelectedReportId(id)}
+            filters={{
+              scope: reportScope,
+              user_id: reportTargetUserId,
+              user_obj: reportTargetUserObj,
+              start_date: reportStartDate,
+              end_date: reportEndDate,
+              quick_range: reportQuickRange,
+              department: reportDeptFilter,
+              status: reportStatusFilter,
+              role: reportRoleFilter,
+              risk_level: reportRiskFilter,
+              priority: reportPriorityFilter
+            }}
+            onFilterChange={handleReportFilterChange}
+            onClearFilters={handleClearReportFilters}
+            onQuickRange={handleReportQuickRange}
+          />
         )}
 
         {/* TAB 8: SUGERENCIAS IA */}

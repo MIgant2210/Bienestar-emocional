@@ -29,7 +29,7 @@ const CustomSelect = ({
     if (typeof opt === 'string' || typeof opt === 'number') {
       return { value: String(opt), label: String(opt) };
     }
-    return { ...opt, value: String(opt.value) };
+    return { ...opt, value: String(opt.value), label: opt.label || String(opt.value) };
   });
 
   const selectedOption = normalizedOptions.find(opt => {
@@ -56,7 +56,7 @@ const CustomSelect = ({
   };
 
   return (
-    <div ref={containerRef} style={{ position: 'relative', width: '100%', zIndex: isOpen ? 1000 : 1, ...style }}>
+    <div ref={containerRef} className="custom-select-container" style={{ position: 'relative', width: '100%', zIndex: isOpen ? 99999 : 1, overflow: 'visible', ...style }}>
       {/* Botón Principal del Selector */}
       <button
         type="button"
@@ -67,32 +67,34 @@ const CustomSelect = ({
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
-          padding: '11px 16px',
+          padding: '10px 14px',
           backgroundColor: 'var(--bg-secondary)',
           color: selectedOption ? 'var(--text-primary)' : 'var(--text-muted)',
-          border: isOpen ? '2px solid var(--primary)' : '1.5px solid var(--border)',
-          borderRadius: '14px',
-          boxShadow: isOpen ? '0 0 0 4px var(--primary-glow)' : 'var(--shadow-sm)',
-          fontSize: '13px',
+          border: isOpen ? '1.5px solid var(--primary)' : '1.5px solid var(--border)',
+          borderRadius: '12px',
+          boxShadow: isOpen ? '0 0 0 3px var(--primary-glow)' : 'none',
+          fontSize: '12.5px',
           fontWeight: '700',
           cursor: disabled ? 'not-allowed' : 'pointer',
-          transition: 'all 0.2s ease',
-          opacity: disabled ? 0.6 : 1
+          transition: 'all 0.15s ease',
+          opacity: disabled ? 0.6 : 1,
+          height: '42px'
         }}
       >
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', overflow: 'hidden' }}>
-          {Icon && <Icon size={16} style={{ color: 'var(--primary)', flexShrink: 0 }} />}
-          <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', overflow: 'hidden', minWidth: 0 }}>
+          {Icon && <Icon size={15} style={{ color: 'var(--primary)', flexShrink: 0 }} />}
+          <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', fontSize: '12.5px' }}>
             {selectedOption ? selectedOption.label : placeholder}
           </span>
         </div>
         <ChevronDown 
-          size={16} 
+          size={15} 
           style={{ 
-            color: 'var(--primary)', 
+            color: 'var(--text-muted)', 
             transform: isOpen ? 'rotate(180deg)' : 'rotate(0deg)',
-            transition: 'transform 0.25s ease',
-            flexShrink: 0 
+            transition: 'transform 0.2s ease',
+            flexShrink: 0,
+            marginLeft: '6px'
           }} 
         />
       </button>
@@ -101,31 +103,31 @@ const CustomSelect = ({
       {isOpen && (
         <div style={{
           position: 'absolute',
-          top: 'calc(100% + 6px)',
+          top: 'calc(100% + 4px)',
           left: 0,
           right: 0,
+          minWidth: '220px',
           backgroundColor: 'var(--bg-secondary)',
-          border: '2px solid var(--primary)',
-          borderRadius: '16px',
-          boxShadow: '0 16px 40px rgba(0, 0, 0, 0.45)',
-          zIndex: 10001,
-          maxHeight: '260px',
-          overflow: 'hidden',
+          border: '1.5px solid var(--primary)',
+          borderRadius: '14px',
+          boxShadow: '0 18px 45px rgba(0, 0, 0, 0.35)',
+          zIndex: 99999,
           display: 'flex',
           flexDirection: 'column',
-          animation: 'fadeIn 0.15s ease'
+          overflow: 'hidden',
+          animation: 'fadeIn 0.12s ease'
         }}>
-          {/* Barra de búsqueda si hay más de 4 opciones */}
-          {normalizedOptions.length > 4 && (
-            <div style={{ padding: '8px 12px', borderBottom: '1px solid var(--border)', backgroundColor: 'var(--bg-tertiary)' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', backgroundColor: 'var(--bg-primary)', padding: '6px 12px', borderRadius: '10px', border: '1px solid var(--border)' }}>
-                <Search size={14} style={{ color: 'var(--text-muted)' }} />
+          {/* Barra de búsqueda solo si hay más de 6 opciones */}
+          {normalizedOptions.length > 6 && (
+            <div style={{ padding: '8px 10px', borderBottom: '1px solid var(--border)', backgroundColor: 'var(--bg-primary)' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', backgroundColor: 'var(--bg-secondary)', padding: '5px 10px', borderRadius: '8px', border: '1px solid var(--border)' }}>
+                <Search size={13} style={{ color: 'var(--text-muted)' }} />
                 <input
                   type="text"
-                  placeholder="Buscar opción..."
+                  placeholder="Buscar..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  style={{ border: 'none', background: 'none', padding: 0, fontSize: '12px', outline: 'none', width: '100%', color: 'var(--text-primary)' }}
+                  style={{ border: 'none', background: 'none', padding: 0, fontSize: '11.5px', outline: 'none', width: '100%', color: 'var(--text-primary)' }}
                   autoFocus
                 />
               </div>
@@ -133,9 +135,9 @@ const CustomSelect = ({
           )}
 
           {/* Opciones */}
-          <div style={{ overflowY: 'auto', padding: '6px', maxHeight: '200px' }}>
+          <div style={{ overflowY: 'auto', padding: '5px', maxHeight: '220px' }}>
             {filteredOptions.length === 0 ? (
-              <div style={{ padding: '14px', textAlign: 'center', color: 'var(--text-muted)', fontSize: '12px' }}>
+              <div style={{ padding: '12px', textAlign: 'center', color: 'var(--text-muted)', fontSize: '11.5px' }}>
                 No se encontraron opciones.
               </div>
             ) : (
@@ -146,7 +148,6 @@ const CustomSelect = ({
                     key={opt.value}
                     type="button"
                     onMouseDown={(e) => {
-                      // Evitar que mousedown en document cierre antes de procesar el clic
                       e.preventDefault();
                     }}
                     onClick={() => handleSelectOption(opt.value)}
@@ -155,27 +156,27 @@ const CustomSelect = ({
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'space-between',
-                      padding: '10px 14px',
-                      borderRadius: '10px',
+                      padding: '8px 12px',
+                      borderRadius: '8px',
                       backgroundColor: isSelected ? 'var(--primary-light)' : 'transparent',
                       color: isSelected ? 'var(--primary)' : 'var(--text-primary)',
                       border: 'none',
                       cursor: 'pointer',
                       textAlign: 'left',
-                      fontSize: '12.5px',
+                      fontSize: '12px',
                       fontWeight: isSelected ? '800' : '600',
-                      transition: 'background-color 0.15s ease',
+                      transition: 'background-color 0.12s ease',
                       marginBottom: '2px'
                     }}
                   >
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      {opt.icon && <span style={{ fontSize: '16px' }}>{opt.icon}</span>}
-                      <div>
-                        <div>{opt.label}</div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', overflow: 'hidden' }}>
+                      {opt.icon && <span style={{ fontSize: '14px' }}>{opt.icon}</span>}
+                      <div style={{ overflow: 'hidden' }}>
+                        <div style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{opt.label}</div>
                         {opt.sublabel && <div style={{ fontSize: '10px', color: 'var(--text-muted)' }}>{opt.sublabel}</div>}
                       </div>
                     </div>
-                    {isSelected && <Check size={15} style={{ color: 'var(--primary)' }} />}
+                    {isSelected && <Check size={14} style={{ color: 'var(--primary)', flexShrink: 0, marginLeft: '6px' }} />}
                   </button>
                 );
               })

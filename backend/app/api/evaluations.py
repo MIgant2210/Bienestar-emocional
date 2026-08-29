@@ -21,7 +21,7 @@ def get_templates(current_user):
         # Sembrar o actualizar plantillas (3 completas de 10 preguntas + 3 express de 5 preguntas)
         rich_templates_data = [
             {
-                "title": "[Plantilla] Chequeo Integral de Clima Laboral y Estrés",
+                "title": "Chequeo Integral de Clima Laboral y Estrés (10 Preguntas)",
                 "description": "Evaluación multidimensional de 10 preguntas para medir clima, sobrecarga laboral, resiliencia y expresión gráfica.",
                 "category": "Clima Laboral",
                 "questions": [
@@ -38,7 +38,7 @@ def get_templates(current_user):
                 ]
             },
             {
-                "title": "[Plantilla Express] Chequeo Rápido de Clima Laboral (5 Preguntas)",
+                "title": "Chequeo Rápido de Clima Laboral (5 Preguntas)",
                 "description": "Evaluación veloz de 5 ítems para medir tensión semanal, emoji de ánimo, voz, dibujo de estado y respaldo.",
                 "category": "Clima Laboral",
                 "questions": [
@@ -50,7 +50,7 @@ def get_templates(current_user):
                 ]
             },
             {
-                "title": "[Plantilla] Diagnóstico Semanal de Ánimo y Resiliencia",
+                "title": "Diagnóstico Semanal de Ánimo y Resiliencia (10 Preguntas)",
                 "description": "Cuestionario de 10 ítems para explorar bienestar personal, motivación futura y expresión gráfica emocional.",
                 "category": "Ánimo Personal",
                 "questions": [
@@ -67,7 +67,7 @@ def get_templates(current_user):
                 ]
             },
             {
-                "title": "[Plantilla Express] Diagnóstico Rápido de Ánimo (5 Preguntas)",
+                "title": "Diagnóstico Rápido de Ánimo (5 Preguntas)",
                 "description": "Cuestionario exprés de 5 ítems sobre energía personal, satisfacción, expresión gráfica y motivación futura.",
                 "category": "Ánimo Personal",
                 "questions": [
@@ -79,7 +79,7 @@ def get_templates(current_user):
                 ]
             },
             {
-                "title": "[Plantilla] Evaluación de Bienestar Integral y Prevención de Burnout",
+                "title": "Evaluación de Bienestar Integral y Prevención de Burnout (10 Preguntas)",
                 "description": "Test de prevención de sobrecarga crónica de 10 preguntas con diagnósticos cuantitativos y lienzo interactivo.",
                 "category": "Bienestar Integral",
                 "questions": [
@@ -96,7 +96,7 @@ def get_templates(current_user):
                 ]
             },
             {
-                "title": "[Plantilla Express] Chequeo Rápido de Prevención de Burnout (5 Preguntas)",
+                "title": "Chequeo Rápido de Prevención de Burnout (5 Preguntas)",
                 "description": "Test veloz de 5 preguntas de prevención de sobrecarga crónica con dibujo lienzo y escala cuantitativa.",
                 "category": "Bienestar Integral",
                 "questions": [
@@ -130,7 +130,7 @@ def get_templates(current_user):
 
 @evaluations_bp.route('/activate-template', methods=['POST'])
 @token_required
-@roles_accepted('admin_institucion', 'superadmin')
+@roles_accepted('admin_institucion', 'superadmin', 'profesional_apoyo')
 def activate_template(current_user):
     """
     Clona y activa un test precargado para la institución del usuario con 1 clic.
@@ -212,7 +212,7 @@ def get_evaluations(current_user):
 
 @evaluations_bp.route('', methods=['POST'])
 @token_required
-@roles_accepted('admin_institucion', 'superadmin')
+@roles_accepted('admin_institucion', 'superadmin', 'profesional_apoyo')
 def create_evaluation(current_user):
     """
     Crea un nuevo test personalizado con preguntas a medida para la institución (Admin).
@@ -269,7 +269,7 @@ def create_evaluation(current_user):
 
 @evaluations_bp.route('/<uuid:eval_id>', methods=['PUT'])
 @token_required
-@roles_accepted('admin_institucion', 'superadmin')
+@roles_accepted('admin_institucion', 'superadmin', 'profesional_apoyo')
 def update_evaluation(current_user, eval_id):
     """
     Actualiza o desactiva/activa un cuestionario de la institución.
@@ -388,7 +388,7 @@ def update_clinical_notes(current_user, reflection_id):
 
 @evaluations_bp.route('/<uuid:eval_id>', methods=['DELETE'])
 @token_required
-@roles_accepted('admin_institucion', 'superadmin')
+@roles_accepted('admin_institucion', 'superadmin', 'profesional_apoyo')
 def delete_evaluation(current_user, eval_id):
     """
     Elimina un cuestionario.

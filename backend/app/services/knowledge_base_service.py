@@ -1,6 +1,8 @@
 import re
+from sqlalchemy import or_
 from app import db
 from app.models.knowledge_document import KnowledgeDocument
+from app.models.resource import Resource
 
 class KnowledgeBaseService:
     """
@@ -153,12 +155,22 @@ class KnowledgeBaseService:
             # Fallback general a bienestar emocional
             docs = KnowledgeDocument.query.filter_by(is_active=True).limit(limit).all()
 
+        # Recuperar también recursos reales publicados en el Centro de Recursos
+        real_resources = []
+        try:
+            res_query = Resource.query.filter_by(is_published=True, allow_ai_recommendation=True)
+            if matched_categories:
+                res_query = res_query.filter(or_(*[Resource.category.ilike(f"%{c}%") for c in matched_categories] + [Resource.tags.ilike(f"%{c}%") for c in matched_categories]))
+            real_resources = res_query.limit(2).all()
+        except Exception:
+            pass
+
         # Construir resumen de contexto con fuentes
         context_snippets = []
         citations = []
         for d in docs:
             snippet = (
-                f"[Documento: '{d.title}' | Categoría: {d.category}]\n"
+                f"[Documento Técnico: '{d.title}' | Categoría: {d.category}]\n"
                 f"• Concepto: {d.concept or d.definition}\n"
                 f"• Recomendaciones Técnicas: {d.recommendations}\n"
                 f"• Cuándo orientar a profesional: {d.when_to_refer_professional}\n"
@@ -169,6 +181,21 @@ class KnowledgeBaseService:
                 'title': d.title,
                 'source': d.source,
                 'url': d.url
+            })
+
+        for r in real_resources:
+            snippet = (
+                f"[Recurso Disponible en Centro de Recursos de EquilibrIA: '{r.title}']\n"
+                f"• Tipo: {r.resource_type} | Nivel: {r.level} | Duración: {r.reading_time_minutes} min\n"
+                f"• Resumen: {r.description}\n"
+                f"• Contenido Clave: {r.content[:250]}...\n"
+                f"• Fuente / Autor: {r.source_institution or r.author}"
+            )
+            context_snippets.append(snippet)
+            citations.append({
+                'title': r.title,
+                'source': r.source_institution or r.author,
+                'url': r.source_url or '/mi-bienestar'
             })
 
         return {

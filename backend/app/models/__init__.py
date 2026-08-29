@@ -11,7 +11,7 @@ from app.models.appointment import Appointment
 from app.models.kudos import Kudos
 from app.models.gamification import XpTransaction, UserActivityDay, Badge, UserBadge, XpRule
 from app.models.consent import Consent
-from app.models.resource import Resource
+from app.models.resource import Resource, ResourceFavorite, ResourceProgress
 from app.models.notification import Notification, NotificationPreference
 from app.models.invitation import InvitationCode
 from app.models.verification_token import EmailVerificationToken

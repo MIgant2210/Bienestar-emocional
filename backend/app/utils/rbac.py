@@ -19,8 +19,8 @@ MODULE_ACCESS_MATRIX = {
     'alerts': ['superadmin', 'admin_institucion', 'profesional_apoyo'],
     'evaluations': ['superadmin', 'admin_institucion', 'profesional_apoyo', 'lider_depto', 'miembro'],
     'clinical_appointments': ['superadmin', 'admin_institucion', 'profesional_apoyo', 'miembro'],
-    'members': ['superadmin', 'admin_institucion', 'lider_depto'],
-    'institutions': ['superadmin', 'admin_institucion'],
+    'members': ['superadmin', 'admin_institucion', 'profesional_apoyo', 'lider_depto'],
+    'institutions': ['superadmin', 'admin_institucion', 'profesional_apoyo', 'lider_depto'],
     'progress': ['superadmin', 'admin_institucion', 'profesional_apoyo', 'lider_depto', 'miembro'],
     'kudos': ['superadmin', 'admin_institucion', 'profesional_apoyo', 'lider_depto', 'miembro'],
     'reports': ['superadmin', 'admin_institucion', 'profesional_apoyo'],
@@ -45,7 +45,7 @@ GRANULAR_PERMISSIONS = {
     'departments.deactivate': ['superadmin', 'admin_institucion'],
     
     # Usuarios y Roles (RBAC)
-    'users.view': ['superadmin', 'admin_institucion', 'lider_depto'],
+    'users.view': ['superadmin', 'admin_institucion', 'profesional_apoyo', 'lider_depto'],
     'users.create': ['superadmin', 'admin_institucion'],
     'users.edit_profile': ['superadmin', 'admin_institucion'],
     'users.change_role': ['superadmin', 'admin_institucion'],
