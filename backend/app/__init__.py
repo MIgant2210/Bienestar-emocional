@@ -25,9 +25,10 @@ def create_app(config_class=Config):
         InvitationCode, EmailVerificationToken
     )
 
-    from app.utils.db_schema import ensure_task_schema, ensure_gamification_schema, ensure_wellbeing_and_consents_schema, ensure_ai_knowledge_and_culture_schema
+    from app.utils.db_schema import ensure_task_schema, ensure_gamification_schema, ensure_wellbeing_and_consents_schema, ensure_ai_knowledge_and_culture_schema, ensure_auth_oauth_schema
     from app.utils.db_indexes import ensure_database_indexes
     with app.app_context():
+        ensure_auth_oauth_schema(db)
         ensure_task_schema(db)
         ensure_gamification_schema(db)
         ensure_wellbeing_and_consents_schema(db)
@@ -50,6 +51,7 @@ def create_app(config_class=Config):
     from app.api.wellbeing import wellbeing_bp
     from app.api.notifications import notifications_bp
     from app.api.culture import culture_bp
+    from app.api.avatar import avatar_bp
     
     app.register_blueprint(auth_bp, url_prefix='/api/auth')
     app.register_blueprint(analysis_bp, url_prefix='/api/analysis')
@@ -66,6 +68,7 @@ def create_app(config_class=Config):
     app.register_blueprint(wellbeing_bp, url_prefix='/api/wellbeing')
     app.register_blueprint(notifications_bp, url_prefix='/api/notifications')
     app.register_blueprint(culture_bp, url_prefix='/api/culture')
+    app.register_blueprint(avatar_bp, url_prefix='/api/avatar')
     
     import gzip
     from flask import request

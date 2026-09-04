@@ -13,7 +13,173 @@ const formatVal = (val, fallback = 'Sin datos suficientes') => {
 };
 
 /**
+ * Generador de Gráficas Vectoriales SVG de Alta Definición para Hoja 2 del PDF
+ */
+const generateReportChartsSvgHtml = (currentReport, selectedReportId, scopeLabel) => {
+  if (selectedReportId !== 'reporte_1_clima') return '';
+
+  const evolucion = Array.isArray(currentReport.evolucion_temporal) ? currentReport.evolucion_temporal : [];
+  const departamentos = Array.isArray(currentReport.distribucion_departamentos) ? currentReport.distribucion_departamentos : [];
+
+  if (evolucion.length === 0 && departamentos.length === 0) return '';
+
+  let evolucionSvg = '';
+  if (evolucion.length > 0) {
+    const W = 680;
+    const H = 240;
+    const padL = 45;
+    const padR = 25;
+    const padT = 30;
+    const padB = 40;
+    const plotW = W - padL - padR;
+    const plotH = H - padT - padB;
+
+    // Puntos de cada serie
+    const getX = (i) => padL + (evolucion.length === 1 ? plotW / 2 : (i / (evolucion.length - 1)) * plotW);
+    const getY = (val) => padT + plotH - (Math.max(0, Math.min(100, Number(val) || 0)) / 100) * plotH;
+
+    const ptsEstres = evolucion.map((d, i) => `${getX(i)},${getY(d.estres)}`).join(' ');
+    const ptsMotiv = evolucion.map((d, i) => `${getX(i)},${getY(d.motivacion)}`).join(' ');
+    const ptsBurnout = evolucion.map((d, i) => `${getX(i)},${getY(d.burnout)}`).join(' ');
+
+    const dotsEstres = evolucion.map((d, i) => `<circle cx="${getX(i)}" cy="${getY(d.estres)}" r="4" fill="#ef4444" stroke="#ffffff" stroke-width="1.5" />`).join('');
+    const dotsMotiv = evolucion.map((d, i) => `<circle cx="${getX(i)}" cy="${getY(d.motivacion)}" r="4" fill="#10b981" stroke="#ffffff" stroke-width="1.5" />`).join('');
+    const dotsBurnout = evolucion.map((d, i) => `<circle cx="${getX(i)}" cy="${getY(d.burnout)}" r="4" fill="#f59e0b" stroke="#ffffff" stroke-width="1.5" />`).join('');
+
+    const gridLines = [0, 25, 50, 75, 100].map(val => {
+      const y = getY(val);
+      return `
+        <line x1="${padL}" y1="${y}" x2="${W - padR}" y2="${y}" stroke="#e2e8f0" stroke-width="1" stroke-dasharray="4 3" />
+        <text x="${padL - 8}" y="${y + 3.5}" fill="#94a3b8" font-size="9.5" text-anchor="end" font-weight="600">${val}%</text>
+      `;
+    }).join('');
+
+    const xLabels = evolucion.map((d, i) => {
+      const x = getX(i);
+      const label = d.fecha ? String(d.fecha).slice(5) : `#${i+1}`;
+      return `<text x="${x}" y="${H - 12}" fill="#64748b" font-size="9" text-anchor="middle" font-weight="600">${label}</text>`;
+    }).join('');
+
+    evolucionSvg = `
+      <div style="background: #ffffff; border: 1.5px solid #e2e8f0; border-radius: 12px; padding: 16px; margin-bottom: 22px;">
+        <div style="font-size: 12.5px; font-weight: 800; color: #1e293b; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center;">
+          <span>📈 1. Evolución Temporal del Clima Emocional (${scopeLabel || 'Institucional'})</span>
+          <span style="font-size: 10px; color: #64748b; font-weight: 600;">Valores promedio en escala 0-100%</span>
+        </div>
+        <svg viewBox="0 0 ${W} ${H}" style="width: 100%; height: auto; display: block; overflow: visible;">
+          ${gridLines}
+          <polyline fill="none" stroke="#ef4444" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" points="${ptsEstres}" />
+          <polyline fill="none" stroke="#10b981" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" points="${ptsMotiv}" />
+          <polyline fill="none" stroke="#f59e0b" stroke-width="2" stroke-dasharray="5 4" stroke-linecap="round" stroke-linejoin="round" points="${ptsBurnout}" />
+          ${dotsEstres}
+          ${dotsMotiv}
+          ${dotsBurnout}
+          ${xLabels}
+        </svg>
+        <div style="display: flex; justify-content: center; gap: 24px; margin-top: 10px; font-size: 10.5px; font-weight: 700;">
+          <span style="color: #ef4444; display: inline-flex; align-items: center; gap: 5px;">● Estrés</span>
+          <span style="color: #10b981; display: inline-flex; align-items: center; gap: 5px;">● Motivación</span>
+          <span style="color: #f59e0b; display: inline-flex; align-items: center; gap: 5px;">┄ Agotamiento (Burnout)</span>
+        </div>
+      </div>
+    `;
+  }
+
+  let deptSvg = '';
+  if (departamentos.length > 0) {
+    const W = 680;
+    const H = 250;
+    const padL = 45;
+    const padR = 25;
+    const padT = 30;
+    const padB = 46;
+    const plotW = W - padL - padR;
+    const plotH = H - padT - padB;
+    const groupW = plotW / departamentos.length;
+    const barW = Math.min(18, (groupW - 14) / 3);
+
+    const getY = (val) => padT + plotH - (Math.max(0, Math.min(100, Number(val) || 0)) / 100) * plotH;
+
+    const gridLines = [0, 25, 50, 75, 100].map(val => {
+      const y = getY(val);
+      return `
+        <line x1="${padL}" y1="${y}" x2="${W - padR}" y2="${y}" stroke="#e2e8f0" stroke-width="1" stroke-dasharray="4 3" />
+        <text x="${padL - 8}" y="${y + 3.5}" fill="#94a3b8" font-size="9.5" text-anchor="end" font-weight="600">${val}%</text>
+      `;
+    }).join('');
+
+    const bars = departamentos.map((d, i) => {
+      const centerGroup = padL + i * groupW + groupW / 2;
+      const x1 = centerGroup - (barW * 1.5) - 2;
+      const x2 = centerGroup - (barW * 0.5);
+      const x3 = centerGroup + (barW * 0.5) + 2;
+
+      const y1 = getY(d.estres);
+      const y2 = getY(d.motivacion);
+      const y3 = getY(d.burnout);
+
+      const h1 = (padT + plotH) - y1;
+      const h2 = (padT + plotH) - y2;
+      const h3 = (padT + plotH) - y3;
+
+      const deptLabel = d.departamento ? (d.departamento.length > 14 ? d.departamento.slice(0, 12) + '…' : d.departamento) : 'Dept';
+
+      return `
+        <rect x="${x1}" y="${y1}" width="${barW}" height="${h1}" rx="3" fill="#ef4444" />
+        <rect x="${x2}" y="${y2}" width="${barW}" height="${h2}" rx="3" fill="#10b981" />
+        <rect x="${x3}" y="${y3}" width="${barW}" height="${h3}" rx="3" fill="#f59e0b" />
+        <text x="${centerGroup}" y="${H - 14}" fill="#475569" font-size="9.5" font-weight="700" text-anchor="middle">${deptLabel}</text>
+      `;
+    }).join('');
+
+    deptSvg = `
+      <div style="background: #ffffff; border: 1.5px solid #e2e8f0; border-radius: 12px; padding: 16px; margin-bottom: 20px;">
+        <div style="font-size: 12.5px; font-weight: 800; color: #1e293b; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center;">
+          <span>📊 2. Comparativo de Indicadores Emocionales por Departamento</span>
+          <span style="font-size: 10px; color: #64748b; font-weight: 600;">Valores agregados por área</span>
+        </div>
+        <svg viewBox="0 0 ${W} ${H}" style="width: 100%; height: auto; display: block; overflow: visible;">
+          ${gridLines}
+          ${bars}
+        </svg>
+        <div style="display: flex; justify-content: center; gap: 24px; margin-top: 10px; font-size: 10.5px; font-weight: 700;">
+          <span style="color: #ef4444; display: inline-flex; align-items: center; gap: 5px;">■ Estrés (%)</span>
+          <span style="color: #10b981; display: inline-flex; align-items: center; gap: 5px;">■ Motivación (%)</span>
+          <span style="color: #f59e0b; display: inline-flex; align-items: center; gap: 5px;">■ Burnout (%)</span>
+        </div>
+      </div>
+    `;
+  }
+
+  return `
+    <div style="page-break-before: always; break-before: page; padding-top: 18px;">
+      <div class="header-bar" style="margin-bottom: 18px;">
+        <div>
+          <div class="brand-title">EquilibrIA Platform</div>
+          <div class="brand-sub">Análisis Gráfico y Tendencias Estadísticas Institucionales</div>
+        </div>
+        <div class="doc-badge">DOCUMENTO OFICIAL • HOJA 2 DE 2</div>
+      </div>
+
+      <div class="doc-title" style="font-size: 16px; margin-bottom: 14px;">
+        Anexos Gráficos Institucionales — ${currentReport.titulo || 'Clima Emocional'}
+      </div>
+
+      ${evolucionSvg}
+      ${deptSvg}
+
+      <div class="footer-bar" style="margin-top: 24px;">
+        <div>Documento generado electrónicamente por EquilibrIA</div>
+        <div>Fecha de emisión: ${currentReport.fecha_generacion || new Date().toLocaleString()}</div>
+        <div>Página 2 de 2</div>
+      </div>
+    </div>
+  `;
+};
+
+/**
  * 1. EXPORTAR EN PDF (PLANTILLA DE IMPRESIÓN OFICIAL INSTITUCIONAL)
+ * Utiliza un iframe oculto para no abrir ventanas en blanco y mantener la vista actual.
  */
 export const exportReportToPDF = (allReportsData, selectedReportId) => {
   if (!allReportsData) return;
@@ -22,12 +188,6 @@ export const exportReportToPDF = (allReportsData, selectedReportId) => {
   const detailList = Array.isArray(currentReport.detalle)
     ? currentReport.detalle
     : (Array.isArray(currentReport.detalle_catalogo) ? currentReport.detalle_catalogo : []);
-
-  const printWin = window.open('', '_blank');
-  if (!printWin) {
-    alert('Por favor permite las ventanas emergentes en tu navegador para generar el PDF oficial.');
-    return;
-  }
 
   // Generar columnas y filas de la tabla según el tipo de reporte
   let tableHeadersHtml = '';
@@ -141,7 +301,7 @@ export const exportReportToPDF = (allReportsData, selectedReportId) => {
       tableRowsHtml = detailList.map((item, idx) => `
         <tr>
           <td>${idx + 1}</td>
-          <td>${item.remitente || 'Anónimo 🌿'}</td>
+          <td>${item.remitente || 'Anónimo'}</td>
           <td><strong>${item.destinatario || 'Compañero'}</strong></td>
           <td>${item.departamento || 'General'}</td>
           <td><span class="badge badge-primary">${item.tipo_insignia || 'Gratitud'}</span></td>
@@ -344,22 +504,44 @@ export const exportReportToPDF = (allReportsData, selectedReportId) => {
 
       <div class="footer-bar">
         <div>Documento generado electrónicamente por EquilibrIA</div>
-        <div>Fecha de emisión: ${allReportsData.fecha_generacion}</div>
-        <div>Página 1 de 1</div>
+        <div>Fecha de emisión: ${allReportsData.fecha_generacion || new Date().toLocaleString()}</div>
+        <div>Página 1 de ${selectedReportId === 'reporte_1_clima' && (currentReport.evolucion_temporal?.length > 0 || currentReport.distribucion_departamentos?.length > 0) ? '2' : '1'}</div>
       </div>
 
-      <script>
-        window.onload = function() {
-          window.print();
-        };
-      </script>
+      ${generateReportChartsSvgHtml(currentReport, selectedReportId, (allReportsData.alcance && allReportsData.alcance.etiqueta) || filters.alcance)}
     </body>
     </html>
   `;
 
-  printWin.document.open();
-  printWin.document.write(htmlContent);
-  printWin.document.close();
+  // Mecanismo de impresión en segundo plano vía iframe invisible
+  let printIframe = document.getElementById('equilibria-report-print-frame');
+  if (!printIframe) {
+    printIframe = document.createElement('iframe');
+    printIframe.id = 'equilibria-report-print-frame';
+    printIframe.style.position = 'fixed';
+    printIframe.style.right = '0';
+    printIframe.style.bottom = '0';
+    printIframe.style.width = '0';
+    printIframe.style.height = '0';
+    printIframe.style.border = '0';
+    printIframe.style.visibility = 'hidden';
+    document.body.appendChild(printIframe);
+  }
+
+  const iframeDoc = printIframe.contentDocument || printIframe.contentWindow.document;
+  iframeDoc.open();
+  iframeDoc.write(htmlContent);
+  iframeDoc.close();
+
+  // Esperar a que se renderice el contenido del iframe y disparar el diálogo nativo de impresión
+  setTimeout(() => {
+    try {
+      printIframe.contentWindow.focus();
+      printIframe.contentWindow.print();
+    } catch (err) {
+      console.error('Error al imprimir documento:', err);
+    }
+  }, 400);
 };
 
 /**
@@ -373,7 +555,7 @@ export const exportReportToCSV = (allReportsData, selectedReportId) => {
     : (Array.isArray(currentReport.detalle_catalogo) ? currentReport.detalle_catalogo : []);
 
   if (detailList.length === 0) {
-    alert('No hay registros filtrados para exportar en este reporte.');
+    if (typeof window !== 'undefined' && window.showSystemAlert) { window.showSystemAlert('info', 'Reportes', 'No hay registros filtrados para exportar en este reporte.'); } else { console.warn('No hay registros filtrados para exportar.'); }
     return;
   }
 

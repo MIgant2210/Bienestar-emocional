@@ -97,8 +97,9 @@ const Unauthorized403 = ({ onGoHome }) => {
             justifyContent: 'space-between'
           }}>
             <span style={{ color: 'var(--text-muted)' }}>Tu Rol Actual:</span>
-            <span style={{ fontWeight: '900', color: 'var(--primary)' }}>
-              🔒 {getRoleTitle(user.role)}
+            <span style={{ fontWeight: '900', color: 'var(--primary)', display: 'inline-flex', alignItems: 'center', gap: '5px' }}>
+              <Lock size={13} />
+              <span>{getRoleTitle(user.role)}</span>
             </span>
           </div>
         )}

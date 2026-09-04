@@ -107,6 +107,7 @@ const CustomSelect = ({
           left: 0,
           right: 0,
           minWidth: '220px',
+          maxWidth: 'calc(100vw - 24px)',
           backgroundColor: 'var(--bg-secondary)',
           border: '1.5px solid var(--primary)',
           borderRadius: '14px',
@@ -170,7 +171,14 @@ const CustomSelect = ({
                     }}
                   >
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px', overflow: 'hidden' }}>
-                      {opt.icon && <span style={{ fontSize: '14px' }}>{opt.icon}</span>}
+                      {opt.icon && (
+                        React.isValidElement(opt.icon) ? opt.icon :
+                        (typeof opt.icon === 'function' || (typeof opt.icon === 'object' && opt.icon?.$$typeof)) ? (
+                          React.createElement(opt.icon, { size: 14 })
+                        ) : (
+                          <span style={{ fontSize: '14px' }}>{opt.icon}</span>
+                        )
+                      )}
                       <div style={{ overflow: 'hidden' }}>
                         <div style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{opt.label}</div>
                         {opt.sublabel && <div style={{ fontSize: '10px', color: 'var(--text-muted)' }}>{opt.sublabel}</div>}

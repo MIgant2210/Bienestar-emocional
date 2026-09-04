@@ -28,6 +28,69 @@ const CHART_COLORS = {
   gray: '#94a3b8'
 };
 
+// Contenedor robusto para Recharts con detección dinámica de ancho en móviles y tablets
+const AutoResponsiveContainer = ({ children, height = 260 }) => {
+  const containerRef = React.useRef(null);
+  const [containerWidth, setContainerWidth] = React.useState(() => {
+    if (typeof window !== 'undefined' && window.innerWidth > 0) {
+      return Math.min(Math.max(window.innerWidth - 64, 280), 1200);
+    }
+    return 340;
+  });
+
+  React.useEffect(() => {
+    if (!containerRef.current) return;
+
+    const measure = () => {
+      if (containerRef.current) {
+        const w = containerRef.current.clientWidth || containerRef.current.getBoundingClientRect().width;
+        if (w > 0) {
+          setContainerWidth(Math.floor(w));
+        }
+      }
+    };
+
+    measure();
+
+    let resizeObserver = null;
+    if (typeof ResizeObserver !== 'undefined') {
+      resizeObserver = new ResizeObserver(() => {
+        measure();
+      });
+      resizeObserver.observe(containerRef.current);
+    }
+
+    window.addEventListener('resize', measure);
+    const t1 = setTimeout(measure, 60);
+    const t2 = setTimeout(measure, 250);
+
+    return () => {
+      if (resizeObserver) resizeObserver.disconnect();
+      window.removeEventListener('resize', measure);
+      clearTimeout(t1);
+      clearTimeout(t2);
+    };
+  }, []);
+
+  return (
+    <div
+      ref={containerRef}
+      className="chart-container-responsive"
+      style={{
+        width: '100%',
+        minWidth: 0,
+        height,
+        position: 'relative',
+        display: 'block'
+      }}
+    >
+      <ResponsiveContainer width={containerWidth} height={height} key={`rc-${containerWidth}`}>
+        {children}
+      </ResponsiveContainer>
+    </div>
+  );
+};
+
 export const InstitutionalReportView = ({
   allReportsData,
   loading = false,
@@ -69,7 +132,7 @@ export const InstitutionalReportView = ({
   ];
 
   return (
-    <div className="institutional-reports-module animate-fade" style={{ display: 'grid', gap: '20px', overflow: 'visible' }}>
+    <div className="institutional-reports-module animate-fade" style={{ display: 'flex', flexDirection: 'column', gap: '20px', width: '100%', minWidth: 0, overflow: 'visible' }}>
       
       {/* 1. HEADER Y BARRA DE HERRAMIENTAS PRINCIPAL */}
       <div className="glass-card" style={{ overflow: 'visible', position: 'relative', zIndex: 100 }}>
@@ -210,9 +273,9 @@ export const InstitutionalReportView = ({
                 value={filters.scope || 'institution'}
                 onChange={(val) => onFilterChange('scope', typeof val === 'string' ? val : val?.target?.value || 'institution')}
                 options={[
-                  { value: 'institution', label: '👥 Toda la institución', sublabel: 'Población general' },
-                  { value: 'department', label: '🏢 Departamento específico', sublabel: 'Segmentación departamental' },
-                  { value: 'user', label: '👤 Usuario específico', sublabel: 'Análisis individual auditado' }
+                  { value: 'institution', label: 'Toda la institución', sublabel: 'Población general' },
+                  { value: 'department', label: 'Departamento específico', sublabel: 'Segmentación departamental' },
+                  { value: 'user', label: 'Usuario específico', sublabel: 'Análisis individual auditado' }
                 ]}
               />
             </div>
@@ -627,46 +690,48 @@ export const InstitutionalReportView = ({
 
             {/* SECCIÓN DE ANÁLISIS GRÁFICO (RECHARTS) */}
             {safeReportId === 'reporte_1_clima' && currentReport.evolucion_temporal?.length > 0 && (
-              <div style={{ backgroundColor: 'var(--bg-secondary)', borderRadius: '16px', border: '1px solid var(--border)', padding: '20px' }}>
+              <div className="glass-card" style={{ backgroundColor: 'var(--bg-secondary)', borderRadius: '16px', border: '1px solid var(--border)', padding: '20px 14px', width: '100%', minWidth: 0, boxSizing: 'border-box' }}>
                 <h4 style={{ fontSize: '13.5px', fontWeight: '800', color: 'var(--text-primary)', marginBottom: '14px', display: 'flex', alignItems: 'center', gap: '6px' }}>
                   <TrendingUp size={16} style={{ color: 'var(--primary)' }} /> Evolución Temporal del Clima Emocional ({scopeData.etiqueta})
                 </h4>
-                <div style={{ width: '100%', height: 260 }}>
-                  <ResponsiveContainer width="100%" height="100%">
-                    <LineChart data={currentReport.evolucion_temporal}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" opacity={0.5} />
-                      <XAxis dataKey="fecha" stroke="var(--text-muted)" fontSize={11} />
-                      <YAxis stroke="var(--text-muted)" fontSize={11} domain={[0, 100]} />
-                      <Tooltip contentStyle={{ backgroundColor: 'var(--bg-primary)', border: '1px solid var(--border)', borderRadius: '10px', fontSize: '12px' }} />
-                      <Legend wrapperStyle={{ fontSize: '12px' }} />
-                      <Line type="monotone" dataKey="estres" name="Estrés Promedio (%)" stroke="#ef4444" strokeWidth={2.5} dot={{ r: 3 }} activeDot={{ r: 6 }} />
-                      <Line type="monotone" dataKey="motivacion" name="Motivación (%)" stroke="#10b981" strokeWidth={2.5} dot={{ r: 3 }} activeDot={{ r: 6 }} />
-                      <Line type="monotone" dataKey="burnout" name="Burnout (%)" stroke="#f59e0b" strokeWidth={2} strokeDasharray="4 4" dot={{ r: 3 }} />
-                    </LineChart>
-                  </ResponsiveContainer>
-                </div>
+                <AutoResponsiveContainer height={260}>
+                  <LineChart
+                    data={currentReport.evolucion_temporal}
+                    margin={{ top: 10, right: 15, left: -20, bottom: 5 }}
+                  >
+                    <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" opacity={0.5} />
+                    <XAxis dataKey="fecha" stroke="var(--text-muted)" fontSize={11} />
+                    <YAxis stroke="var(--text-muted)" fontSize={11} domain={[0, 100]} />
+                    <Tooltip contentStyle={{ backgroundColor: 'var(--bg-primary)', border: '1px solid var(--border)', borderRadius: '10px', fontSize: '12px' }} />
+                    <Legend verticalAlign="top" height={36} iconType="circle" wrapperStyle={{ fontSize: '12px' }} />
+                    <Line type="monotone" dataKey="estres" name="Estrés Promedio (%)" stroke="#ef4444" strokeWidth={2.5} dot={{ r: 3 }} activeDot={{ r: 6 }} />
+                    <Line type="monotone" dataKey="motivacion" name="Motivación (%)" stroke="#10b981" strokeWidth={2.5} dot={{ r: 3 }} activeDot={{ r: 6 }} />
+                    <Line type="monotone" dataKey="burnout" name="Burnout (%)" stroke="#f59e0b" strokeWidth={2} strokeDasharray="4 4" dot={{ r: 3 }} />
+                  </LineChart>
+                </AutoResponsiveContainer>
               </div>
             )}
 
             {safeReportId === 'reporte_1_clima' && scopeData.tipo !== 'user' && currentReport.distribucion_departamentos?.length > 0 && (
-              <div style={{ backgroundColor: 'var(--bg-secondary)', borderRadius: '16px', border: '1px solid var(--border)', padding: '20px' }}>
+              <div className="glass-card" style={{ backgroundColor: 'var(--bg-secondary)', borderRadius: '16px', border: '1px solid var(--border)', padding: '20px 14px', width: '100%', minWidth: 0, boxSizing: 'border-box' }}>
                 <h4 style={{ fontSize: '13.5px', fontWeight: '800', color: 'var(--text-primary)', marginBottom: '14px', display: 'flex', alignItems: 'center', gap: '6px' }}>
                   <BarChart3 size={16} style={{ color: 'var(--primary)' }} /> Comparativo de Indicadores por Departamento
                 </h4>
-                <div style={{ width: '100%', height: 240 }}>
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={currentReport.distribucion_departamentos}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" opacity={0.5} />
-                      <XAxis dataKey="departamento" stroke="var(--text-muted)" fontSize={11} />
-                      <YAxis stroke="var(--text-muted)" fontSize={11} domain={[0, 100]} />
-                      <Tooltip contentStyle={{ backgroundColor: 'var(--bg-primary)', border: '1px solid var(--border)', borderRadius: '10px', fontSize: '12px' }} />
-                      <Legend wrapperStyle={{ fontSize: '12px' }} />
-                      <Bar dataKey="estres" name="Estrés (%)" fill="#ef4444" radius={[4, 4, 0, 0]} />
-                      <Bar dataKey="motivacion" name="Motivación (%)" fill="#10b981" radius={[4, 4, 0, 0]} />
-                      <Bar dataKey="burnout" name="Burnout (%)" fill="#f59e0b" radius={[4, 4, 0, 0]} />
-                    </BarChart>
-                  </ResponsiveContainer>
-                </div>
+                <AutoResponsiveContainer height={260}>
+                  <BarChart
+                    data={currentReport.distribucion_departamentos}
+                    margin={{ top: 10, right: 15, left: -20, bottom: 25 }}
+                  >
+                    <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" opacity={0.5} />
+                    <XAxis dataKey="departamento" stroke="var(--text-muted)" fontSize={10} interval={0} angle={-15} textAnchor="end" />
+                    <YAxis stroke="var(--text-muted)" fontSize={11} domain={[0, 100]} />
+                    <Tooltip contentStyle={{ backgroundColor: 'var(--bg-primary)', border: '1px solid var(--border)', borderRadius: '10px', fontSize: '12px' }} />
+                    <Legend verticalAlign="top" height={36} iconType="circle" wrapperStyle={{ fontSize: '12px' }} />
+                    <Bar dataKey="estres" name="Estrés (%)" fill="#ef4444" radius={[4, 4, 0, 0]} />
+                    <Bar dataKey="motivacion" name="Motivación (%)" fill="#10b981" radius={[4, 4, 0, 0]} />
+                    <Bar dataKey="burnout" name="Burnout (%)" fill="#f59e0b" radius={[4, 4, 0, 0]} />
+                  </BarChart>
+                </AutoResponsiveContainer>
               </div>
             )}
 
@@ -695,46 +760,48 @@ export const InstitutionalReportView = ({
                   </button>
                 </div>
               ) : (
-                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px', textAlign: 'left' }}>
-                  <thead>
-                    <tr style={{ borderBottom: '2px solid var(--border)', color: 'var(--text-muted)' }}>
-                      <th style={{ padding: '10px 12px' }}>#</th>
-                      <th style={{ padding: '10px 12px' }}>CONCEPTO / REGISTRO</th>
-                      <th style={{ padding: '10px 12px' }}>DEPARTAMENTO / CATEGORÍA</th>
-                      <th style={{ padding: '10px 12px' }}>ESTADO / CONDICIÓN</th>
-                      <th style={{ padding: '10px 12px' }}>FECHA DE REGISTRO</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {detailList.map((item, idx) => (
-                      <tr key={idx} style={{ borderBottom: '1px solid var(--border)' }}>
-                        <td style={{ padding: '10px 12px', fontWeight: '700', color: 'var(--text-muted)' }}>{idx + 1}</td>
-                        <td style={{ padding: '10px 12px', fontWeight: '700', color: 'var(--text-primary)' }}>
-                          {item.title || item.titulo || item.usuario || item.paciente || item.destinatario || item.nombre_completo || item.accion || item.recomendacion || item.nombre || `Registro #${idx + 1}`}
-                        </td>
-                        <td style={{ padding: '10px 12px', color: 'var(--text-secondary)' }}>
-                          {item.departamento || item.categoria || item.departamento_origen || item.rol || 'General'}
-                        </td>
-                        <td style={{ padding: '10px 12px' }}>
-                          <span className="duo-pill" style={{
-                            padding: '2px 8px',
-                            fontSize: '10.5px',
-                            fontWeight: '800',
-                            backgroundColor: (item.estado === 'Completada' || item.estado === 'ACTIVO' || item.estado === 'completada') ? 'rgba(16, 185, 129, 0.15)' : 'var(--bg-primary)',
-                            color: (item.estado === 'Completada' || item.estado === 'ACTIVO' || item.estado === 'completada') ? '#10b981' : 'var(--text-primary)'
-                          }}>
-                            {item.estado || item.prioridad || item.tipo_insignia || item.sentimiento || 'Vigente'}
-                          </span>
-                        </td>
-                        <td style={{ padding: '10px 12px', color: 'var(--text-muted)' }}>
-                          {item.fecha || item.fecha_creacion || item.fecha_hora || item.fecha_registro
-                            ? new Date(item.fecha || item.fecha_creacion || item.fecha_hora || item.fecha_registro).toLocaleDateString()
-                            : 'N/A'}
-                        </td>
+                <div className="table-responsive">
+                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px', textAlign: 'left', minWidth: '600px' }}>
+                    <thead>
+                      <tr style={{ borderBottom: '2px solid var(--border)', color: 'var(--text-muted)' }}>
+                        <th style={{ padding: '10px 12px' }}>#</th>
+                        <th style={{ padding: '10px 12px' }}>CONCEPTO / REGISTRO</th>
+                        <th style={{ padding: '10px 12px' }}>DEPARTAMENTO / CATEGORÍA</th>
+                        <th style={{ padding: '10px 12px' }}>ESTADO / CONDICIÓN</th>
+                        <th style={{ padding: '10px 12px' }}>FECHA DE REGISTRO</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
+                    </thead>
+                    <tbody>
+                      {detailList.map((item, idx) => (
+                        <tr key={idx} style={{ borderBottom: '1px solid var(--border)' }}>
+                          <td style={{ padding: '10px 12px', fontWeight: '700', color: 'var(--text-muted)' }}>{idx + 1}</td>
+                          <td style={{ padding: '10px 12px', fontWeight: '700', color: 'var(--text-primary)' }}>
+                            {item.title || item.titulo || item.usuario || item.paciente || item.destinatario || item.nombre_completo || item.accion || item.recomendacion || item.nombre || `Registro #${idx + 1}`}
+                          </td>
+                          <td style={{ padding: '10px 12px', color: 'var(--text-secondary)' }}>
+                            {item.departamento || item.categoria || item.departamento_origen || item.rol || 'General'}
+                          </td>
+                          <td style={{ padding: '10px 12px' }}>
+                            <span className="duo-pill" style={{
+                              padding: '2px 8px',
+                              fontSize: '10.5px',
+                              fontWeight: '800',
+                              backgroundColor: (item.estado === 'Completada' || item.estado === 'ACTIVO' || item.estado === 'completada') ? 'rgba(16, 185, 129, 0.15)' : 'var(--bg-primary)',
+                              color: (item.estado === 'Completada' || item.estado === 'ACTIVO' || item.estado === 'completada') ? '#10b981' : 'var(--text-primary)'
+                            }}>
+                              {item.estado || item.prioridad || item.tipo_insignia || item.sentimiento || 'Vigente'}
+                            </span>
+                          </td>
+                          <td style={{ padding: '10px 12px', color: 'var(--text-muted)' }}>
+                            {item.fecha || item.fecha_creacion || item.fecha_hora || item.fecha_registro
+                              ? new Date(item.fecha || item.fecha_creacion || item.fecha_hora || item.fecha_registro).toLocaleDateString()
+                              : 'N/A'}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
               )}
             </div>
 
@@ -747,9 +814,10 @@ export const InstitutionalReportView = ({
                 {currentReport.observaciones || 'Se recopilaron los datos del periodo seleccionado conforme a los protocolos institucionales de auditoría y análisis de bienestar.'}
               </p>
               {currentReport.nota_aclaratoria && (
-                <p style={{ fontSize: '11.5px', color: 'var(--text-muted)', marginTop: '8px', fontStyle: 'italic' }}>
-                  ℹ️ {currentReport.nota_aclaratoria}
-                </p>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11.5px', color: 'var(--text-muted)', marginTop: '8px', fontStyle: 'italic' }}>
+                  <Info size={13} style={{ color: 'var(--primary)', flexShrink: 0 }} />
+                  <span>{currentReport.nota_aclaratoria}</span>
+                </div>
               )}
             </div>
 

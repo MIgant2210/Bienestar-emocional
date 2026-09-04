@@ -2,6 +2,7 @@ import React, { useContext, lazy, Suspense } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useNavigate } from 'react-router-dom';
 import { AuthContext, AuthProvider } from './contexts/AuthContext';
 import { ThemeContext, ThemeProvider } from './contexts/ThemeContext';
+import { DialogProvider } from './contexts/DialogContext';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import Unauthorized403 from './pages/Unauthorized403';
@@ -182,10 +183,12 @@ function App() {
   return (
     <ThemeProvider>
       <AuthProvider>
-        <BrowserRouter>
+        <DialogProvider>
+          <BrowserRouter>
           <StarryBackground />
           <NavigationHandler />
         </BrowserRouter>
+        </DialogProvider>
       </AuthProvider>
     </ThemeProvider>
   );

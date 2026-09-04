@@ -7,7 +7,8 @@ import {
   SendHorizontal, Bot, User, Loader, Calendar, ClipboardCheck, Sliders, Check, 
   HelpCircle, Mic, MicOff, ArrowLeft, FileAudio, Volume2, Play, Square, CheckCircle,
   Flame, Zap, Award, ThumbsUp, ThumbsDown, Palette, Trophy, Bell, Settings as SettingsIcon,
-  UserPlus, X, ChevronLeft, ChevronRight
+  UserPlus, X, ChevronLeft, ChevronRight, List, LayoutGrid, Clock, ArrowRight, 
+  BookOpen, Coffee, SunMedium, Meh, Frown, Users, AlertTriangle, Menu
 } from 'lucide-react';
 import api from '../services/api';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
@@ -70,7 +71,9 @@ const MemberDashboard = ({ initialTab }) => {
   
   // State para menú de paletas y notificaciones
   const [showPaletteMenu, setShowPaletteMenu] = useState(false);
+  const [mobilePaletteOpen, setMobilePaletteOpen] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   useEffect(() => {
     if (!showPaletteMenu) return;
@@ -159,7 +162,7 @@ const MemberDashboard = ({ initialTab }) => {
   const [newGroupName, setNewGroupName] = useState('');
   const [newGroupMembers, setNewGroupMembers] = useState([]);
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
-  const modernEmojis = ['😊', '🚀', '👍', '❤️', '💡', '🔥', '🙏', '🎉', '⭐', '💪', '👏', '😄', '🌟', '✨', '🧠', '💬', '💯', '🤝', '🙌', '🎯', '🍀', '🌈', '☕', '🎁'];
+  const CHAT_EMOJIS = ['😊', '🚀', '👍', '❤️', '💡', '🔥', '🙏', '🎉', '⭐', '💪', '👏', '😄', '🌟', '✨', '🧠', '💬', '💯', '🤝', '🙌', '🎯', '🍀', '🌈', '☕', '🎁'];
 
   const handleCreateGroup = (e) => {
     e.preventDefault();
@@ -292,7 +295,7 @@ const MemberDashboard = ({ initialTab }) => {
 
   const handleRedeemReward = async (reward) => {
     if (xpPoints < reward.cost_xp) {
-      alert(`Necesitas ${reward.cost_xp} XP para canjear esta recompensa. Actualmente tienes ${xpPoints} XP. ¡Completa más tareas y reflexiones!`);
+      showAlert('warning', 'Puntos XP Insuficientes', `Necesitas ${reward.cost_xp} XP para canjear esta recompensa. Actualmente tienes ${xpPoints} XP. ¡Completa más tareas y reflexiones para acumular puntos!`);
       return;
     }
 
@@ -300,10 +303,10 @@ const MemberDashboard = ({ initialTab }) => {
     try {
       await api.post('/rewards/redeem', { reward_id: reward.id });
       setXpPoints(prev => prev - reward.cost_xp);
-      setRewardMsg(`¡Felicidades! Has canjeado "${reward.title}" por ${reward.cost_xp} XP 🏆`);
+      setRewardMsg(`¡Felicidades! Has canjeado "${reward.title}" por ${reward.cost_xp} XP.`);
       fetchRewards();
     } catch (err) {
-      alert('Error al canjear recompensa: ' + (err.response?.data?.message || err.message));
+      showAlert('danger', 'Error al Canjear', err.response?.data?.message || err.message);
     } finally {
       setRewardLoading(false);
     }
@@ -468,7 +471,7 @@ const MemberDashboard = ({ initialTab }) => {
       setXpPoints(prev => prev + 50);
       setStreakDays(prev => prev + 1);
 
-      setEvalSuccessMsg('¡Test completado exitosamente! +50 XP Ganados ⚡');
+      setEvalSuccessMsg('¡Test completado exitosamente! +50 XP Ganados');
       setTestAnswers({});
       setLatestAnalysis(response.data.analysis);
       fetchHistory();
@@ -649,18 +652,14 @@ const MemberDashboard = ({ initialTab }) => {
   const completedTasksCount = tasks.filter(t => t.status === 'completada').length;
   const taskProgressPercent = tasks.length > 0 ? Math.round((completedTasksCount / tasks.length) * 100) : 0;
 
-  // Emojis para Escalas estilo Duolingo
-  const emojiMap5 = ['😫', '🙁', '😐', '🙂', '😁'];
-  const emojiMap10 = ['😫', '😣', '🙁', '😟', '😐', '🙂', '😊', '😄', '😁', '🤩'];
-
   const renderEquiMascot = (progressPercent = 0) => {
     let speech = "¡Hola! Soy Equi tu Colibrí Orientador. Estoy aquí para acompañarte y brindarte serenidad en tu día.";
     if (progressPercent > 0 && progressPercent < 50) {
-      speech = "¡Excelente comienzo! Mantén la calma y sigue avanzando en tus respuestas ⚡";
+      speech = "¡Excelente comienzo! Mantén la calma y sigue avanzando en tus respuestas.";
     } else if (progressPercent >= 50 && progressPercent < 100) {
-      speech = "¡Vas por más de la mitad! Tu constancia fortalece tu bienestar mental 🔥";
+      speech = "¡Vas por más de la mitad! Tu constancia fortalece tu bienestar mental.";
     } else if (progressPercent >= 100) {
-      speech = "¡Increíble trabajo! Has completado la actividad. Reclama tus puntos XP y mantén el equilibrio 🎉";
+      speech = "¡Increíble trabajo! Has completado la actividad. Reclama tus puntos XP y mantén el equilibrio.";
     }
 
     return (
@@ -712,17 +711,7 @@ const MemberDashboard = ({ initialTab }) => {
     const progressPercent = totalQ > 0 ? Math.round(((currentQuestionIndex + (isCurrentAnswered ? 1 : 0)) / totalQ) * 100) : 0;
 
     return (
-      <div style={{ 
-        minHeight: '100vh', 
-        background: 'var(--page-bg)', 
-        backgroundColor: 'var(--bg-primary)',
-        paddingBottom: '60px',
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        position: 'relative',
-        overflow: 'hidden'
-      }} className="animate-fade">
+      <div className="animate-fade eval-fullscreen-wrapper">
         
         {/* Cielo Estrellado Oficial de EquilibrIA */}
         <StarryBackground isLogin={false} />
@@ -743,13 +732,20 @@ const MemberDashboard = ({ initialTab }) => {
             zIndex: 99999,
             animation: 'pulseGlow 0.5s ease'
           }}>
-            <div style={{ fontSize: '48px', marginBottom: '10px' }}>⚡ 🎉</div>
+            <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '10px' }}>
+              <Award size={48} style={{ color: 'var(--success)' }} />
+            </div>
             <h2 style={{ fontSize: '24px', fontWeight: '900', color: 'var(--success)' }}>¡Test Completado!</h2>
-            <p style={{ fontSize: '16px', fontWeight: '800', marginTop: '6px' }}>+50 XP Ganados • Racha: {streakDays} Días 🔥</p>
+            <p style={{ fontSize: '16px', fontWeight: '800', marginTop: '6px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
+              <span>+50 XP Ganados</span>
+              <span>•</span>
+              <Flame size={18} style={{ color: '#f97316' }} />
+              <span>Racha: {streakDays} Días</span>
+            </p>
           </div>
         )}
 
-        {/* Modal de Confirmación antes de Finalizar */}
+        {/* Modal de Confirmación de Finalización de Test */}
         {showConfirmModal && (
           <div style={{
             position: 'fixed',
@@ -757,22 +753,25 @@ const MemberDashboard = ({ initialTab }) => {
             left: 0,
             right: 0,
             bottom: 0,
-            backgroundColor: 'rgba(0,0,0,0.65)',
-            backdropFilter: 'blur(8px)',
+            backgroundColor: 'rgba(15, 23, 42, 0.45)',
+            backdropFilter: 'blur(6px)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
             zIndex: 10000,
             padding: '20px'
           }} className="animate-fade">
-            <div className="glass-card" style={{
+            <div style={{
               maxWidth: '460px',
               width: '100%',
               padding: '32px 28px',
               textAlign: 'center',
               borderRadius: '24px',
-              border: '2px solid var(--border)',
-              boxShadow: 'var(--shadow-lg)'
+              backgroundColor: 'var(--bg-primary)',
+              background: 'var(--bg-primary)',
+              border: '1.5px solid var(--border)',
+              boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
+              boxSizing: 'border-box'
             }}>
               <div style={{
                 width: '60px',
@@ -788,11 +787,11 @@ const MemberDashboard = ({ initialTab }) => {
                 <Sparkles size={30} />
               </div>
 
-              <h3 style={{ fontSize: '20px', fontWeight: '900', marginBottom: '8px' }}>
+              <h3 style={{ fontSize: '20px', fontWeight: '900', color: 'var(--text-primary)', marginBottom: '8px' }}>
                 ¿Deseas finalizar el test?
               </h3>
 
-              <p style={{ fontSize: '13.5px', color: 'var(--text-secondary)', lineHeight: '1.5', marginBottom: '24px' }}>
+              <p style={{ fontSize: '13.5px', color: 'var(--text-secondary)', lineHeight: '1.5', marginBottom: '24px', fontWeight: '500' }}>
                 Has respondido las preguntas de la evaluación. Una vez enviado, tus respuestas serán procesadas de forma confidencial y recibirás tu diagnóstico con <strong>+50 XP</strong>.
               </p>
 
@@ -806,8 +805,15 @@ const MemberDashboard = ({ initialTab }) => {
                 <button
                   type="button"
                   onClick={() => setShowConfirmModal(false)}
-                  className="btn btn-secondary"
-                  style={{ padding: '12px', borderRadius: '14px', fontWeight: '800' }}
+                  style={{
+                    padding: '12px',
+                    borderRadius: '14px',
+                    fontWeight: '800',
+                    backgroundColor: 'var(--bg-secondary)',
+                    border: '1.5px solid var(--border)',
+                    color: 'var(--text-primary)',
+                    cursor: 'pointer'
+                  }}
                   disabled={evalSubmitLoading}
                 >
                   Revisar
@@ -827,22 +833,10 @@ const MemberDashboard = ({ initialTab }) => {
         )}
 
         {/* Cabecera Fija Superior con Progreso y Gamificación */}
-        <div style={{
-          width: '100%',
-          backgroundColor: 'var(--bg-secondary)',
-          borderBottom: '1px solid var(--border)',
-          padding: '12px 28px',
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          boxShadow: 'var(--shadow-sm)',
-          position: 'sticky',
-          top: 0,
-          zIndex: 100,
-          backdropFilter: 'blur(10px)'
-        }}>
+        <div className="eval-sticky-header">
           <button 
             onClick={() => { setActiveView('dashboard'); setSelectedEval(null); setTestStep('intro'); }}
+            className="eval-exit-btn"
             style={{
               display: 'flex',
               alignItems: 'center',
@@ -875,7 +869,7 @@ const MemberDashboard = ({ initialTab }) => {
                 <span style={{ fontSize: '12px', color: 'var(--text-secondary)', fontWeight: '800' }}>
                   {progressPercent}%
                 </span>
-                <div style={{ width: '120px', height: '8px', backgroundColor: 'var(--bg-primary)', borderRadius: '6px', overflow: 'hidden', border: '1px solid var(--border)' }}>
+                <div className="eval-progress-bar-wrap" style={{ width: '120px', height: '8px', backgroundColor: 'var(--bg-primary)', borderRadius: '6px', overflow: 'hidden', border: '1px solid var(--border)' }}>
                   <div style={{ width: `${progressPercent}%`, height: '100%', backgroundColor: 'var(--primary)', transition: 'width 0.3s ease' }} />
                 </div>
               </div>
@@ -884,26 +878,16 @@ const MemberDashboard = ({ initialTab }) => {
         </div>
 
         {/* CONTENEDOR PRINCIPAL CENTRADO Y AMPLIO EN PC */}
-        <div style={{ 
-          width: '100%', 
-          maxWidth: '1060px', 
-          margin: 'auto 0',
-          padding: '40px 24px', 
-          position: 'relative', 
-          zIndex: 10,
-          display: 'flex',
-          flexDirection: 'column',
-          justifyContent: 'center'
-        }}>
+        <div className="eval-content-container">
           
           {/* PASO 1: PANTALLA INTRODUCTORIA / ENCABEZADO DEL TEST */}
           {testStep === 'intro' && (
-            <div className="animate-fade" style={{ display: 'grid', gridTemplateColumns: 'minmax(300px, 340px) 1fr', gap: '32px', alignItems: 'center' }}>
+            <div className="animate-fade responsive-eval-preview" style={{ display: 'grid', gridTemplateColumns: 'minmax(300px, 340px) 1fr', gap: '32px', alignItems: 'center' }}>
               
               {/* Mascota Colibrí en estado de bienvenida */}
               <ColibriMascot 
                 mood="welcome" 
-                customMessage="¡Hola! Te acompañaré paso a paso en esta evaluación. Responde con calma y sinceridad. 🌿"
+                customMessage="¡Hola! Te acompañaré paso a paso en esta evaluación. Responde con calma y sinceridad."
                 progressPercent={0}
               />
 
@@ -935,11 +919,11 @@ const MemberDashboard = ({ initialTab }) => {
                 {/* Chips de Información del Test */}
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px', marginBottom: '28px' }}>
                   <div style={{ backgroundColor: 'var(--bg-secondary)', border: '1px solid var(--border)', padding: '8px 14px', borderRadius: '12px', fontSize: '12.5px', fontWeight: '800', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                    <span>📋</span>
+                    <ClipboardList size={15} style={{ color: 'var(--primary)' }} />
                     <span>{totalQ} preguntas interactivas</span>
                   </div>
                   <div style={{ backgroundColor: 'var(--bg-secondary)', border: '1px solid var(--border)', padding: '8px 14px', borderRadius: '12px', fontSize: '12.5px', fontWeight: '800', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                    <span>⏱️</span>
+                    <Clock size={15} style={{ color: 'var(--text-secondary)' }} />
                     <span>~{Math.max(2, Math.round(totalQ * 0.6))} minutos estimados</span>
                   </div>
                   <div style={{ backgroundColor: 'var(--primary-light)', color: 'var(--primary)', padding: '8px 14px', borderRadius: '12px', fontSize: '12.5px', fontWeight: '900', display: 'flex', alignItems: 'center', gap: '6px' }}>
@@ -979,10 +963,10 @@ const MemberDashboard = ({ initialTab }) => {
 
           {/* PASO 2: PREGUNTAS INDIVIDUALES (UNA A LA VEZ) */}
           {testStep === 'question' && currentQ && (
-            <div className="animate-fade" style={{ display: 'grid', gridTemplateColumns: 'minmax(300px, 340px) 1fr', gap: '32px', alignItems: 'flex-start' }}>
+            <div className="animate-fade responsive-eval-preview" style={{ display: 'grid', gridTemplateColumns: 'minmax(300px, 340px) 1fr', gap: '32px', alignItems: 'flex-start' }}>
               
               {/* Mascota Colibrí en el lateral */}
-              <div style={{ position: 'sticky', top: '80px' }}>
+              <div className="eval-mascot-wrapper" style={{ position: 'sticky', top: '80px' }}>
                 <ColibriMascot 
                   mood={mascotMood}
                   progressPercent={progressPercent}
@@ -990,7 +974,7 @@ const MemberDashboard = ({ initialTab }) => {
               </div>
 
               {/* Tarjeta de la Pregunta Actual */}
-              <div className="glass-card" style={{
+              <div className="glass-card eval-question-card" style={{
                 padding: '38px 36px',
                 borderRadius: '24px',
                 border: '2px solid var(--border)',
@@ -1032,13 +1016,14 @@ const MemberDashboard = ({ initialTab }) => {
                 </h2>
 
                 {/* COMPONENTES DE RESPUESTA POR TIPO */}
-                <div style={{ marginBottom: '32px' }}>
+                <div className="eval-answers-container" style={{ marginBottom: '32px' }}>
                   
                   {/* Tipo Texto con Dictado por Voz */}
                   {currentQ.type === 'text' && (
                     <div>
                       <textarea
-                        rows="5"
+                        className="eval-textarea"
+                        rows="4"
                         placeholder="Escribe tu reflexión o presiona 'Hablar por Micrófono' para dictar por voz en tiempo real..."
                         value={testAnswers[currentQ.id] || ''}
                         onChange={(e) => handleAnswerChange(currentQ.id, e.target.value)}
@@ -1078,7 +1063,7 @@ const MemberDashboard = ({ initialTab }) => {
                         <span>{currentQ.type === 'scale_1_10' ? 'Máximo (10)' : 'Máximo (5)'}</span>
                       </div>
                       
-                      <div style={{ display: 'grid', gridTemplateColumns: currentQ.type === 'scale_1_10' ? 'repeat(5, 1fr)' : 'repeat(5, 1fr)', gap: '10px' }}>
+                      <div className="eval-scale-grid" style={{ display: 'grid', gridTemplateColumns: currentQ.type === 'scale_1_10' ? 'repeat(5, 1fr)' : 'repeat(5, 1fr)', gap: '10px' }}>
                         {(currentQ.type === 'scale_1_10' ? [1, 2, 3, 4, 5, 6, 7, 8, 9, 10] : [1, 2, 3, 4, 5]).map((val) => {
                           const isSelected = testAnswers[currentQ.id] === val;
                           return (
@@ -1086,7 +1071,7 @@ const MemberDashboard = ({ initialTab }) => {
                               key={val}
                               type="button"
                               onClick={() => handleAnswerChange(currentQ.id, val)}
-                              className={`duo-card ${isSelected ? 'selected' : ''}`}
+                              className={`duo-card eval-scale-btn ${isSelected ? 'selected' : ''}`}
                               style={{ justifyContent: 'center', padding: '16px 8px', fontSize: '17px', fontWeight: '900', borderRadius: '14px' }}
                             >
                               <span>{val}</span>
@@ -1101,13 +1086,13 @@ const MemberDashboard = ({ initialTab }) => {
                   {currentQ.type === 'emoji_scale_5' && (
                     <div>
                       <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '12px', fontSize: '12px', fontWeight: '800', color: 'var(--text-muted)' }}>
-                        <span>😡 Muy Bajo / Difícil</span>
-                        <span>😁 Excelente / Pleno</span>
+                        <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}><span>😫</span> Muy Bajo / Difícil</span>
+                        <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}><span>😁</span> Excelente / Pleno</span>
                       </div>
                       
-                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '10px' }}>
+                      <div className="eval-emoji-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '10px' }}>
                         {[
-                          { emoji: '😡', label: 'Molesto' },
+                          { emoji: '😫', label: 'Molesto' },
                           { emoji: '🙁', label: 'Agotado' },
                           { emoji: '😐', label: 'Neutral' },
                           { emoji: '🙂', label: 'Tranquilo' },
@@ -1119,11 +1104,11 @@ const MemberDashboard = ({ initialTab }) => {
                               key={eIdx}
                               type="button"
                               onClick={() => handleAnswerChange(currentQ.id, `${item.emoji} ${item.label}`)}
-                              className={`duo-card ${isSelected ? 'selected' : ''}`}
+                              className={`duo-card eval-emoji-btn ${isSelected ? 'selected' : ''}`}
                               style={{ justifyContent: 'center', padding: '14px 6px', flexDirection: 'column', gap: '6px', borderRadius: '16px' }}
                             >
-                              <span style={{ fontSize: '30px' }}>{item.emoji}</span>
-                              <span style={{ fontSize: '11px', fontWeight: '800' }}>{item.label}</span>
+                              <span className="eval-emoji-icon" style={{ fontSize: '30px', transform: isSelected ? 'scale(1.15)' : 'scale(1)', transition: 'transform 0.15s ease' }}>{item.emoji}</span>
+                              <span className="eval-emoji-label" style={{ fontSize: '11px', fontWeight: '800' }}>{item.label}</span>
                             </button>
                           );
                         })}
@@ -1143,11 +1128,11 @@ const MemberDashboard = ({ initialTab }) => {
 
                   {/* Opción Booleana (Sí / No) */}
                   {currentQ.type === 'boolean' && (
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+                    <div className="eval-boolean-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
                       <button
                         type="button"
                         onClick={() => handleAnswerChange(currentQ.id, 'Sí')}
-                        className={`duo-card ${testAnswers[currentQ.id] === 'Sí' ? 'selected' : ''}`}
+                        className={`duo-card eval-boolean-btn ${testAnswers[currentQ.id] === 'Sí' ? 'selected' : ''}`}
                         style={{ justifyContent: 'center', padding: '18px', fontSize: '15px', fontWeight: '900', borderRadius: '14px' }}
                       >
                         <ThumbsUp size={20} />
@@ -1157,7 +1142,7 @@ const MemberDashboard = ({ initialTab }) => {
                       <button
                         type="button"
                         onClick={() => handleAnswerChange(currentQ.id, 'No')}
-                        className={`duo-card ${testAnswers[currentQ.id] === 'No' ? 'selected' : ''}`}
+                        className={`duo-card eval-boolean-btn ${testAnswers[currentQ.id] === 'No' ? 'selected' : ''}`}
                         style={{ justifyContent: 'center', padding: '18px', fontSize: '15px', fontWeight: '900', borderRadius: '14px' }}
                       >
                         <ThumbsDown size={20} />
@@ -1168,7 +1153,7 @@ const MemberDashboard = ({ initialTab }) => {
 
                   {/* Opciones de Selección Única */}
                   {currentQ.type === 'single_choice' && Array.isArray(currentQ.options) && (
-                    <div style={{ display: 'grid', gap: '10px' }}>
+                    <div className="eval-choice-grid" style={{ display: 'grid', gap: '10px' }}>
                       {currentQ.options.map((opt, oIdx) => {
                         const isSelected = testAnswers[currentQ.id] === opt;
                         return (
@@ -1176,7 +1161,7 @@ const MemberDashboard = ({ initialTab }) => {
                             key={oIdx}
                             type="button"
                             onClick={() => handleAnswerChange(currentQ.id, opt)}
-                            className={`duo-card ${isSelected ? 'selected' : ''}`}
+                            className={`duo-card eval-choice-btn ${isSelected ? 'selected' : ''}`}
                             style={{ padding: '14px 18px', fontSize: '14px', fontWeight: '800', textAlign: 'left', borderRadius: '14px' }}
                           >
                             <span>{opt}</span>
@@ -1188,7 +1173,7 @@ const MemberDashboard = ({ initialTab }) => {
                 </div>
 
                 {/* BARRA DE NAVEGACIÓN INFERIOR (ANTERIOR / SIGUIENTE) */}
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: '20px', borderTop: '1px solid var(--border)' }}>
+                <div className="eval-footer-nav" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: '20px', borderTop: '1px solid var(--border)' }}>
                   <button
                     type="button"
                     onClick={() => {
@@ -1255,37 +1240,41 @@ const MemberDashboard = ({ initialTab }) => {
 
   // RENDER ESTÁNDAR DEL DASHBOARD
   return (
-    <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
+    <div style={{ minHeight: '100vh', width: '100%', maxWidth: '100vw', display: 'flex', flexDirection: 'column', position: 'relative', overflowX: 'hidden', boxSizing: 'border-box' }}>
       
       {/* Navbar Superior Compacta con Gamificación */}
       <header style={{
         display: 'flex',
         justifyContent: 'space-between',
         alignItems: 'center',
-        padding: '12px 28px',
+        padding: '12px 20px',
         backgroundColor: 'var(--bg-secondary)',
         borderBottom: '1px solid var(--border)',
         boxShadow: 'var(--shadow)',
-        zIndex: 10
+        zIndex: 100,
+        position: 'relative',
+        width: '100%',
+        maxWidth: '100vw',
+        boxSizing: 'border-box'
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
           <img 
             src="/logo.png" 
             alt="EquilibrIA Logo" 
             style={{ 
-              height: '46px', 
+              height: '42px', 
               objectFit: 'contain',
               filter: 'drop-shadow(0 2px 8px rgba(99, 102, 241, 0.25))' 
             }} 
           />
-          <div>
-            <h1 style={{ fontSize: '17px', fontWeight: '900', letterSpacing: '-0.5px' }}>EquilibrIA</h1>
-            <p style={{ fontSize: '11px', color: 'var(--text-secondary)', fontWeight: '500' }}>Plataforma inteligente de bienestar y orientación</p>
+          <div className="app-header-title">
+            <h1 style={{ fontSize: '17px', fontWeight: '900', letterSpacing: '-0.5px', margin: 0 }}>EquilibrIA</h1>
+            <p style={{ fontSize: '11px', color: 'var(--text-secondary)', fontWeight: '500', margin: 0 }}>Plataforma inteligente de bienestar y orientación</p>
           </div>
         </div>
 
-        {/* Indicadores de Racha Duolingo */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+        {/* Indicadores de Racha y XP + Acciones */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
           <span className="duo-streak-badge" title="Días consecutivos cuidando tu bienestar">
             <Flame size={14} />
             <span>{streakDays} DÍAS</span>
@@ -1296,62 +1285,202 @@ const MemberDashboard = ({ initialTab }) => {
             <span>{xpPoints} XP</span>
           </span>
 
-          {/* Centro de Notificaciones */}
-          <div style={{ position: 'relative' }}>
-            <button 
-              onClick={() => { setShowNotifications(!showNotifications); setShowPaletteMenu(false); }}
-              className="theme-toggle"
-              style={{ border: '1px solid var(--border)', width: '36px', height: '36px', borderRadius: '50%', position: 'relative' }}
-              title="Centro de Notificaciones"
-            >
-              <Bell size={16} style={{ color: 'var(--primary)' }} />
+          {/* Desktop Navigation Items (Oculto en móvil/tablet < 1024px) */}
+          <div className="desktop-nav-items">
+            {/* Centro de Notificaciones */}
+            <div style={{ position: 'relative' }}>
+              <button 
+                onClick={() => { setShowNotifications(!showNotifications); setShowPaletteMenu(false); }}
+                className="theme-toggle"
+                style={{ border: '1px solid var(--border)', width: '36px', height: '36px', borderRadius: '50%', position: 'relative' }}
+                title="Centro de Notificaciones"
+              >
+                <Bell size={16} style={{ color: 'var(--primary)' }} />
+              </button>
+              <NotificationCenter isOpen={showNotifications} onClose={() => setShowNotifications(false)} />
+            </div>
+
+            {/* Botón Selector de Paletas de Colores */}
+            <div ref={paletteMenuRef} style={{ position: 'relative' }}>
+              <button 
+                onClick={() => { setShowPaletteMenu(!showPaletteMenu); setShowNotifications(false); }}
+                className="theme-toggle"
+                style={{ border: '1px solid var(--border)', width: '36px', height: '36px', borderRadius: '50%' }}
+                title="Personalizar Paleta de Colores del Sistema"
+              >
+                <Palette size={16} style={{ color: 'var(--primary)' }} />
+              </button>
+
+              {showPaletteMenu && (
+                <div className="notification-popover" style={{ width: '220px', right: 0 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px', borderBottom: '1px solid var(--border)', paddingBottom: '6px' }}>
+                    <h4 style={{ fontSize: '12px', fontWeight: '900', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <Palette size={14} style={{ color: 'var(--primary)' }} /> Tema de Colores
+                    </h4>
+                  </div>
+                  <div style={{ display: 'grid', gap: '6px' }}>
+                    {PALETTES.map((p) => (
+                      <button
+                        key={p.id}
+                        type="button"
+                        onClick={() => { changePalette(p.id); setShowPaletteMenu(false); }}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'space-between',
+                          padding: '8px 10px',
+                          borderRadius: '8px',
+                          border: colorPalette === p.id ? '2px solid var(--primary)' : '1px solid var(--border)',
+                          backgroundColor: colorPalette === p.id ? 'var(--primary-light)' : 'var(--bg-primary)',
+                          cursor: 'pointer',
+                          fontSize: '11.5px',
+                          fontWeight: '700',
+                          color: 'var(--text-primary)'
+                        }}
+                      >
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <span>{p.icon}</span>
+                          <span>{p.name}</span>
+                        </div>
+                        <div style={{ display: 'flex', gap: '3px' }}>
+                          <div style={{ width: '10px', height: '10px', borderRadius: '50%', backgroundColor: p.primary }} />
+                          <div style={{ width: '10px', height: '10px', borderRadius: '50%', backgroundColor: p.accent }} />
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <button onClick={toggleTheme} className="theme-toggle" style={{ border: '1px solid var(--border)', width: '36px', height: '36px', borderRadius: '50%' }} title="Cambiar Modo Claro/Oscuro">
+              {theme === 'light' ? <Moon size={15} /> : <Sun size={15} />}
             </button>
-            <NotificationCenter isOpen={showNotifications} onClose={() => setShowNotifications(false)} />
+
+            {/* Botón Acceso a Configuración */}
+            <button 
+              onClick={() => navigate('/configuracion')} 
+              className="theme-toggle" 
+              style={{ border: '1px solid var(--border)', width: '36px', height: '36px', borderRadius: '50%' }} 
+              title="Configuración de la Cuenta y Privacidad"
+            >
+              <SettingsIcon size={15} style={{ color: 'var(--text-primary)' }} />
+            </button>
+            
+            <div style={{ textAlign: 'right', fontSize: '12.5px' }}>
+              <span style={{ fontWeight: '800', display: 'block' }}>{user?.first_name} {user?.last_name}</span>
+              <span style={{ color: 'var(--text-secondary)', fontSize: '10.5px', fontWeight: '500' }}>Miembro Activo</span>
+            </div>
+
+            <button onClick={logout} className="theme-toggle" style={{ color: 'var(--danger)', border: '1px solid var(--border)', width: '36px', height: '36px', borderRadius: '50%' }} title="Cerrar Sesión">
+              <LogOut size={15} />
+            </button>
           </div>
 
-          {/* Botón Selector de Paletas de Colores 🎨 */}
-          <div ref={paletteMenuRef} style={{ position: 'relative' }}>
-            <button 
-              onClick={() => { setShowPaletteMenu(!showPaletteMenu); setShowNotifications(false); }}
-              className="theme-toggle"
-              style={{ border: '1px solid var(--border)', width: '36px', height: '36px', borderRadius: '50%' }}
-              title="Personalizar Paleta de Colores del Sistema"
-            >
-              <Palette size={16} style={{ color: 'var(--primary)' }} />
-            </button>
+          {/* Botón Hamburguesa Móvil (Visible solo en < 1024px) */}
+          <button 
+            type="button"
+            className="hamburger-btn" 
+            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+            aria-label="Abrir menú de navegación"
+            title="Abrir menú"
+          >
+            {mobileMenuOpen ? <X size={20} /> : <Menu size={20} />}
+          </button>
+        </div>
+      </header>
 
-            {showPaletteMenu && (
-              <div className="notification-popover" style={{ width: '220px', right: 0 }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px', borderBottom: '1px solid var(--border)', paddingBottom: '6px' }}>
-                  <h4 style={{ fontSize: '12px', fontWeight: '900', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                    <Palette size={14} style={{ color: 'var(--primary)' }} /> Tema de Colores
-                  </h4>
+      {/* Drawer Móvil de Navegación */}
+      {mobileMenuOpen && (
+        <>
+          <div className="mobile-drawer-backdrop" onClick={() => setMobileMenuOpen(false)} />
+          <div className="mobile-drawer">
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '18px', paddingBottom: '12px', borderBottom: '1px solid var(--border)' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <div style={{ width: '38px', height: '38px', borderRadius: '50%', backgroundColor: 'var(--primary)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '900', fontSize: '15px' }}>
+                  {user?.first_name ? user.first_name.charAt(0) : 'U'}
                 </div>
+                <div>
+                  <h4 style={{ margin: 0, fontSize: '14px', fontWeight: '800' }}>{user?.first_name} {user?.last_name}</h4>
+                  <span style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>Miembro Activo</span>
+                </div>
+              </div>
+              <button 
+                type="button" 
+                onClick={() => setMobileMenuOpen(false)} 
+                className="theme-toggle" 
+                style={{ width: '32px', height: '32px', borderRadius: '50%', border: '1px solid var(--border)' }}
+              >
+                <X size={16} />
+              </button>
+            </div>
+
+            {/* Acciones Rápidas Táctiles */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '8px', marginBottom: '20px' }}>
+              <button 
+                onClick={toggleTheme} 
+                className="theme-toggle" 
+                style={{ width: '100%', height: '40px', borderRadius: '10px', border: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'center' }} 
+                title="Modo Claro/Oscuro"
+              >
+                {theme === 'light' ? <Moon size={16} /> : <Sun size={16} />}
+              </button>
+
+              <button 
+                onClick={() => setMobilePaletteOpen(!mobilePaletteOpen)} 
+                className="theme-toggle" 
+                style={{ width: '100%', height: '40px', borderRadius: '10px', border: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'center' }} 
+                title="Paleta de Colores"
+              >
+                <Palette size={16} style={{ color: 'var(--primary)' }} />
+              </button>
+
+              <button 
+                onClick={() => { navigate('/configuracion'); setMobileMenuOpen(false); }} 
+                className="theme-toggle" 
+                style={{ width: '100%', height: '40px', borderRadius: '10px', border: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'center' }} 
+                title="Configuración"
+              >
+                <SettingsIcon size={16} />
+              </button>
+
+              <button 
+                onClick={logout} 
+                className="theme-toggle" 
+                style={{ width: '100%', height: '40px', borderRadius: '10px', border: '1px solid var(--border)', color: 'var(--danger)', display: 'flex', alignItems: 'center', justifyContent: 'center' }} 
+                title="Cerrar Sesión"
+              >
+                <LogOut size={16} />
+              </button>
+            </div>
+
+            {/* Submenú de Paletas en el Drawer */}
+            {mobilePaletteOpen && (
+              <div style={{ backgroundColor: 'var(--bg-tertiary)', padding: '10px', borderRadius: '12px', marginBottom: '16px', border: '1px solid var(--border)' }}>
+                <span style={{ fontSize: '11px', fontWeight: '800', color: 'var(--text-muted)', display: 'block', marginBottom: '6px' }}>SELECCIONAR TEMA</span>
                 <div style={{ display: 'grid', gap: '6px' }}>
                   {PALETTES.map((p) => (
                     <button
                       key={p.id}
                       type="button"
-                      onClick={() => { changePalette(p.id); setShowPaletteMenu(false); }}
+                      onClick={() => { changePalette(p.id); setMobilePaletteOpen(false); }}
                       style={{
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'space-between',
-                        padding: '8px 10px',
-                        borderRadius: '8px',
+                        padding: '8px 12px',
+                        borderRadius: '10px',
                         border: colorPalette === p.id ? '2px solid var(--primary)' : '1px solid var(--border)',
-                        backgroundColor: colorPalette === p.id ? 'var(--primary-light)' : 'var(--bg-primary)',
-                        cursor: 'pointer',
-                        fontSize: '11.5px',
+                        backgroundColor: colorPalette === p.id ? 'var(--primary-light)' : 'var(--bg-secondary)',
+                        fontSize: '12px',
                         fontWeight: '700',
-                        color: 'var(--text-primary)'
+                        color: 'var(--text-primary)',
+                        cursor: 'pointer',
+                        width: '100%'
                       }}
                     >
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <span>{p.icon}</span>
-                        <span>{p.name}</span>
-                      </div>
-                      <div style={{ display: 'flex', gap: '3px' }}>
+                      <span style={{ fontWeight: '700' }}>{p.name}</span>
+                      <div style={{ display: 'flex', gap: '4px' }}>
                         <div style={{ width: '10px', height: '10px', borderRadius: '50%', backgroundColor: p.primary }} />
                         <div style={{ width: '10px', height: '10px', borderRadius: '50%', backgroundColor: p.accent }} />
                       </div>
@@ -1360,38 +1489,66 @@ const MemberDashboard = ({ initialTab }) => {
                 </div>
               </div>
             )}
+
+            {/* Lista de Módulos */}
+            <span style={{ fontSize: '11px', fontWeight: '900', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '10px', display: 'block' }}>
+              Módulos del Sistema
+            </span>
+            <div style={{ display: 'grid', gap: '6px' }}>
+              {[
+                { id: 'bienestar', label: 'Mi Bienestar', icon: Brain },
+                { id: 'tasks', label: 'Mis Tareas', icon: ClipboardList, badge: tasks.filter(t => t.status === 'pendiente').length, badgeColor: 'var(--danger)' },
+                { id: 'evaluations', label: 'Tests', icon: Calendar, badge: evaluations.length, badgeColor: 'var(--primary)' },
+                { id: 'progress', label: 'Mi Progreso', icon: Trophy },
+                { id: 'clinical_appointments', label: 'Citas 1 a 1', icon: Calendar },
+                { id: 'kudos', label: 'Chat & Grupos', icon: MessageSquare },
+                { id: 'chat_ia', label: 'Asistente IA', icon: Sparkles }
+              ].map(item => {
+                const Icon = item.icon;
+                const isActive = activeTab === item.id || (item.id === 'tasks' && activeTab === 'tareas') || (item.id === 'clinical_appointments' && activeTab === 'appointments');
+                return (
+                  <button
+                    key={item.id}
+                    type="button"
+                    onClick={() => { handleTabChange(item.id); setMobileMenuOpen(false); }}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      padding: '12px 14px',
+                      borderRadius: '12px',
+                      border: isActive ? '1.5px solid var(--primary)' : '1px solid transparent',
+                      backgroundColor: isActive ? 'var(--primary-light)' : 'transparent',
+                      color: isActive ? 'var(--primary)' : 'var(--text-primary)',
+                      fontWeight: isActive ? '800' : '600',
+                      fontSize: '13px',
+                      textAlign: 'left',
+                      cursor: 'pointer',
+                      transition: 'all 0.15s ease'
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                      <Icon size={16} style={{ color: isActive ? 'var(--primary)' : 'var(--text-secondary)' }} />
+                      <span>{item.label}</span>
+                    </div>
+                    {item.badge > 0 && (
+                      <span style={{ backgroundColor: item.badgeColor, color: '#fff', fontSize: '10px', padding: '2px 7px', borderRadius: '12px', fontWeight: '800' }}>
+                        {item.badge}
+                      </span>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
           </div>
-
-          <button onClick={toggleTheme} className="theme-toggle" style={{ border: '1px solid var(--border)', width: '36px', height: '36px', borderRadius: '50%' }} title="Cambiar Modo Claro/Oscuro">
-            {theme === 'light' ? <Moon size={15} /> : <Sun size={15} />}
-          </button>
-
-          {/* Botón Acceso a Configuración */}
-          <button 
-            onClick={() => navigate('/configuracion')} 
-            className="theme-toggle" 
-            style={{ border: '1px solid var(--border)', width: '36px', height: '36px', borderRadius: '50%' }} 
-            title="Configuración de la Cuenta y Privacidad"
-          >
-            <SettingsIcon size={15} style={{ color: 'var(--text-primary)' }} />
-          </button>
-          
-          <div style={{ textAlign: 'right', fontSize: '12.5px' }}>
-            <span style={{ fontWeight: '800', display: 'block' }}>{user?.first_name} {user?.last_name}</span>
-            <span style={{ color: 'var(--text-secondary)', fontSize: '10.5px', fontWeight: '500' }}>Miembro Activo</span>
-          </div>
-
-          <button onClick={logout} className="theme-toggle" style={{ color: 'var(--danger)', border: '1px solid var(--border)', width: '36px', height: '36px', borderRadius: '50%' }} title="Cerrar Sesión">
-            <LogOut size={15} />
-          </button>
-        </div>
-      </header>
+        </>
+      )}
 
       {/* Contenedor del Tablero */}
-      <main style={{ flex: 1, padding: '24px 24px', maxWidth: '1300px', width: '100%', margin: '0 auto' }}>
+      <main className="dashboard-main-content" style={{ flex: 1, padding: '24px 24px', maxWidth: '1300px', width: '100%', margin: '0 auto', boxSizing: 'border-box' }}>
         
         {/* Pestañas de Navegación Profesional (Sin Emojis en Menú) */}
-        <div className="tab-container" style={{ width: '100%', overflowX: 'auto', flexWrap: 'nowrap' }}>
+        <div className="tab-container" style={{ width: '100%' }}>
           <button className={`tab-btn ${activeTab === 'bienestar' ? 'active' : ''}`} onClick={() => handleTabChange('bienestar')}><Brain size={15} /><span>Mi Bienestar</span></button>
           <button className={`tab-btn ${activeTab === 'tareas' || activeTab === 'tasks' ? 'active' : ''}`} onClick={() => handleTabChange('tasks')}><ClipboardList size={15} /><span>Mis Tareas</span>{tasks.filter(t => t.status === 'pendiente').length > 0 && <span style={{ backgroundColor: 'var(--danger)', color: '#fff', fontSize: '10px', padding: '2px 6px', borderRadius: 'var(--radius-full)', fontWeight: 'bold' }}>{tasks.filter(t => t.status === 'pendiente').length}</span>}</button>
           <button className={`tab-btn ${activeTab === 'evaluations' ? 'active' : ''}`} onClick={() => handleTabChange('evaluations')}><Calendar size={15} /><span>Tests</span>{evaluations.length > 0 && <span style={{ backgroundColor: 'var(--primary)', color: '#fff', fontSize: '10px', padding: '2px 6px', borderRadius: 'var(--radius-full)', fontWeight: 'bold' }}>{evaluations.length}</span>}</button>
@@ -1425,11 +1582,13 @@ const MemberDashboard = ({ initialTab }) => {
               </div>
               <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
                 <div style={{ display: 'flex', backgroundColor: 'var(--bg-secondary)', padding: '3px', borderRadius: '10px', border: '1px solid var(--border)' }}>
-                  <button onClick={() => setTaskViewMode('list')} className={`duo-pill ${taskViewMode === 'list' ? 'selected' : ''}`} style={{ padding: '4px 12px', fontSize: '11px' }}>
-                    📋 Lista
+                  <button onClick={() => setTaskViewMode('list')} className={`duo-pill ${taskViewMode === 'list' ? 'selected' : ''}`} style={{ padding: '4px 12px', fontSize: '11px', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                    <List size={13} />
+                    <span>Lista</span>
                   </button>
-                  <button onClick={() => setTaskViewMode('kanban')} className={`duo-pill ${taskViewMode === 'kanban' ? 'selected' : ''}`} style={{ padding: '4px 12px', fontSize: '11px' }}>
-                    📊 Tablero Kanban
+                  <button onClick={() => setTaskViewMode('kanban')} className={`duo-pill ${taskViewMode === 'kanban' ? 'selected' : ''}`} style={{ padding: '4px 12px', fontSize: '11px', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                    <LayoutGrid size={13} />
+                    <span>Tablero Kanban</span>
                   </button>
                 </div>
               </div>
@@ -1448,15 +1607,16 @@ const MemberDashboard = ({ initialTab }) => {
               }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '12px' }}>
                   <div>
-                    <div style={{ display: 'flex', gap: '6px', marginBottom: '6px', flexWrap: 'wrap' }}>
+                    <div style={{ display: 'flex', gap: '6px', marginBottom: '6px', flexWrap: 'wrap', alignItems: 'center' }}>
                       <span style={{ fontSize: '10px', fontWeight: '800', padding: '2px 8px', borderRadius: '10px', backgroundColor: 'var(--primary-light)', color: 'var(--primary)' }}>
                         {selectedTaskModal.category || 'Bienestar'}
                       </span>
-                      <span style={{ fontSize: '10px', fontWeight: '800', padding: '2px 8px', borderRadius: '10px', backgroundColor: 'var(--accent-light)', color: 'var(--accent)' }}>
-                        {selectedTaskModal.priority === 'Alta' ? '🔴 Prioridad Alta' : selectedTaskModal.priority === 'Baja' ? '🟢 Prioridad Baja' : '🟡 Prioridad Media'}
+                      <span style={{ fontSize: '10px', fontWeight: '800', padding: '2px 8px', borderRadius: '10px', backgroundColor: selectedTaskModal.priority === 'Alta' ? 'var(--danger-light)' : selectedTaskModal.priority === 'Baja' ? 'var(--success-light)' : 'var(--warning-light)', color: selectedTaskModal.priority === 'Alta' ? 'var(--danger)' : selectedTaskModal.priority === 'Baja' ? 'var(--success)' : 'var(--warning)' }}>
+                        Prioridad {selectedTaskModal.priority || 'Media'}
                       </span>
-                      <span style={{ fontSize: '10px', fontWeight: '800', padding: '2px 8px', borderRadius: '10px', backgroundColor: 'var(--bg-secondary)', color: 'var(--text-secondary)' }}>
-                        ⏱️ {selectedTaskModal.estimated_minutes || 15} min
+                      <span style={{ fontSize: '10px', fontWeight: '800', padding: '2px 8px', borderRadius: '10px', backgroundColor: 'var(--bg-secondary)', color: 'var(--text-secondary)', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                        <Clock size={11} />
+                        <span>{selectedTaskModal.estimated_minutes || 15} min</span>
                       </span>
                     </div>
                     <h3 style={{ fontSize: '17px', fontWeight: '900', color: 'var(--text-primary)' }}>
@@ -1501,7 +1661,7 @@ const MemberDashboard = ({ initialTab }) => {
 
                 <div style={{ marginBottom: '16px' }}>
                   <label style={{ fontSize: '11px', fontWeight: '800', color: 'var(--primary)', display: 'block', marginBottom: '6px', textTransform: 'uppercase' }}>
-                    📝 Evidencia / Observaciones al Completar (Opcional):
+                    Evidencia / Observaciones al Completar (Opcional):
                   </label>
                   <textarea
                     rows="3"
@@ -1526,9 +1686,9 @@ const MemberDashboard = ({ initialTab }) => {
                     onClick={() => handleToggleTaskStatus(selectedTaskModal.id, selectedTaskModal.status, taskSubmissionNote)}
                     className="btn btn-primary"
                     disabled={taskSubmitting}
-                    style={{ padding: '10px 20px', fontSize: '12.5px', borderRadius: '10px', fontWeight: '900' }}
+                    style={{ padding: '10px 20px', fontSize: '12.5px', borderRadius: '10px', fontWeight: '900', display: 'inline-flex', alignItems: 'center', gap: '6px' }}
                   >
-                    {taskSubmitting ? <Loader className="animate-spin" size={14} /> : '⚡ Entregar Tarea y Ganar +20 XP'}
+                    {taskSubmitting ? <Loader className="animate-spin" size={14} /> : <><span>Entregar Tarea y Ganar +20 XP</span><Zap size={14} /></>}
                   </button>
                 </div>
               </div>
@@ -1542,10 +1702,10 @@ const MemberDashboard = ({ initialTab }) => {
                 
                 {/* Definición de Columnas Kanban */}
                 {[
-                  { key: 'todo', title: '📌 Por Hacer', color: 'var(--primary)', filter: t => (t.board_column === 'todo' || !t.board_column) && t.status !== 'completada' },
-                  { key: 'in_progress', title: '⏳ En Proceso', color: 'var(--warning)', filter: t => t.board_column === 'in_progress' },
-                  { key: 'in_review', title: '📝 En Revisión', color: 'var(--accent)', filter: t => t.board_column === 'in_review' },
-                  { key: 'completed', title: '✅ Completadas', color: 'var(--success)', filter: t => t.board_column === 'completed' || t.status === 'completada' }
+                  { key: 'todo', title: 'Por Hacer', color: 'var(--primary)', filter: t => (t.board_column === 'todo' || !t.board_column) && t.status !== 'completada' },
+                  { key: 'in_progress', title: 'En Proceso', color: 'var(--warning)', filter: t => t.board_column === 'in_progress' },
+                  { key: 'in_review', title: 'En Revisión', color: 'var(--accent)', filter: t => t.board_column === 'in_review' },
+                  { key: 'completed', title: 'Completadas', color: 'var(--success)', filter: t => t.board_column === 'completed' || t.status === 'completada' }
                 ].map(col => {
                   const colTasks = tasks.filter(col.filter);
                   const isOver = dragOverCol === col.key;
@@ -1587,7 +1747,7 @@ const MemberDashboard = ({ initialTab }) => {
 
                       {isOver && (
                         <div style={{ padding: '8px', marginBottom: '8px', borderRadius: '10px', backgroundColor: 'var(--primary-light)', color: 'var(--primary)', fontSize: '11px', fontWeight: '800', textAlign: 'center', border: '1px dashed var(--primary)' }}>
-                          👇 Soltar tarjeta en {col.title}
+                          Soltar tarjeta en {col.title}
                         </div>
                       )}
 
@@ -1622,11 +1782,24 @@ const MemberDashboard = ({ initialTab }) => {
                                   transition: 'all 0.15s ease'
                                 }}
                               >
-                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px', gap: '6px' }}>
                                   <span style={{ fontSize: '9.5px', fontWeight: '800', padding: '2px 6px', borderRadius: '6px', backgroundColor: 'var(--bg-secondary)', color: 'var(--text-secondary)' }}>
                                     {task.category || 'Bienestar'}
                                   </span>
-                                  <span style={{ fontSize: '11px' }}>🖐️</span>
+                                  <span style={{
+                                    fontSize: '9px',
+                                    fontWeight: '900',
+                                    padding: '1px 6px',
+                                    borderRadius: '6px',
+                                    backgroundColor: task.priority === 'Alta' ? 'var(--danger-light)' : task.priority === 'Baja' ? 'var(--success-light)' : 'rgba(234, 179, 8, 0.12)',
+                                    color: task.priority === 'Alta' ? 'var(--danger)' : task.priority === 'Baja' ? 'var(--success)' : 'var(--warning)',
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    gap: '3px'
+                                  }}>
+                                    <span style={{ width: '4px', height: '4px', borderRadius: '50%', backgroundColor: task.priority === 'Alta' ? 'var(--danger)' : task.priority === 'Baja' ? 'var(--success)' : 'var(--warning)' }}></span>
+                                    <span>{task.priority || 'Media'}</span>
+                                  </span>
                                 </div>
                                 
                                 <h5 style={{ fontSize: '12.5px', fontWeight: '800', textDecoration: col.key === 'completed' ? 'line-through' : 'none' }}>
@@ -1643,7 +1816,7 @@ const MemberDashboard = ({ initialTab }) => {
                                 {task.resource && (
                                   <div style={{ marginTop: '6px', padding: '6px 8px', borderRadius: '8px', backgroundColor: 'var(--primary-light)', border: '1px solid rgba(99, 102, 241, 0.2)' }}>
                                     <div style={{ fontSize: '10px', fontWeight: '900', color: 'var(--primary)', display: 'flex', alignItems: 'center', gap: '4px', marginBottom: task.status !== 'completada' ? '5px' : '0' }}>
-                                      <span>🧘</span>
+                                      <BookOpen size={11} />
                                       <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{task.resource.title}</span>
                                     </div>
                                     {task.status !== 'completada' && (
@@ -1664,13 +1837,16 @@ const MemberDashboard = ({ initialTab }) => {
 
                                 <div style={{ display: 'flex', gap: '4px', marginTop: '8px', alignItems: 'center', justifyContent: 'space-between' }}>
                                   {col.key === 'completed' ? (
-                                    <span style={{ fontSize: '10px', color: 'var(--success)', fontWeight: '800' }}>+20 XP Ganados ⚡</span>
+                                    <span style={{ fontSize: '10px', color: 'var(--success)', fontWeight: '800' }}>+20 XP Ganados</span>
                                   ) : col.key === 'in_review' ? (
                                     <button onClick={() => setSelectedTaskModal(task)} className="duo-pill selected" style={{ width: '100%', justifyContent: 'center', fontSize: '10px', padding: '4px 6px' }}>
-                                      ⚡ Entregar (+20 XP)
+                                      Entregar (+20 XP)
                                     </button>
                                   ) : (
-                                    <span style={{ fontSize: '9.5px', color: 'var(--text-muted)' }}>Arrastra para mover ➔</span>
+                                    <span style={{ fontSize: '9.5px', color: 'var(--text-muted)', display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
+                                      <span>Arrastra para mover</span>
+                                      <ArrowRight size={10} />
+                                    </span>
                                   )}
                                 </div>
                               </div>
@@ -1700,11 +1876,26 @@ const MemberDashboard = ({ initialTab }) => {
                       <div>
                         <div style={{ display: 'flex', gap: '6px', marginBottom: '4px', alignItems: 'center', flexWrap: 'wrap' }}>
                           <span style={{ fontSize: '9px', fontWeight: '800', padding: '2px 6px', borderRadius: '8px', backgroundColor: 'var(--primary-light)', color: 'var(--primary)' }}>{task.category || 'Bienestar'}</span>
-                          <span style={{ fontSize: '9px', fontWeight: '800', padding: '2px 6px', borderRadius: '8px', backgroundColor: 'var(--bg-primary)', color: 'var(--text-secondary)' }}>{task.priority === 'Alta' ? '🔴 Alta' : task.priority === 'Baja' ? '🟢 Baja' : '🟡 Media'}</span>
-                          <span style={{ fontSize: '9px', fontWeight: '800', color: 'var(--text-muted)' }}>⏱️ {task.estimated_minutes || 15} min</span>
+                          <span style={{
+                            fontSize: '9.5px',
+                            fontWeight: '900',
+                            padding: '2px 8px',
+                            borderRadius: '8px',
+                            backgroundColor: task.priority === 'Alta' ? 'var(--danger-light)' : task.priority === 'Baja' ? 'var(--success-light)' : 'rgba(234, 179, 8, 0.12)',
+                            color: task.priority === 'Alta' ? 'var(--danger)' : task.priority === 'Baja' ? 'var(--success)' : 'var(--warning)',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '4px'
+                          }}>
+                            <span style={{ width: '5px', height: '5px', borderRadius: '50%', backgroundColor: task.priority === 'Alta' ? 'var(--danger)' : task.priority === 'Baja' ? 'var(--success)' : 'var(--warning)' }}></span>
+                            <span>Prioridad {task.priority || 'Media'}</span>
+                          </span>
+                          <span style={{ fontSize: '9px', fontWeight: '800', color: 'var(--text-muted)', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                            <Clock size={10} /> {task.estimated_minutes || 15} min
+                          </span>
                           {task.resource && (
                             <span style={{ fontSize: '9.5px', fontWeight: '800', padding: '2px 8px', borderRadius: '8px', backgroundColor: 'var(--primary-light)', color: 'var(--primary)', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-                              🧘 Vinculada a: {task.resource.title}
+                              <BookOpen size={11} /> Vinculada a: {task.resource.title}
                             </span>
                           )}
                         </div>
@@ -1735,12 +1926,12 @@ const MemberDashboard = ({ initialTab }) => {
           </div>
         )}
 
-        {/* MÓDULO DE GAMIFICACIÓN PROFESIONAL Y MI PROGRESO 🏆 */}
+        {/* MÓDULO DE GAMIFICACIÓN PROFESIONAL Y MI PROGRESO */}
         {activeTab === 'progress' && (
           <MyProgress onBack={() => setActiveTab('bienestar')} />
         )}
 
-        {/* NUEVO MÓDULO 2: AGENDA DE CITAS Y SESIONES DE ACOMPAÑAMIENTO 1 A 1 📅 */}
+        {/* NUEVO MÓDULO 2: AGENDA DE CITAS Y SESIONES DE ACOMPAÑAMIENTO 1 A 1 */}
         {(activeTab === 'appointments' || activeTab === 'clinical_appointments') && (
           <div className="grid grid-2 animate-fade" style={{ alignItems: 'start' }}>
             <div className="glass-card">
@@ -1767,11 +1958,11 @@ const MemberDashboard = ({ initialTab }) => {
                   <label style={{ fontSize: '11px', fontWeight: '800', marginBottom: '6px', display: 'block' }}>HORARIO DE DISPONIBILIDAD:</label>
                   <CustomSelect
                     options={[
-                      { value: '09:00', label: '09:00 AM (Turno Mañana)', icon: '⏰' },
-                      { value: '10:00', label: '10:00 AM (Turno Mañana)', icon: '⏰' },
-                      { value: '11:00', label: '11:00 AM (Turno Mañana)', icon: '⏰' },
-                      { value: '14:00', label: '02:00 PM (Turno Tarde)', icon: '⏰' },
-                      { value: '16:00', label: '04:00 PM (Turno Tarde)', icon: '⏰' }
+                      { value: '09:00', label: '09:00 AM (Turno Mañana)' },
+                      { value: '10:00', label: '10:00 AM (Turno Mañana)' },
+                      { value: '11:00', label: '11:00 AM (Turno Mañana)' },
+                      { value: '14:00', label: '02:00 PM (Turno Tarde)' },
+                      { value: '16:00', label: '04:00 PM (Turno Tarde)' }
                     ]}
                     value={apptTime}
                     onChange={(val) => setApptTime(val)}
@@ -1783,8 +1974,8 @@ const MemberDashboard = ({ initialTab }) => {
                   <input type="text" placeholder="Ej. Estrés laboral, orientación académica o respiración" value={apptReason} onChange={(e) => setApptReason(e.target.value)} required style={{ borderRadius: '8px' }} />
                 </div>
 
-                <button type="submit" className="btn btn-primary" disabled={apptLoading} style={{ width: '100%', padding: '12px', borderRadius: '10px', fontWeight: '900' }}>
-                  {apptLoading ? <Loader className="animate-spin" size={16} /> : '📅 Confirmar y Reservar Cita Privada'}
+                <button type="submit" className="btn btn-primary" disabled={apptLoading} style={{ width: '100%', padding: '12px', borderRadius: '10px', fontWeight: '900', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
+                  {apptLoading ? <Loader className="animate-spin" size={16} /> : <><span>Confirmar y Reservar Cita Privada</span><Calendar size={16} /></>}
                 </button>
               </form>
             </div>
@@ -1804,8 +1995,9 @@ const MemberDashboard = ({ initialTab }) => {
                         <span style={{ fontSize: '10px', fontWeight: '800', padding: '2px 6px', borderRadius: '8px', backgroundColor: 'var(--success-light)', color: 'var(--success)' }}>{a.status}</span>
                       </div>
                       <p style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>{a.reason}</p>
-                      <span style={{ fontSize: '11px', color: 'var(--primary)', fontWeight: '800', marginTop: '6px', display: 'block' }}>
-                        📆 {new Date(a.date_time).toLocaleString()}
+                      <span style={{ fontSize: '11px', color: 'var(--primary)', fontWeight: '800', marginTop: '6px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                        <Clock size={12} />
+                        <span>{new Date(a.date_time).toLocaleString()}</span>
                       </span>
                     </div>
                   ))
@@ -1815,7 +2007,7 @@ const MemberDashboard = ({ initialTab }) => {
           </div>
         )}
 
-        {/* NUEVO MÓDULO 3: CHAT DE EQUIPO, SALAS Y GRUPOS DE TRABAJO 💬 */}
+        {/* NUEVO MÓDULO 3: CHAT DE EQUIPO, SALAS Y GRUPOS DE TRABAJO */}
         {activeTab === 'kudos' && (
           <div className="glass-card animate-fade" style={{ padding: '0', overflow: 'hidden', borderRadius: '24px', border: '1px solid var(--border)', height: '650px', display: 'flex' }}>
             
@@ -1844,7 +2036,7 @@ const MemberDashboard = ({ initialTab }) => {
                   className={`duo-card ${chatChannel === 'general' ? 'selected' : ''}`}
                   style={{ justifyContent: 'flex-start', padding: '10px 12px', gap: '10px' }}
                 >
-                  <span style={{ fontSize: '20px' }}>💬</span>
+                  <MessageSquare size={20} style={{ color: 'var(--primary)', flexShrink: 0 }} />
                   <div style={{ textAlign: 'left' }}>
                     <h5 style={{ fontSize: '13px', fontWeight: '800' }}>Canal General EquilibrIA</h5>
                     <span style={{ fontSize: '10.5px', color: 'var(--text-muted)' }}>Comunidad Institucional</span>
@@ -1857,7 +2049,7 @@ const MemberDashboard = ({ initialTab }) => {
                   className={`duo-card ${chatChannel === 'kudos' ? 'selected' : ''}`}
                   style={{ justifyContent: 'flex-start', padding: '10px 12px', gap: '10px' }}
                 >
-                  <span style={{ fontSize: '20px' }}>💖</span>
+                  <Heart size={20} style={{ color: '#ec4899', flexShrink: 0 }} />
                   <div style={{ textAlign: 'left' }}>
                     <h5 style={{ fontSize: '13px', fontWeight: '800' }}>Muro de Gratitud e Insignias</h5>
                     <span style={{ fontSize: '10.5px', color: 'var(--text-muted)' }}>Reconocimientos comunitarios</span>
@@ -1880,7 +2072,7 @@ const MemberDashboard = ({ initialTab }) => {
                     style={{ justifyContent: 'flex-start', padding: '8px 10px', gap: '10px' }}
                   >
                     <div style={{ width: '32px', height: '32px', borderRadius: '50%', backgroundColor: 'var(--accent-light)', color: 'var(--accent)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '900', fontSize: '14px' }}>
-                      👥
+                      <Users size={16} />
                     </div>
                     <div style={{ textAlign: 'left', flex: 1, overflow: 'hidden' }}>
                       <h5 style={{ fontSize: '12.5px', fontWeight: '800', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{g.name}</h5>
@@ -1925,7 +2117,7 @@ const MemberDashboard = ({ initialTab }) => {
               <div style={{ padding: '14px 20px', borderBottom: '1px solid var(--border)', backgroundColor: 'var(--bg-secondary)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                   <div style={{ width: '38px', height: '38px', borderRadius: '50%', backgroundColor: 'var(--primary)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '900', fontSize: '16px' }}>
-                    {chatChannel === 'general' ? '💬' : chatChannel === 'kudos' ? '💖' : chatChannel === 'group' ? '👥' : '👤'}
+                    {chatChannel === 'general' ? <MessageSquare size={18} /> : chatChannel === 'kudos' ? <Heart size={18} /> : chatChannel === 'group' ? <Users size={18} /> : <User size={18} />}
                   </div>
                   <div>
                     <h4 style={{ fontSize: '14.5px', fontWeight: '900' }}>
@@ -1973,8 +2165,10 @@ const MemberDashboard = ({ initialTab }) => {
                       <div key={k.id} style={{ display: 'flex', justifyContent: isMe ? 'flex-end' : 'flex-start' }}>
                         <div className={isMe ? 'chat-bubble-sender' : 'chat-bubble-receiver'} style={{ maxWidth: '75%', padding: '12px 16px', borderRadius: '16px' }}>
                           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px', marginBottom: '4px' }}>
-                            <span style={{ fontSize: '11.5px', fontWeight: '900', opacity: 0.9 }}>
-                              {isMe ? 'Tú' : k.sender_name} ➔ <span style={{ textDecoration: 'underline' }}>{k.receiver_name}</span>
+                            <span style={{ fontSize: '11.5px', fontWeight: '900', opacity: 0.9, display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                              <span>{isMe ? 'Tú' : k.sender_name}</span>
+                              <ArrowRight size={11} />
+                              <span style={{ textDecoration: 'underline' }}>{k.receiver_name}</span>
                             </span>
                             <span style={{ fontSize: '9.5px', padding: '2px 6px', borderRadius: '6px', backgroundColor: 'rgba(255,255,255,0.2)', fontWeight: '800' }}>
                               {k.badge_type}
@@ -1991,30 +2185,30 @@ const MemberDashboard = ({ initialTab }) => {
                 })()}
               </div>
 
-              {/* Entrada Fija al Pie de Bienestar con Selector de Emojis */}
+              {/* Entrada Fija al Pie de Bienestar */}
               <form onSubmit={handleCreateKudos} style={{ padding: '14px 20px', backgroundColor: 'var(--bg-secondary)', borderTop: '1px solid var(--border)', display: 'flex', flexDirection: 'column', gap: '10px', position: 'relative' }}>
                 
-                {/* Paleta Emergente de Emojis Modernos */}
+                {/* Paleta Emergente de Emojis de Chat */}
                 {showEmojiPicker && (
                   <div style={{
                     position: 'absolute',
-                    bottom: '100%',
+                    bottom: 'calc(100% + 8px)',
                     left: '20px',
-                    marginBottom: '10px',
-                    backgroundColor: 'var(--bg-secondary)',
+                    backgroundColor: 'var(--bg-primary)',
                     border: '1.5px solid var(--border)',
-                    borderRadius: '18px',
+                    borderRadius: '16px',
                     padding: '12px',
-                    boxShadow: '0 10px 30px rgba(0,0,0,0.3)',
+                    boxShadow: '0 10px 30px rgba(0,0,0,0.25)',
                     zIndex: 9999,
-                    width: '300px',
+                    width: '310px',
                     display: 'grid',
                     gridTemplateColumns: 'repeat(6, 1fr)',
-                    gap: '8px'
+                    gap: '6px',
+                    animation: 'fadeIn 0.15s ease'
                   }}>
-                    {modernEmojis.map(emoji => (
+                    {CHAT_EMOJIS.map((emoji, idx) => (
                       <button
-                        key={emoji}
+                        key={idx}
                         type="button"
                         onClick={() => {
                           setKudoMessage(prev => prev + emoji);
@@ -2026,10 +2220,20 @@ const MemberDashboard = ({ initialTab }) => {
                           background: 'transparent',
                           cursor: 'pointer',
                           borderRadius: '8px',
-                          padding: '4px',
-                          transition: 'transform 0.15s ease'
+                          padding: '6px',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          transition: 'transform 0.12s ease, background-color 0.12s ease'
                         }}
-                        className="calendar-day-box"
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.backgroundColor = 'var(--bg-secondary)';
+                          e.currentTarget.style.transform = 'scale(1.2)';
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.backgroundColor = 'transparent';
+                          e.currentTarget.style.transform = 'scale(1)';
+                        }}
                       >
                         {emoji}
                       </button>
@@ -2039,29 +2243,53 @@ const MemberDashboard = ({ initialTab }) => {
 
                 <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
                   <span style={{ fontSize: '11px', fontWeight: '800', color: 'var(--text-secondary)' }}>Insignia / Categoría:</span>
-                  {['Gratitud', 'Compañerismo', 'Resiliencia', 'Liderazgo'].map(b => (
+                  {[
+                    { label: 'Gratitud', color: '#ec4899' },
+                    { label: 'Compañerismo', color: '#3b82f6' },
+                    { label: 'Resiliencia', color: '#10b981' },
+                    { label: 'Liderazgo', color: '#f59e0b' }
+                  ].map(b => (
                     <button
-                      key={b}
+                      key={b.label}
                       type="button"
-                      onClick={() => setKudoBadge(b)}
-                      className={`duo-pill ${kudoBadge === b ? 'selected' : ''}`}
-                      style={{ fontSize: '11px', padding: '3px 8px' }}
+                      onClick={() => setKudoBadge(b.label)}
+                      className={`duo-pill ${kudoBadge === b.label ? 'selected' : ''}`}
+                      style={{
+                        fontSize: '11px',
+                        padding: '3px 10px',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                        borderColor: kudoBadge === b.label ? b.color : undefined,
+                        color: kudoBadge === b.label ? b.color : undefined
+                      }}
                     >
-                      {b}
+                      <span style={{ width: '7px', height: '7px', borderRadius: '50%', backgroundColor: b.color, display: 'inline-block' }}></span>
+                      <span>{b.label}</span>
                     </button>
                   ))}
                 </div>
 
                 <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
-                  {/* Botón Emergente de Emojis */}
+                  {/* Botón para Abrir Selector de Emojis */}
                   <button
                     type="button"
                     onClick={() => setShowEmojiPicker(!showEmojiPicker)}
                     className="theme-toggle"
-                    style={{ width: '40px', height: '40px', borderRadius: '50%', border: '1px solid var(--border)', fontSize: '18px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-                    title="Insertar Emojis"
+                    style={{
+                      width: '40px',
+                      height: '40px',
+                      borderRadius: '50%',
+                      border: '1px solid var(--border)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      backgroundColor: showEmojiPicker ? 'var(--primary-light)' : 'var(--bg-primary)',
+                      color: showEmojiPicker ? 'var(--primary)' : 'var(--text-secondary)'
+                    }}
+                    title="Insertar Emoji"
                   >
-                    <Smile size={20} style={{ color: 'var(--primary)' }} />
+                    <Smile size={20} />
                   </button>
 
                   <input 
@@ -2136,22 +2364,23 @@ const MemberDashboard = ({ initialTab }) => {
                             Ver Diagnóstico
                           </button>
                         ) : (
-                          <button
-                            onClick={() => {
-                              setSelectedEval(ev);
-                              setTestAnswers({});
-                              setTestStep('intro');
-                              setCurrentQuestionIndex(0);
-                              setMascotMood('welcome');
-                              setEvalSuccessMsg('');
-                              setEvalErrorMsg('');
-                              setActiveView('fill_test');
-                            }}
-                            className="duo-pill selected"
-                            style={{ fontSize: '12px' }}
-                          >
-                            Responder Test ⚡
-                          </button>
+                            <button
+                              onClick={() => {
+                                setSelectedEval(ev);
+                                setTestAnswers({});
+                                setTestStep('intro');
+                                setCurrentQuestionIndex(0);
+                                setMascotMood('welcome');
+                                setEvalSuccessMsg('');
+                                setEvalErrorMsg('');
+                                setActiveView('fill_test');
+                              }}
+                              className="duo-pill selected"
+                              style={{ fontSize: '12px', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
+                            >
+                              <span>Responder Test</span>
+                              <ArrowRight size={12} />
+                            </button>
                         )}
                       </div>
                     );
@@ -2242,7 +2471,7 @@ const MemberDashboard = ({ initialTab }) => {
                     <p style={{ whiteSpace: 'pre-line' }}>{msg.text}</p>
                     {msg.citations && msg.citations.length > 0 && (
                       <div style={{ marginTop: '10px', paddingTop: '8px', borderTop: '1px solid rgba(0,0,0,0.1)', fontSize: '11px', opacity: 0.85 }}>
-                        <strong>📚 Fuentes de referencia:</strong>
+                        <strong style={{ display: 'flex', alignItems: 'center', gap: '4px' }}><BookOpen size={12} /> Fuentes de referencia:</strong>
                         <ul style={{ margin: '4px 0 0 16px', padding: 0 }}>
                           {msg.citations.map((c, cIdx) => (
                             <li key={cIdx}>

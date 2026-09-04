@@ -42,7 +42,7 @@ const StarryBackground = ({ isLogin = false }) => {
       }
 
       const size = Math.random() * 3.2 + 1.8;
-      const isSparkle = i % 3 === 0; // 1 de cada 3 es un destello ✨ en cruz
+      const isSparkle = i % 3 === 0; // 1 de cada 3 es un destello en cruz
       const color = systemColors[i % systemColors.length];
 
       return {

@@ -24,8 +24,8 @@ export default function GamificationWidget({ onNavigateToFullProgress }) {
     try {
       setLoading(true);
       const [resProfile, resBadges] = await Promise.all([
-        api.get('/gamification/me'),
-        api.get('/gamification/badges')
+        api.get('/gamification/me', { timeout: 10000 }),
+        api.get('/gamification/badges', { timeout: 10000 })
       ]);
       setProfile(resProfile.data);
       setBadges(resBadges.data || []);
@@ -97,7 +97,7 @@ export default function GamificationWidget({ onNavigateToFullProgress }) {
       </div>
 
       {/* Grid de 4 Pilares: Nivel & XP, Racha, Medallas, Ranking */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '14px', marginBottom: '18px' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 190px), 1fr))', gap: '14px', marginBottom: '18px', width: '100%', boxSizing: 'border-box' }}>
         
         {/* 1. Nivel y XP */}
         <div style={{ backgroundColor: 'var(--bg-secondary)', borderRadius: '16px', padding: '14px 16px', border: '1px solid var(--border)' }}>
@@ -134,7 +134,9 @@ export default function GamificationWidget({ onNavigateToFullProgress }) {
             <Flame size={18} style={{ color: '#f97316' }} />
           </div>
           <div style={{ fontSize: '22px', fontWeight: '900', color: '#f97316', marginBottom: '4px', display: 'flex', alignItems: 'center', gap: '6px' }}>
-            🔥 {profile.current_streak || 0} <span style={{ fontSize: '13px', color: 'var(--text-primary)' }}>DÍAS</span>
+            <Flame size={20} style={{ color: '#f97316' }} />
+            <span>{profile.current_streak || 0}</span>
+            <span style={{ fontSize: '13px', color: 'var(--text-primary)' }}>DÍAS</span>
           </div>
           <p style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '6px' }}>
             Mejor racha histórica: <strong>{profile.longest_streak || 0} días</strong>

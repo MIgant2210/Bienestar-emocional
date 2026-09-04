@@ -17,3 +17,4 @@ from app.models.invitation import InvitationCode
 from app.models.verification_token import EmailVerificationToken
 from app.models.cultural_expression import CulturalExpression
 from app.models.knowledge_document import KnowledgeDocument
+from app.models.user_avatar import UserAvatar

@@ -1,18 +1,20 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useContext } from 'react';
 import { 
   CheckCircle2, Circle, Play, Pause, RotateCcw, Volume2, Sparkles, 
   HelpCircle, Award, Eye, Heart, ArrowRight, ArrowLeft, Clock,
   Calendar, Check, AlertTriangle, MessageSquare, BookOpen, ShieldCheck,
   Send, Smile, Compass, RefreshCw, Video, Music, Headphones, Sliders,
   VolumeX, ExternalLink, Activity, Wind, FileText, CheckSquare, PenLine,
-  Brain, Lightbulb, Flame, SkipForward
+  Brain, Lightbulb, Flame, SkipForward, Feather, Zap, ChevronDown
 } from 'lucide-react';
+import { AuthContext } from '../contexts/AuthContext';
 import ResourceAudioPlayer from './ResourceAudioPlayer';
 import ColibriMascot from './ColibriMascot';
 import EquilibriaCharacter from './EquilibriaCharacter';
 import HumanWellnessAvatar from './HumanWellnessAvatar';
 import AngieAvatar from './AngieAvatar';
 import KennyAvatar from './KennyAvatar';
+import ModularAvatar from './ModularAvatar';
 
 // Helper para convertir cualquier URL de YouTube a URL embebible
 const getEmbedUrl = (url) => {
@@ -29,58 +31,148 @@ const getEmbedUrl = (url) => {
   return url;
 };
 
-// Helper de Síntesis de Voz Web Speech API
-const speakVoiceCue = (text, isVoiceEnabled = true) => {
-  if (!isVoiceEnabled || !('speechSynthesis' in window) || !text) return;
-  try {
-    window.speechSynthesis.cancel(); // Cancelar locuciones previas
-    const utterance = new SpeechSynthesisUtterance(text);
-    utterance.lang = 'es-ES';
-    utterance.rate = 0.95; // Voz suave y pausada de bienestar
-    utterance.pitch = 1.0;
+import api from '../services/api';
 
-    // Buscar una voz en español si está disponible
-    const voices = window.speechSynthesis.getVoices();
-    const esVoice = voices.find(v => v.lang.startsWith('es') || v.name.toLowerCase().includes('spanish'));
-    if (esVoice) utterance.voice = esVoice;
+// Instancia global de audio y caché para la voz del Asistente de IA en ejercicios
+let activeVoiceAudio = null;
+let activeSessionToken = 0;
+const voiceCueCache = new Map();
 
-    window.speechSynthesis.speak(utterance);
-  } catch (err) {
-    console.log('Web Speech API notification:', err);
+export const stopExerciseVoiceCue = () => {
+  activeSessionToken++;
+  if (activeVoiceAudio) {
+    try {
+      activeVoiceAudio.pause();
+      activeVoiceAudio.currentTime = 0;
+      activeVoiceAudio.src = '';
+    } catch (e) {}
+    activeVoiceAudio = null;
+  }
+  if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
+    window.speechSynthesis.cancel();
   }
 };
+
+// Síntesis Exclusiva con Voz IA Neural (Sofía, Zen, Mateo, Valeria) - Cero voces robóticas antiguas
+const speakVoiceCue = async (text, isVoiceEnabled = true, persona = 'sofia') => {
+  if (!isVoiceEnabled || !text) return;
+  
+  stopExerciseVoiceCue();
+  const currentToken = activeSessionToken;
+  const activePersona = persona || 'sofia';
+  const cacheKey = `${activePersona}_${text}`;
+
+  // 1. Verificación en caché de audio neural para reproducción inmediata (0ms)
+  if (voiceCueCache.has(cacheKey)) {
+    try {
+      const blob = voiceCueCache.get(cacheKey);
+      const url = URL.createObjectURL(blob);
+      const audio = new Audio(url);
+      activeVoiceAudio = audio;
+      audio.onended = () => {
+        URL.revokeObjectURL(url);
+        if (activeVoiceAudio === audio) activeVoiceAudio = null;
+      };
+      await audio.play();
+      return;
+    } catch (err) {
+      console.warn('Error al reproducir audio neural desde caché:', err);
+    }
+  }
+
+  // 2. Si no está en caché aún, descargar del backend con voz IA Neural
+  try {
+    const response = await api.post(
+      '/wellbeing/tts',
+      { text, persona: activePersona, rate: 0.95 },
+      { responseType: 'blob', timeout: 15000 }
+    );
+
+    if (activeSessionToken !== currentToken) return;
+
+    if (response.data) {
+      voiceCueCache.set(cacheKey, response.data);
+      const url = URL.createObjectURL(response.data);
+      const audio = new Audio(url);
+      activeVoiceAudio = audio;
+      audio.onended = () => {
+        URL.revokeObjectURL(url);
+        if (activeVoiceAudio === audio) activeVoiceAudio = null;
+      };
+      await audio.play();
+    }
+  } catch (err) {
+    console.warn('No se pudo reproducir audio neural en ejercicio:', err);
+  }
+};
+
+const EXERCISE_VOICE_PERSONAS = [
+  { id: 'sofia', name: 'Sofía (Asistente IA)', tag: 'Neutra & Serena', desc: 'Voz empática, clara y suave', icon: Sparkles },
+  { id: 'zen', name: 'Modo Zen', tag: 'Paz Profunda', desc: 'Tono pausado, meditativo y relajante', icon: Feather },
+  { id: 'mateo', name: 'Mateo', tag: 'Motivador', desc: 'Tono fresco, dinámico y activo', icon: Zap },
+  { id: 'taylor', name: 'Valeria', tag: 'Suave & Dulce', desc: 'Tono reconfortante, amigable y dulce', icon: Heart }
+];
 
 const GuidedExercisePlayer = ({ resource, config, onComplete, readOnly }) => {
   const type = resource?.resource_type || 'articulo';
 
     const totalCycles = Number(config.total_cycles || config.cycles) || 3;
     
-    let steps = config.steps;
-    if (!steps || steps.length === 0) {
+    let rawSteps = (config.steps && config.steps.length > 0) ? config.steps : [];
+    if (rawSteps.length === 0) {
       if (type === 'respiracion') {
         const inh = Number(config.inhale) || 4;
         const hld = Number(config.hold_in || config.hold) || 4;
         const exh = Number(config.exhale) || 6;
         const hldOut = Number(config.hold_out) || 0;
 
-        steps = [
+        rawSteps = [
           { step: 1, name: 'INHALA', type: 'inhale', duration: inh, text: 'Expande tu abdomen y llena tus pulmones con aire fresco.', voice: 'Inhala lentamente por la nariz.' }
         ];
         if (hld > 0) {
-          steps.push({ step: 2, name: 'MANTÉN', type: 'hold', duration: hld, text: 'Mantén el aire. Cuerpo relajado y sereno.', voice: 'Mantén la respiración.' });
+          rawSteps.push({ step: 2, name: 'MANTÉN', type: 'hold', duration: hld, text: 'Mantén el aire. Cuerpo relajado y sereno.', voice: 'Mantén la respiración.' });
         }
-        steps.push({ step: steps.length + 1, name: 'EXHALA', type: 'exhale', duration: exh, text: 'Suelta el aire lentamente liberando toda tensión.', voice: 'Exhala suavemente.' });
+        rawSteps.push({ step: rawSteps.length + 1, name: 'EXHALA', type: 'exhale', duration: exh, text: 'Suelta el aire lentamente liberando toda tensión.', voice: 'Exhala suavemente.' });
         if (hldOut > 0) {
-          steps.push({ step: steps.length + 1, name: 'PAUSA', type: 'hold_out', duration: hldOut, text: 'Pausa con los pulmones vacíos en profunda calma.', voice: 'Pausa y siente la calma.' });
+          rawSteps.push({ step: rawSteps.length + 1, name: 'PAUSA', type: 'hold_out', duration: hldOut, text: 'Pausa con los pulmones vacíos en profunda calma.', voice: 'Pausa y siente la calma.' });
         }
       } else {
-        steps = [
+        rawSteps = [
           { step: 1, name: 'POSTURA INICIAL', type: 'step', duration: 20, text: 'Ponte erguido con los pies firmes y hombros relajados.', voice: 'Acomoda tu postura y respira.' },
           { step: 2, name: 'SOLTADO', type: 'step', duration: 15, text: 'Deja caer los hombros de golpe y suspira profundamente.', voice: 'Deja caer los hombros y suspira.' },
           { step: 3, name: 'ROTACIÓN', type: 'step', duration: 30, text: 'Realiza giros circulares amplios y fluidos hacia atrás.', voice: 'Gira los hombros hacia atrás.' }
         ];
       }
     }
+
+    // Normalizar pasos para asegurar consistencia total con campos de la BD (title, duration_seconds, instruction)
+    const steps = rawSteps.map((s, idx) => {
+      const stepName = s.name || s.title || `Paso ${idx + 1}`;
+      const stepDuration = Number(s.duration || s.duration_seconds || s.seconds) || (type === 'respiracion' ? 4 : 15);
+      const stepInstruction = s.text || s.instruction || s.description || stepName;
+      // La voz describe el paso diciendo el nombre y la instrucción que se va a hacer
+      const stepVoice = s.voice || (stepInstruction !== stepName ? `${stepName}. ${stepInstruction}` : stepInstruction);
+      return {
+        step: s.step || idx + 1,
+        name: stepName,
+        type: s.type || 'step',
+        duration: stepDuration,
+        text: stepInstruction,
+        voice: stepVoice
+      };
+    });
+
+    const { user } = useContext(AuthContext);
+    const activeStoredConfig = (() => {
+      try {
+        const raw = localStorage.getItem('active_exercise_avatar_config');
+        return raw ? JSON.parse(raw) : null;
+      } catch {
+        return null;
+      }
+    })();
+    const userAvatarConfig = user?.avatar_config || activeStoredConfig || null;
+    const userAvatarName = user?.avatar_name || localStorage.getItem('active_exercise_avatar_name') || 'Mi Avatar';
 
     const [isActive, setIsActive] = useState(false);
     const [hasStarted, setHasStarted] = useState(false);
@@ -89,9 +181,57 @@ const GuidedExercisePlayer = ({ resource, config, onComplete, readOnly }) => {
     const [stepSecondsLeft, setStepSecondsLeft] = useState(steps[0]?.duration || 4);
     const [isCompleted, setIsCompleted] = useState(false);
     const [voiceEnabled, setVoiceEnabled] = useState(true);
-    const [selectedGuide, setSelectedGuide] = useState('female'); // 'female' (Angie) | 'male' (Kenny)
+    const [selectedVoicePersona, setSelectedVoicePersona] = useState('sofia');
+    const [showVoiceDropdown, setShowVoiceDropdown] = useState(false);
+    const voiceDropdownRef = useRef(null);
+
+    const [selectedGuide, setSelectedGuide] = useState(() => {
+      return (user?.avatar_config || localStorage.getItem('active_exercise_avatar_config')) ? 'custom' : 'custom';
+    });
 
     const currentStep = steps[currentStepIdx] || steps[0];
+    const selectedPersonaObj = EXERCISE_VOICE_PERSONAS.find(p => p.id === selectedVoicePersona) || EXERCISE_VOICE_PERSONAS[0];
+
+    // Cerrar menú de voces al hacer clic afuera
+    useEffect(() => {
+      const handleOutsideClick = (e) => {
+        if (voiceDropdownRef.current && !voiceDropdownRef.current.contains(e.target)) {
+          setShowVoiceDropdown(false);
+        }
+      };
+      if (showVoiceDropdown) {
+        document.addEventListener('mousedown', handleOutsideClick);
+      }
+      return () => {
+        document.removeEventListener('mousedown', handleOutsideClick);
+      };
+    }, [showVoiceDropdown]);
+
+    // Limpiar audio únicamente al desmontar el componente (NUNCA en cada tick)
+    useEffect(() => {
+      return () => {
+        stopExerciseVoiceCue();
+      };
+    }, []);
+
+    // Pre-cargar los audios en memoria para que la reproducción sea instantánea sin latencia
+    useEffect(() => {
+      if (!steps || steps.length === 0) return;
+      steps.forEach(s => {
+        const cueText = s.voice || s.text;
+        if (!cueText) return;
+        const cueKey = `${selectedVoicePersona}_${cueText}`;
+        if (!voiceCueCache.has(cueKey)) {
+          api.post(
+            '/wellbeing/tts',
+            { text: cueText, persona: selectedVoicePersona, rate: 0.95 },
+            { responseType: 'blob', timeout: 12000 }
+          ).then(res => {
+            if (res.data) voiceCueCache.set(cueKey, res.data);
+          }).catch(() => {});
+        }
+      });
+    }, [steps, selectedVoicePersona]);
 
     // Cálculo de Progreso General
     const totalStepsInSession = steps.length * totalCycles;
@@ -110,19 +250,19 @@ const GuidedExercisePlayer = ({ resource, config, onComplete, readOnly }) => {
               const nextIdx = currentStepIdx + 1;
               setCurrentStepIdx(nextIdx);
               const nextStep = steps[nextIdx];
-              speakVoiceCue(nextStep.voice, voiceEnabled);
+              speakVoiceCue(nextStep.voice, voiceEnabled, selectedVoicePersona);
               return nextStep.duration;
             } else {
               if (currentCycle < totalCycles) {
                 setCurrentCycle(c => c + 1);
                 setCurrentStepIdx(0);
-                speakVoiceCue(`Ciclo ${currentCycle} completado. Continuamos.`, voiceEnabled);
+                speakVoiceCue(`Ciclo ${currentCycle} completado. Continuamos.`, voiceEnabled, selectedVoicePersona);
                 return steps[0].duration;
               } else {
                 setIsCompleted(true);
                 setIsActive(false);
                 setHasStarted(false);
-                speakVoiceCue('Excelente trabajo. Has completado el ejercicio.', voiceEnabled);
+                speakVoiceCue('Excelente trabajo. Has completado el ejercicio.', voiceEnabled, selectedVoicePersona);
                 if (onComplete && !readOnly) onComplete();
                 return 0;
               }
@@ -130,18 +270,26 @@ const GuidedExercisePlayer = ({ resource, config, onComplete, readOnly }) => {
           });
         }, 1000);
       }
-      return () => clearInterval(interval);
-    }, [isActive, isCompleted, currentStepIdx, currentCycle, steps, totalCycles, voiceEnabled, onComplete, readOnly]);
+      return () => {
+        if (interval) clearInterval(interval);
+      };
+    }, [isActive, isCompleted, currentStepIdx, currentCycle, steps, totalCycles, voiceEnabled, selectedVoicePersona, onComplete, readOnly]);
 
     const handleStart = () => {
       setIsActive(true);
       setHasStarted(true);
       setIsCompleted(false);
-      speakVoiceCue(currentStep.voice || 'Comenzamos.', voiceEnabled);
+      speakVoiceCue(currentStep.voice || 'Comenzamos.', voiceEnabled, selectedVoicePersona);
     };
 
-    const handlePause = () => setIsActive(false);
-    const handleResume = () => setIsActive(true);
+    const handlePause = () => {
+      setIsActive(false);
+      stopExerciseVoiceCue();
+    };
+    const handleResume = () => {
+      setIsActive(true);
+      speakVoiceCue(currentStep.voice || 'Continuamos.', voiceEnabled, selectedVoicePersona);
+    };
 
     const handleReset = () => {
       setIsActive(false);
@@ -150,7 +298,7 @@ const GuidedExercisePlayer = ({ resource, config, onComplete, readOnly }) => {
       setCurrentCycle(1);
       setCurrentStepIdx(0);
       setStepSecondsLeft(steps[0]?.duration || 4);
-      window.speechSynthesis?.cancel();
+      stopExerciseVoiceCue();
     };
 
     const handleSkipStep = () => {
@@ -158,11 +306,12 @@ const GuidedExercisePlayer = ({ resource, config, onComplete, readOnly }) => {
         const nextIdx = currentStepIdx + 1;
         setCurrentStepIdx(nextIdx);
         setStepSecondsLeft(steps[nextIdx].duration);
-        speakVoiceCue(steps[nextIdx].voice, voiceEnabled);
+        speakVoiceCue(steps[nextIdx].voice, voiceEnabled, selectedVoicePersona);
       } else if (currentCycle < totalCycles) {
         setCurrentCycle(c => c + 1);
         setCurrentStepIdx(0);
         setStepSecondsLeft(steps[0].duration);
+        speakVoiceCue(steps[0].voice, voiceEnabled, selectedVoicePersona);
       } else {
         setIsCompleted(true);
         setIsActive(false);
@@ -170,48 +319,108 @@ const GuidedExercisePlayer = ({ resource, config, onComplete, readOnly }) => {
       }
     };
 
-    // Determinar pose para Angie y Kenny
+    // Determinar pose precisa y expresiva para ModularAvatar, Angie y Kenny
     let colibriExercisePose = 'neutral';
-    const stepText = `${currentStep.text || ''} ${currentStep.name || ''}`.toLowerCase();
-    const stepType = currentStep.type || 'step';
+    const stepText = `${currentStep.text || ''} ${currentStep.name || ''} ${currentStep.type || ''} ${resource?.title || ''}`.toLowerCase();
+    const stepType = (currentStep.type || 'step').toLowerCase();
+
+    const hasRight = stepText.includes('derech') || stepText.includes('der') || stepText.includes('right');
+    const hasLeft = stepText.includes('izquierd') || stepText.includes('izq') || stepText.includes('left');
 
     if (isCompleted) {
       colibriExercisePose = 'celebrate';
-    } else if (stepType === 'inhale' || stepText.includes('inhala') || stepText.includes('toma aire') || stepText.includes('llena tus pulmones')) {
+    } 
+    // Respiración Guiada
+    else if (stepType === 'inhale' || stepText.includes('inhala') || stepText.includes('toma aire') || stepText.includes('llena tus pulmones') || stepText.includes('inspira')) {
       colibriExercisePose = 'inhale';
-    } else if (stepType === 'hold' || stepType === 'hold_out' || stepText.includes('mantén') || stepText.includes('sostén') || stepText.includes('pausa')) {
+    } else if (stepType === 'hold' || stepType === 'hold_out' || stepText.includes('mantén') || stepText.includes('manten') || stepText.includes('sostén') || stepText.includes('sosten') || stepText.includes('pausa')) {
       colibriExercisePose = 'hold';
-    } else if (stepType === 'exhale' || stepText.includes('exhala') || stepText.includes('suelta el aire') || stepText.includes('vacía')) {
+    } else if (stepType === 'exhale' || stepText.includes('exhala') || stepText.includes('suelta el aire') || stepText.includes('vacía') || stepText.includes('vacia') || stepText.includes('expira')) {
       colibriExercisePose = 'exhale';
-    } else if (stepText.includes('suelta los hombros') || stepText.includes('suelta') || stepText.includes('soltado') || stepText.includes('golpe') || stepText.includes('deja caer')) {
-      colibriExercisePose = 'shoulder_drop';
-    } else if (stepText.includes('eleva los hombros') || stepText.includes('eleva') || stepText.includes('oreja') || stepText.includes('elevación') || stepText.includes('sube los hombros')) {
+    } 
+    // 1. Movimientos de Cuello y Cabeza (Cervicales)
+    else if (
+      stepText.includes('cervical') || stepText.includes('cráneo') || stepText.includes('craneo') ||
+      stepText.includes('cuello') || stepText.includes('cabeza') || stepText.includes('nuca') ||
+      stepText.includes('mentón') || stepText.includes('menton') || stepText.includes('barbilla') ||
+      stepText.includes('oreja al hombro') || stepText.includes('oreja')
+    ) {
+      if (
+        stepText.includes('mentón') || stepText.includes('menton') || stepText.includes('barbilla') ||
+        stepText.includes('pecho') || stepText.includes('nuca') || stepText.includes('base del cráneo') ||
+        stepText.includes('base del craneo') || stepText.includes('flexión') || stepText.includes('flexion') ||
+        stepText.includes('frontal') || stepText.includes('hacia adelante') || stepText.includes('hacia abajo')
+      ) {
+        colibriExercisePose = 'neck_front';
+      } else if (hasLeft) {
+        colibriExercisePose = 'neck_left';
+      } else if (hasRight) {
+        colibriExercisePose = 'neck_right';
+      } else {
+        colibriExercisePose = 'neck_right';
+      }
+    }
+    // 2. Movimientos de Hombros (Elevación, Giros, Soltado)
+    else if (
+      stepText.includes('eleva los hombros') || stepText.includes('eleva') || stepText.includes('elevación') || 
+      stepText.includes('elevacion') || stepText.includes('sube los hombros') || stepText.includes('subir los hombros') || 
+      stepText.includes('encogimiento') || stepText.includes('hacia las orejas') || stepText.includes('hombros arriba')
+    ) {
       colibriExercisePose = 'shoulder_lift';
-    } else if (stepText.includes('rotación') || stepText.includes('círculo') || stepText.includes('circunferencia') || (stepText.includes('hombro') && !stepText.includes('eleva') && !stepText.includes('suelta') && !stepText.includes('relajado'))) {
+    } else if (
+      stepText.includes('rotación') || stepText.includes('rotacion') || stepText.includes('círculo') || 
+      stepText.includes('circulo') || stepText.includes('circunferencia') || stepText.includes('circunducción') || 
+      stepText.includes('circunduccion') || stepText.includes('gira los hombros') || stepText.includes('girar los hombros') || 
+      stepText.includes('hacia atrás') || stepText.includes('hacia atras') || stepText.includes('giros')
+    ) {
       colibriExercisePose = 'shoulder_roll';
-    } else if (stepText.includes('apertura de pecho') || stepText.includes('detrás de la espalda') || stepText.includes('omóplatos') || stepText.includes('pecho y relaja la espalda') || stepText.includes('abre el pecho')) {
+    } else if (
+      stepText.includes('suelta los hombros') || stepText.includes('suelta') || stepText.includes('soltado') || 
+      stepText.includes('golpe') || stepText.includes('deja caer') || stepText.includes('suspira') || 
+      stepText.includes('libera hombros')
+    ) {
+      colibriExercisePose = 'shoulder_drop';
+    } 
+    // 3. Apertura de Pecho y Omóplatos (Vista de Espalda)
+    else if (
+      stepText.includes('apertura de pecho') || stepText.includes('pecho y omóplatos') || 
+      stepText.includes('pecho y omoplatos') || stepText.includes('detrás de la espalda') || 
+      stepText.includes('detras de la espalda') || stepText.includes('vista de espalda') || 
+      stepText.includes('junta los omóplatos') || stepText.includes('junta los omoplatos') ||
+      stepText.includes('omóplatos') || stepText.includes('omoplatos')
+    ) {
       colibriExercisePose = 'chest_open';
-    } else if (stepText.includes('extensión de palma') || (stepText.includes('palma') && stepText.includes('derech'))) {
-      colibriExercisePose = 'palm_stretch_right';
-    } else if (stepText.includes('extensión contralateral') || (stepText.includes('palma') && (stepText.includes('izquierd') || stepText.includes('izq')))) {
-      colibriExercisePose = 'palm_stretch_left';
-    } else if (stepText.includes('rotación de muñecas') || stepText.includes('muñeca') || stepText.includes('dedo')) {
-      colibriExercisePose = 'wrist_roll';
-    } else if (stepText.includes('puños') || stepText.includes('antebrazos') || stepText.includes('tensa') || stepText.includes('aprieta')) {
-      colibriExercisePose = 'fist_clench';
-    } else if (stepText.includes('torsión') || stepText.includes('torso') || stepText.includes('tronco') || stepText.includes('gira el cuerpo')) {
-      colibriExercisePose = 'twist_right';
-    } else if (stepText.includes('mentón') || stepText.includes('barbilla') || (stepText.includes('pecho') && stepText.includes('cabeza'))) {
-      colibriExercisePose = 'neck_front';
-    } else if (stepText.includes('cuello') && (stepText.includes('izquierd') || stepText.includes('izq'))) {
-      colibriExercisePose = 'neck_left';
-    } else if (stepText.includes('cuello') && (stepText.includes('derech') || stepText.includes('der'))) {
-      colibriExercisePose = 'neck_right';
-    } else if (stepText.includes('cuello') || stepText.includes('cabeza') || stepText.includes('lateral')) {
-      colibriExercisePose = 'neck_right';
-    } else if (stepText.includes('arriba') || stepText.includes('techo') || stepText.includes('estira los brazos') || stepText.includes('brazos') || stepText.includes('columna') || stepText.includes('extensión hacia el techo')) {
+    } 
+    // 4. Brazos y Extremidades Superiores
+    else if (
+      stepText.includes('extensión hacia el techo') || stepText.includes('extension hacia el techo') || 
+      stepText.includes('estira los brazos') || stepText.includes('brazos arriba') || stepText.includes('hacia el techo') || 
+      stepText.includes('al techo') || stepText.includes('elongación') || stepText.includes('elongacion') || 
+      stepText.includes('alcanza el cielo') || stepText.includes('estírate') || stepText.includes('estirate')
+    ) {
       colibriExercisePose = 'stretch_up';
-    } else if (stepText.includes('siéntate') || stepText.includes('sentad') || stepText.includes('erguido') || stepText.includes('pies planos') || stepText.includes('pies en el suelo') || stepText.includes('flor de loto') || stepText.includes('4-7-8') || stepText.includes('478') || stepText.includes('postura') || stepText.includes('posición') || stepText.includes('grounding') || stepText.includes('anclaje')) {
+    } else if (stepText.includes('palma') && hasRight) {
+      colibriExercisePose = 'palm_stretch_right';
+    } else if (stepText.includes('palma') && hasLeft) {
+      colibriExercisePose = 'palm_stretch_left';
+    } else if (stepText.includes('rotación de muñecas') || stepText.includes('rotacion de muñecas') || stepText.includes('muñeca') || stepText.includes('muñecas') || stepText.includes('dedo')) {
+      colibriExercisePose = 'wrist_roll';
+    } else if (stepText.includes('puños') || stepText.includes('puño') || stepText.includes('antebrazos') || stepText.includes('tensa') || stepText.includes('aprieta') || stepText.includes('tensión muscular')) {
+      colibriExercisePose = 'fist_clench';
+    } 
+    // 5. Torsión de Torso
+    else if (stepText.includes('torsión') || stepText.includes('torsion') || stepText.includes('torso') || stepText.includes('tronco') || stepText.includes('gira el cuerpo')) {
+      colibriExercisePose = hasLeft ? 'twist_left' : 'twist_right';
+    } 
+    // 6. Postura Sedente / Meditación / Grounding
+    else if (
+      stepText.includes('siéntate') || stepText.includes('sientate') || stepText.includes('sentad') || 
+      stepText.includes('erguido') || stepText.includes('pies planos') || stepText.includes('pies en el suelo') || 
+      stepText.includes('flor de loto') || stepText.includes('4-7-8') || stepText.includes('478') || 
+      stepText.includes('postura') || stepText.includes('posición') || stepText.includes('posicion') || 
+      stepText.includes('grounding') || stepText.includes('anclaje') || stepText.includes('somático') || 
+      stepText.includes('somatico')
+    ) {
       colibriExercisePose = 'seated';
     } else {
       colibriExercisePose = 'neutral';
@@ -223,112 +432,258 @@ const GuidedExercisePlayer = ({ resource, config, onComplete, readOnly }) => {
         style={{ 
           padding: '30px 28px', 
           borderRadius: '28px', 
-          border: '1.5px solid rgba(192, 132, 252, 0.35)', 
+          border: '1.5px solid var(--border)', 
           backgroundColor: 'var(--bg-secondary, #ffffff)',
-          boxShadow: '0 24px 50px -12px rgba(126, 34, 206, 0.12)',
-          maxWidth: '920px',
-          margin: '0 auto'
+          boxShadow: 'var(--shadow-md)',
+          width: '100%',
+          maxWidth: '100%',
+          margin: '0'
         }}
       >
         {/* BARRA SUPERIOR: ENCABEZADO Y SELECTOR DE GUÍAS TIPO TABS */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '22px', flexWrap: 'wrap', gap: '14px', borderBottom: '1px solid rgba(192, 132, 252, 0.15)', paddingBottom: '16px' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '22px', flexWrap: 'wrap', gap: '14px', borderBottom: '1px solid var(--border)', paddingBottom: '16px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <div style={{ width: '36px', height: '36px', borderRadius: '12px', backgroundColor: 'rgba(139, 92, 246, 0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#7e22ce' }}>
+            <div style={{ width: '36px', height: '36px', borderRadius: '12px', backgroundColor: 'var(--primary-light)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--primary)' }}>
               <Wind size={20} />
             </div>
             <div>
-              <span style={{ fontSize: '11px', fontWeight: '800', color: 'var(--text-muted, #64748b)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+              <span style={{ fontSize: '11px', fontWeight: '800', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
                 Ejercicio
               </span>
-              <h3 style={{ fontSize: '17px', fontWeight: '900', color: 'var(--text-primary, #0f172a)', margin: 0 }}>
+              <h3 style={{ fontSize: '17px', fontWeight: '900', color: 'var(--text-primary)', margin: 0 }}>
                 {resource.title || config.title || 'Relajación y Liberación de Hombros'}
               </h3>
             </div>
           </div>
 
-          {/* TABS SELECTORAS DE GUÍA: ANGIE | KENNY */}
+          {/* TABS SELECTORAS DE GUÍA: MI AVATAR | ANGIE | KENNY */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <div style={{ display: 'flex', backgroundColor: 'var(--bg-tertiary, #f8fafc)', padding: '4px', borderRadius: '16px', border: '1px solid var(--border, #e2e8f0)' }}>
+            <div style={{ display: 'flex', backgroundColor: 'var(--bg-tertiary)', padding: '4px', borderRadius: '16px', border: '1px solid var(--border)' }}>
               <button
                 type="button"
-                onClick={() => setSelectedGuide('female')}
+                onClick={() => setSelectedGuide('custom')}
                 style={{
-                  padding: '6px 16px',
+                  padding: '6px 14px',
                   borderRadius: '12px',
                   border: 'none',
-                  backgroundColor: selectedGuide === 'female' ? '#7e22ce' : 'transparent',
-                  color: selectedGuide === 'female' ? '#ffffff' : 'var(--text-secondary, #475569)',
-                  fontSize: '12.5px',
+                  backgroundColor: selectedGuide === 'custom' ? 'var(--primary)' : 'transparent',
+                  color: selectedGuide === 'custom' ? '#ffffff' : 'var(--text-secondary)',
+                  fontSize: '12px',
                   fontWeight: '800',
                   cursor: 'pointer',
                   display: 'flex',
                   alignItems: 'center',
                   gap: '6px',
-                  boxShadow: selectedGuide === 'female' ? '0 4px 12px rgba(126, 34, 206, 0.25)' : 'none',
+                  transition: 'all 0.2s'
+                }}
+              >
+                <Sparkles size={13} />
+                <span>{userAvatarName}</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setSelectedGuide('female')}
+                style={{
+                  padding: '6px 14px',
+                  borderRadius: '12px',
+                  border: 'none',
+                  backgroundColor: selectedGuide === 'female' ? 'var(--primary)' : 'transparent',
+                  color: selectedGuide === 'female' ? '#ffffff' : 'var(--text-secondary)',
+                  fontSize: '12px',
+                  fontWeight: '800',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '5px',
+                  boxShadow: selectedGuide === 'female' ? '0 4px 12px var(--primary-light)' : 'none',
                   transition: 'all 0.2s ease'
                 }}
               >
-                <span>👧 Angie</span>
+                <Smile size={13} />
+                <span>Angie</span>
               </button>
               <button
                 type="button"
                 onClick={() => setSelectedGuide('male')}
                 style={{
-                  padding: '6px 16px',
+                  padding: '6px 14px',
                   borderRadius: '12px',
                   border: 'none',
-                  backgroundColor: selectedGuide === 'male' ? '#7e22ce' : 'transparent',
-                  color: selectedGuide === 'male' ? '#ffffff' : 'var(--text-secondary, #475569)',
-                  fontSize: '12.5px',
+                  backgroundColor: selectedGuide === 'male' ? 'var(--primary)' : 'transparent',
+                  color: selectedGuide === 'male' ? '#ffffff' : 'var(--text-secondary)',
+                  fontSize: '12px',
                   fontWeight: '800',
                   cursor: 'pointer',
                   display: 'flex',
                   alignItems: 'center',
-                  gap: '6px',
-                  boxShadow: selectedGuide === 'male' ? '0 4px 12px rgba(126, 34, 206, 0.25)' : 'none',
+                  gap: '5px',
+                  boxShadow: selectedGuide === 'male' ? '0 4px 12px var(--primary-light)' : 'none',
                   transition: 'all 0.2s ease'
                 }}
               >
-                <span>🙋‍♂️ Kenny</span>
+                <Sparkles size={13} />
+                <span>Kenny</span>
               </button>
             </div>
 
-            <button
-              type="button"
-              onClick={() => setVoiceEnabled(!voiceEnabled)}
-              title={voiceEnabled ? 'Silenciar voz' : 'Activar voz'}
-              style={{
-                padding: '7px 12px',
-                borderRadius: '12px',
-                border: '1px solid var(--border, #e2e8f0)',
-                backgroundColor: voiceEnabled ? 'rgba(139, 92, 246, 0.1)' : 'var(--bg-tertiary, #f8fafc)',
-                color: voiceEnabled ? '#7e22ce' : 'var(--text-muted, #64748b)',
-                fontSize: '11.5px',
-                fontWeight: '800',
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '5px'
-              }}
-            >
-              {voiceEnabled ? <Volume2 size={14} /> : <VolumeX size={14} />}
-            </button>
+            {/* SELECTOR DE VOZ DE ASISTENTE IA PARA EL EJERCICIO (DISEÑO PERSONALIZADO EQUILIBRIA) */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <div style={{ position: 'relative' }} ref={voiceDropdownRef}>
+                <button
+                  type="button"
+                  onClick={() => setShowVoiceDropdown(!showVoiceDropdown)}
+                  style={{
+                    padding: '6px 14px',
+                    borderRadius: '12px',
+                    border: '1.5px solid',
+                    borderColor: showVoiceDropdown ? 'var(--primary)' : 'var(--border)',
+                    backgroundColor: 'var(--bg-tertiary)',
+                    color: 'var(--text-primary)',
+                    fontSize: '11.5px',
+                    fontWeight: '800',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '7px',
+                    height: '36px',
+                    boxShadow: showVoiceDropdown ? '0 0 12px var(--primary-light)' : 'none',
+                    transition: 'all 0.2s ease'
+                  }}
+                  title="Elegir voz del asistente para el ejercicio"
+                >
+                  {selectedPersonaObj.icon && <selectedPersonaObj.icon size={14} style={{ color: 'var(--primary)' }} />}
+                  <span>{selectedPersonaObj.name}</span>
+                  <ChevronDown 
+                    size={13} 
+                    style={{ 
+                      color: 'var(--text-muted)', 
+                      transform: showVoiceDropdown ? 'rotate(180deg)' : 'none', 
+                      transition: 'transform 0.2s ease' 
+                    }} 
+                  />
+                </button>
+
+                {/* Menú Desplegable Flotante Elegante con Estilo EquilibrIA */}
+                {showVoiceDropdown && (
+                  <div style={{
+                    position: 'absolute',
+                    right: 0,
+                    top: 'calc(100% + 8px)',
+                    width: '290px',
+                    backgroundColor: 'var(--bg-secondary)',
+                    border: '1.5px solid var(--primary)',
+                    borderRadius: '18px',
+                    padding: '8px',
+                    boxShadow: '0 18px 40px rgba(0,0,0,0.3)',
+                    zIndex: 99999,
+                    backdropFilter: 'blur(12px)'
+                  }}>
+                    <div style={{ fontSize: '10px', fontWeight: '800', color: 'var(--text-muted)', padding: '6px 10px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                      Voz de Guía para Ejercicios:
+                    </div>
+                    {EXERCISE_VOICE_PERSONAS.map(p => {
+                      const isSelected = selectedVoicePersona === p.id;
+                      const IconComp = p.icon;
+                      return (
+                        <button
+                          key={p.id}
+                          type="button"
+                          onClick={() => {
+                            setSelectedVoicePersona(p.id);
+                            setShowVoiceDropdown(false);
+                            speakVoiceCue(currentStep.voice, voiceEnabled, p.id);
+                          }}
+                          style={{
+                            width: '100%',
+                            textAlign: 'left',
+                            padding: '9px 12px',
+                            borderRadius: '12px',
+                            border: 'none',
+                            background: isSelected ? 'var(--primary-light)' : 'transparent',
+                            color: isSelected ? 'var(--primary)' : 'var(--text-primary)',
+                            fontSize: '12px',
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'space-between',
+                            marginBottom: '3px',
+                            transition: 'all 0.15s ease'
+                          }}
+                          onMouseEnter={(e) => {
+                            if (!isSelected) e.currentTarget.style.backgroundColor = 'var(--bg-tertiary)';
+                          }}
+                          onMouseLeave={(e) => {
+                            if (!isSelected) e.currentTarget.style.backgroundColor = 'transparent';
+                          }}
+                        >
+                          <div style={{ display: 'grid', lineHeight: '1.3' }}>
+                            <div style={{ fontWeight: '800', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                              <IconComp size={14} style={{ color: isSelected ? 'var(--primary)' : 'var(--text-muted)' }} />
+                              <span>{p.name}</span>
+                              <span style={{ 
+                                fontSize: '9.5px', 
+                                fontWeight: '700', 
+                                color: isSelected ? 'var(--primary)' : 'var(--text-muted)', 
+                                backgroundColor: isSelected ? '#ffffff' : 'var(--bg-primary)', 
+                                padding: '1px 6px', 
+                                borderRadius: '6px' 
+                              }}>
+                                {p.tag}
+                              </span>
+                            </div>
+                            <span style={{ fontSize: '10.5px', color: 'var(--text-muted)', marginTop: '2px' }}>{p.desc}</span>
+                          </div>
+                          {isSelected && <Check size={15} style={{ color: 'var(--primary)', flexShrink: 0, marginLeft: '6px' }} />}
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+
+              <button
+                type="button"
+                onClick={() => {
+                  const nextVoice = !voiceEnabled;
+                  setVoiceEnabled(nextVoice);
+                  if (!nextVoice) stopExerciseVoiceCue();
+                  else speakVoiceCue(currentStep.voice, true, selectedVoicePersona);
+                }}
+                title={voiceEnabled ? 'Silenciar voz' : 'Activar voz'}
+                style={{
+                  padding: '7px 12px',
+                  borderRadius: '12px',
+                  border: '1px solid var(--border)',
+                  backgroundColor: voiceEnabled ? 'var(--primary-light)' : 'var(--bg-tertiary)',
+                  color: voiceEnabled ? 'var(--primary)' : 'var(--text-muted)',
+                  fontSize: '11.5px',
+                  fontWeight: '800',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '5px',
+                  height: '36px'
+                }}
+              >
+                {voiceEnabled ? <Volume2 size={15} /> : <VolumeX size={15} />}
+              </button>
+            </div>
           </div>
         </div>
 
         {/* LAYOUT PRINCIPAL: CRONÓMETRO + TEXTO A LA IZQ / ESCENARIO VECTORIAL 3D AL CENTRO */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'minmax(250px, 340px) 1fr', gap: '28px', alignItems: 'center', marginBottom: '24px' }}>
+        <div className="responsive-exercise-stage" style={{ display: 'grid', gridTemplateColumns: 'minmax(250px, 340px) 1fr', gap: '28px', alignItems: 'center', marginBottom: '24px' }}>
           
           {/* COLUMNA IZQUIERDA: INFORMACIÓN, CRONÓMETRO Y MENSAJE */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', textAlign: 'left' }}>
             <div>
-              <span style={{ fontSize: '11.5px', fontWeight: '800', color: '#7e22ce', backgroundColor: 'rgba(139, 92, 246, 0.08)', padding: '4px 10px', borderRadius: '8px', display: 'inline-block', marginBottom: '8px' }}>
+              <span style={{ fontSize: '11.5px', fontWeight: '800', color: 'var(--primary)', backgroundColor: 'var(--primary-light)', padding: '4px 10px', borderRadius: '8px', display: 'inline-block', marginBottom: '8px' }}>
                 Paso {currentStepIdx + 1} de {steps.length}
               </span>
-              <h2 style={{ fontSize: '28px', fontWeight: '900', color: 'var(--text-primary, #0f172a)', margin: '0 0 8px 0', letterSpacing: '-0.5px' }}>
+              <h2 style={{ fontSize: '28px', fontWeight: '900', color: 'var(--text-primary)', margin: '0 0 8px 0', letterSpacing: '-0.5px' }}>
                 {currentStep.name || 'Soltado'}
               </h2>
-              <p style={{ fontSize: '15px', fontWeight: '600', color: 'var(--text-secondary, #475569)', margin: 0, lineHeight: '1.5' }}>
+              <p style={{ fontSize: '15px', fontWeight: '600', color: 'var(--text-secondary)', margin: 0, lineHeight: '1.5' }}>
                 {isActive ? currentStep.text : (isCompleted ? '¡Excelente trabajo! Has completado la práctica.' : currentStep.text)}
               </p>
             </div>
@@ -337,27 +692,32 @@ const GuidedExercisePlayer = ({ resource, config, onComplete, readOnly }) => {
             <div style={{ display: 'flex', alignItems: 'center', gap: '18px', marginTop: '6px' }}>
               <div style={{ position: 'relative', width: '100px', height: '100px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                 <svg width="100" height="100" viewBox="0 0 100 100" style={{ transform: 'rotate(-90deg)' }}>
-                  <circle cx="50" cy="50" r="42" stroke="rgba(192, 132, 252, 0.2)" strokeWidth="8" fill="none" />
+                  <circle cx="50" cy="50" r="42" stroke="var(--border)" strokeWidth="8" fill="none" />
                   <circle
                     cx="50"
                     cy="50"
                     r="42"
-                    stroke="#a855f7"
+                    stroke="var(--primary)"
                     strokeWidth="8"
                     strokeLinecap="round"
                     fill="none"
                     style={{
                       strokeDasharray: 263.89,
-                      strokeDashoffset: 263.89 * (1 - (stepSecondsLeft / (currentStep.duration || 4))),
+                      strokeDashoffset: (() => {
+                        const dur = Math.max(1, Number(currentStep.duration) || 15);
+                        const sec = Math.max(0, Math.min(dur, Number(stepSecondsLeft) || 0));
+                        const off = 263.89 * (1 - (sec / dur));
+                        return isNaN(off) ? 0 : off;
+                      })(),
                       transition: 'stroke-dashoffset 1s linear'
                     }}
                   />
                 </svg>
                 <div style={{ position: 'absolute', textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
-                  <span style={{ fontSize: '26px', fontWeight: '900', color: '#7e22ce', lineHeight: '1' }}>
+                  <span style={{ fontSize: '26px', fontWeight: '900', color: 'var(--primary)', lineHeight: '1' }}>
                     {String(stepSecondsLeft).padStart(2, '0')}
                   </span>
-                  <span style={{ fontSize: '10.5px', fontWeight: '800', color: '#94a3b8', textTransform: 'uppercase', marginTop: '2px' }}>
+                  <span style={{ fontSize: '10.5px', fontWeight: '800', color: 'var(--text-muted)', textTransform: 'uppercase', marginTop: '2px' }}>
                     seg
                   </span>
                 </div>
@@ -374,7 +734,7 @@ const GuidedExercisePlayer = ({ resource, config, onComplete, readOnly }) => {
                       padding: '12px 24px',
                       borderRadius: '16px',
                       border: 'none',
-                      backgroundColor: '#7e22ce',
+                      backgroundColor: 'var(--primary)',
                       color: '#ffffff',
                       fontSize: '13.5px',
                       fontWeight: '900',
@@ -382,7 +742,7 @@ const GuidedExercisePlayer = ({ resource, config, onComplete, readOnly }) => {
                       display: 'flex',
                       alignItems: 'center',
                       gap: '8px',
-                      boxShadow: '0 6px 18px rgba(126, 34, 206, 0.35)',
+                      boxShadow: '0 6px 18px var(--primary-light)',
                       transition: 'transform 0.15s, background-color 0.2s'
                     }}
                   >
@@ -398,9 +758,9 @@ const GuidedExercisePlayer = ({ resource, config, onComplete, readOnly }) => {
                     style={{
                       padding: '11px 22px',
                       borderRadius: '14px',
-                      border: '1.5px solid var(--border, #e2e8f0)',
-                      backgroundColor: 'var(--bg-tertiary, #f8fafc)',
-                      color: 'var(--text-primary, #334155)',
+                      border: '1.5px solid var(--border)',
+                      backgroundColor: 'var(--bg-tertiary)',
+                      color: 'var(--text-primary)',
                       fontSize: '13px',
                       fontWeight: '800',
                       cursor: 'pointer',
@@ -423,7 +783,7 @@ const GuidedExercisePlayer = ({ resource, config, onComplete, readOnly }) => {
                         padding: '11px 20px',
                         borderRadius: '14px',
                         border: 'none',
-                        backgroundColor: '#7e22ce',
+                        backgroundColor: 'var(--primary)',
                         color: '#ffffff',
                         fontSize: '13px',
                         fontWeight: '800',
@@ -431,7 +791,7 @@ const GuidedExercisePlayer = ({ resource, config, onComplete, readOnly }) => {
                         display: 'flex',
                         alignItems: 'center',
                         gap: '6px',
-                        boxShadow: '0 4px 14px rgba(126, 34, 206, 0.3)'
+                        boxShadow: '0 4px 14px var(--primary-light)'
                       }}
                     >
                       <Play size={15} fill="#ffffff" /> Continuar
@@ -443,9 +803,9 @@ const GuidedExercisePlayer = ({ resource, config, onComplete, readOnly }) => {
                       style={{
                         padding: '11px 16px',
                         borderRadius: '14px',
-                        border: '1.5px solid var(--border, #e2e8f0)',
-                        backgroundColor: 'var(--bg-tertiary, #f8fafc)',
-                        color: 'var(--text-muted, #64748b)',
+                        border: '1.5px solid var(--border)',
+                        backgroundColor: 'var(--bg-tertiary)',
+                        color: 'var(--text-muted)',
                         fontSize: '13px',
                         fontWeight: '800',
                         cursor: 'pointer',
@@ -462,19 +822,19 @@ const GuidedExercisePlayer = ({ resource, config, onComplete, readOnly }) => {
             </div>
 
             {/* Pill Motivacional */}
-            <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '6px 14px', borderRadius: '12px', backgroundColor: 'rgba(139, 92, 246, 0.08)', color: '#7e22ce', fontSize: '12px', fontWeight: '800', width: 'fit-content' }}>
-              <span>💜</span>
-              <span>Respira profundo, tú puedes.</span>
+            <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '6px 14px', borderRadius: '12px', backgroundColor: 'var(--primary-light)', color: 'var(--primary)', fontSize: '12px', fontWeight: '800', width: 'fit-content' }}>
+              <Heart size={14} style={{ color: 'var(--primary)' }} />
+              <span>{selectedGuide === 'custom' ? `Hoy te acompaña ${userAvatarName} 💜` : 'Respira profundo, tú puedes.'}</span>
             </div>
 
             {/* Barra de Progreso del Ejercicio */}
             <div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', fontWeight: '800', color: 'var(--text-muted, #64748b)', marginBottom: '4px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', fontWeight: '800', color: 'var(--text-muted)', marginBottom: '4px' }}>
                 <span>Progreso del ejercicio</span>
                 <span>{progressPercent}%</span>
               </div>
-              <div style={{ width: '100%', height: '6px', borderRadius: '4px', backgroundColor: 'rgba(192, 132, 252, 0.2)', overflow: 'hidden' }}>
-                <div style={{ width: `${progressPercent}%`, height: '100%', backgroundColor: '#7e22ce', borderRadius: '4px', transition: 'width 0.4s ease' }} />
+              <div style={{ width: '100%', height: '6px', borderRadius: '4px', backgroundColor: 'var(--border)', overflow: 'hidden' }}>
+                <div style={{ width: `${progressPercent}%`, height: '100%', backgroundColor: 'var(--primary)', borderRadius: '4px', transition: 'width 0.4s ease' }} />
               </div>
             </div>
           </div>
@@ -487,9 +847,9 @@ const GuidedExercisePlayer = ({ resource, config, onComplete, readOnly }) => {
               width: '100%',
               minHeight: '340px',
               borderRadius: '28px',
-              background: 'linear-gradient(150deg, #faf5ff 0%, #f3e8ff 45%, #eef2ff 100%)',
-              border: '1.5px solid rgba(192, 132, 252, 0.4)',
-              boxShadow: '0 20px 45px -12px rgba(126, 34, 206, 0.15)',
+              background: 'linear-gradient(150deg, var(--bg-primary) 0%, var(--primary-light) 60%, var(--bg-secondary) 100%)',
+              border: '1.5px solid var(--border)',
+              boxShadow: '0 20px 45px -12px rgba(0, 0, 0, 0.08)',
               display: 'flex',
               flexDirection: 'column',
               alignItems: 'center',
@@ -500,10 +860,10 @@ const GuidedExercisePlayer = ({ resource, config, onComplete, readOnly }) => {
           >
             {/* Destellos ambientales */}
             <div style={{ position: 'absolute', top: '20px', right: '24px', opacity: 0.6 }}>
-              <Sparkles size={16} color="#c084fc" />
+              <Sparkles size={16} style={{ color: 'var(--primary)' }} />
             </div>
             <div style={{ position: 'absolute', bottom: '30px', left: '24px', opacity: 0.5 }}>
-              <Sparkles size={14} color="#f472b6" />
+              <Sparkles size={14} style={{ color: 'var(--accent)' }} />
             </div>
 
             {/* Plataforma 3D Circular en Perspectiva */}
@@ -514,8 +874,8 @@ const GuidedExercisePlayer = ({ resource, config, onComplete, readOnly }) => {
                 width: '210px',
                 height: '46px',
                 borderRadius: '50%',
-                background: 'linear-gradient(180deg, #e9d5ff 0%, #d8b4fe 40%, #c084fc 100%)',
-                boxShadow: '0 12px 28px rgba(126, 34, 206, 0.25), inset 0 2px 4px rgba(255, 255, 255, 0.8)',
+                background: 'linear-gradient(180deg, var(--primary-light) 0%, var(--primary) 100%)',
+                boxShadow: '0 12px 28px rgba(0, 0, 0, 0.12), inset 0 2px 4px rgba(255, 255, 255, 0.8)',
                 border: '1.5px solid rgba(255, 255, 255, 0.7)',
                 zIndex: 1
               }}
@@ -523,17 +883,26 @@ const GuidedExercisePlayer = ({ resource, config, onComplete, readOnly }) => {
 
             {/* Renderizado del Avatar Vectorial Cinemático */}
             <div style={{ position: 'relative', zIndex: 2, display: 'flex', alignItems: 'flex-end', justifyContent: 'center', width: '100%', minHeight: '300px', marginBottom: '4px' }}>
-              {selectedGuide === 'male' ? (
-                <KennyAvatar compact={false} pose={colibriExercisePose} duration={currentStep.duration || 4} />
+              {selectedGuide === 'custom' ? (
+                <ModularAvatar
+                  config={userAvatarConfig || {}}
+                  compact={false}
+                  pose={colibriExercisePose}
+                  duration={currentStep.duration || 4}
+                  isActive={isActive}
+                  secondsLeft={stepSecondsLeft}
+                />
+              ) : selectedGuide === 'male' ? (
+                <KennyAvatar compact={false} pose={colibriExercisePose} duration={currentStep.duration || 4} isActive={isActive} secondsLeft={stepSecondsLeft} />
               ) : (
-                <AngieAvatar compact={false} pose={colibriExercisePose} duration={currentStep.duration || 4} />
+                <AngieAvatar compact={false} pose={colibriExercisePose} duration={currentStep.duration || 4} isActive={isActive} secondsLeft={stepSecondsLeft} />
               )}
             </div>
           </div>
         </div>
 
         {/* BARRA INFERIOR: REINICIAR Y FINALIZAR */}
-        <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', paddingTop: '14px', borderTop: '1px solid rgba(192, 132, 252, 0.15)', gap: '10px' }}>
+        <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', paddingTop: '14px', borderTop: '1px solid var(--border)', gap: '10px' }}>
           <button
             type="button"
             onClick={handleReset}
@@ -541,9 +910,9 @@ const GuidedExercisePlayer = ({ resource, config, onComplete, readOnly }) => {
             style={{
               padding: '8px 14px',
               borderRadius: '12px',
-              border: '1px solid var(--border, #e2e8f0)',
-              backgroundColor: 'var(--bg-tertiary, #f8fafc)',
-              color: 'var(--text-muted, #64748b)',
+              border: '1px solid var(--border)',
+              backgroundColor: 'var(--bg-tertiary)',
+              color: 'var(--text-muted)',
               fontSize: '12px',
               fontWeight: '700',
               cursor: 'pointer',
@@ -560,9 +929,9 @@ const GuidedExercisePlayer = ({ resource, config, onComplete, readOnly }) => {
             style={{
               padding: '8px 16px',
               borderRadius: '12px',
-              border: '1.5px solid rgba(139, 92, 246, 0.3)',
+              border: '1.5px solid var(--primary-light)',
               backgroundColor: 'transparent',
-              color: '#7e22ce',
+              color: 'var(--primary)',
               fontSize: '12px',
               fontWeight: '800',
               cursor: 'pointer',
@@ -752,7 +1121,8 @@ const AudioGuidedPlayer = ({ resource, config, onComplete, readOnly }) => {
       } else {
         audioRef.current.play().catch(e => console.log('Audio playback error:', e));
         setIsPlaying(true);
-};
+      }
+    };
 
 const handleTimeUpdate = () => {
       if (audioRef.current) {
@@ -934,6 +1304,48 @@ const VideoPlayer = ({ resource, config, onComplete, readOnly }) => {
   // 5. REGISTRO EMOCIONAL INTERACTIVO
   // ============================================================================
 
+// Helper para emojis de emociones
+const getEmotionEmoji = (emotion) => {
+  const clean = (emotion || '').toLowerCase().trim();
+  if (clean.includes('calma') || clean.includes('paz') || clean.includes('seren')) return '🌿';
+  if (clean.includes('alegr') || clean.includes('feliz') || clean.includes('felic') || clean.includes('content')) return '😊';
+  if (clean.includes('tensi') || clean.includes('estrés') || clean.includes('estres') || clean.includes('presi')) return '😬';
+  if (clean.includes('cansan') || clean.includes('agota') || clean.includes('sueño') || clean.includes('sueno') || clean.includes('fatig')) return '🥱';
+  if (clean.includes('motiva') || clean.includes('energ') || clean.includes('entusia') || clean.includes('foco')) return '🔥';
+  if (clean.includes('trist') || clean.includes('baj') || clean.includes('desanim') || clean.includes('melanc')) return '🌧️';
+  if (clean.includes('frustra') || clean.includes('enoj') || clean.includes('rabia') || clean.includes('ira')) return '😤';
+  if (clean.includes('grati') || clean.includes('agradec') || clean.includes('esperanz')) return '✨';
+  if (clean.includes('ansie') || clean.includes('preocupa') || clean.includes('nervio')) return '😰';
+  if (clean.includes('confus') || clean.includes('duda')) return '🤔';
+  if (clean.includes('orgull') || clean.includes('logr')) return '🌟';
+  if (clean.includes('alivio')) return '😌';
+  if (clean.includes('miedo') || clean.includes('temor')) return '😨';
+  return '💭';
+};
+
+// Helper para emojis de etiquetas de contexto
+const getTagEmoji = (tag) => {
+  const clean = (tag || '').toLowerCase().trim();
+  if (clean.includes('trabaj') || clean.includes('laboral') || clean.includes('oficina') || clean.includes('empleo')) return '💼';
+  if (clean.includes('famili') || clean.includes('hogar') || clean.includes('casa') || clean.includes('hijos')) return '👨‍👩‍👧';
+  if (clean.includes('salud') || clean.includes('cuerpo') || clean.includes('médic') || clean.includes('fisic')) return '🩺';
+  if (clean.includes('descan') || clean.includes('dormir') || clean.includes('sueño') || clean.includes('pausa')) return '🌙';
+  if (clean.includes('meta') || clean.includes('objetiv') || clean.includes('proyecto') || clean.includes('logro')) return '🎯';
+  if (clean.includes('estudi') || clean.includes('académ') || clean.includes('univers') || clean.includes('examen')) return '📚';
+  if (clean.includes('relaci') || clean.includes('pareja') || clean.includes('amig') || clean.includes('social')) return '🤝';
+  if (clean.includes('finan') || clean.includes('dinero') || clean.includes('econom')) return '💰';
+  if (clean.includes('personal') || clean.includes('crecim') || clean.includes('hobby')) return '🌱';
+  return '🏷️';
+};
+
+const getIntensityBadge = (lvl) => {
+  if (lvl <= 2) return { text: 'Leve', color: '#16a34a', emoji: '🟢' };
+  if (lvl <= 4) return { text: 'Moderado Suave', color: '#22c55e', emoji: '🟢' };
+  if (lvl <= 6) return { text: 'Moderado', color: '#eab308', emoji: '🟡' };
+  if (lvl <= 8) return { text: 'Notable / Alto', color: '#f97316', emoji: '🟠' };
+  return { text: 'Muy Intenso', color: '#ef4444', emoji: '🔴' };
+};
+
 const EmotionalLogPlayer = ({ resource, config, savedAnswers, onSaveAnswers, onComplete, readOnly }) => {
 
     const emotions = config.available_emotions || [
@@ -947,6 +1359,8 @@ const EmotionalLogPlayer = ({ resource, config, savedAnswers, onSaveAnswers, onC
     const [selectedTag, setSelectedTag] = useState(savedAnswers.context_tag || '');
     const [note, setNote] = useState(savedAnswers.note || '');
     const [isSaved, setIsSaved] = useState(false);
+
+    const intensityInfo = getIntensityBadge(intensity);
 
     const handleSave = () => {
       if (onSaveAnswers) {
@@ -962,54 +1376,73 @@ const EmotionalLogPlayer = ({ resource, config, savedAnswers, onSaveAnswers, onC
     };
 
     return (
-      <div className="futuristic-card-item" style={{ padding: '22px', borderRadius: '16px', border: '1px solid var(--border)' }}>
+      <div className="futuristic-card-item" style={{ padding: '24px', borderRadius: '20px', border: '1.5px solid var(--border)', backgroundColor: 'var(--bg-secondary)' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
-          <h4 style={{ fontSize: '15px', fontWeight: '800', display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <Smile size={18} style={{ color: 'var(--primary)' }} />
+          <h4 style={{ fontSize: '16px', fontWeight: '900', display: 'flex', alignItems: 'center', gap: '8px', margin: 0, color: 'var(--text-primary)' }}>
+            <Smile size={20} style={{ color: 'var(--primary)' }} />
             <span>Registro Emocional Consciente</span>
           </h4>
-          <span style={{ fontSize: '11px', fontWeight: '700', color: 'var(--success)', display: 'flex', alignItems: 'center', gap: '4px' }}>
-            <ShieldCheck size={13} /> Registro Confidencial
+          <span style={{ fontSize: '11.5px', fontWeight: '800', color: 'var(--success)', display: 'flex', alignItems: 'center', gap: '5px', backgroundColor: 'rgba(34, 197, 94, 0.1)', padding: '4px 10px', borderRadius: '10px' }}>
+            <ShieldCheck size={14} /> Registro Confidencial
           </span>
         </div>
 
-        <p style={{ fontSize: '12px', color: 'var(--text-secondary)', marginBottom: '14px' }}>
-          {config.additional_prompt || '¿Cómo te sientes en este momento y qué influyó en tu estado?'}
+        <p style={{ fontSize: '13px', color: 'var(--text-secondary)', marginBottom: '16px', fontWeight: '600' }}>
+          {config.additional_prompt || '¿Cómo te sientes en este momento y qué influyó principalmente en tu estado?'}
         </p>
 
-        {/* Selector de Emociones */}
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginBottom: '18px' }}>
-          {emotions.map((emo, idx) => {
-            const isSel = selectedEmotion === emo;
-            return (
-              <button
-                key={idx}
-                type="button"
-                disabled={readOnly}
-                onClick={() => setSelectedEmotion(emo)}
-                style={{
-                  padding: '8px 14px',
-                  borderRadius: '10px',
-                  border: `1px solid ${isSel ? 'var(--primary)' : 'var(--border)'}`,
-                  backgroundColor: isSel ? 'var(--primary)' : 'var(--bg-secondary)',
-                  color: isSel ? '#fff' : 'var(--text-primary)',
-                  fontSize: '12.5px',
-                  fontWeight: '700',
-                  cursor: readOnly ? 'default' : 'pointer',
-                  transition: 'all 0.15s ease'
-                }}
-              >
-                {emo}
-              </button>
-            );
-          })}
+        {/* Selector de Emociones con Emojis */}
+        <div style={{ marginBottom: '20px' }}>
+          <label style={{ fontSize: '11.5px', fontWeight: '800', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px', display: 'block', marginBottom: '8px' }}>
+            SELECCIONA TU ESTADO EMOCIONAL:
+          </label>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+            {emotions.map((emo, idx) => {
+              const isSel = selectedEmotion === emo;
+              const emoji = getEmotionEmoji(emo);
+              return (
+                <button
+                  key={idx}
+                  type="button"
+                  disabled={readOnly}
+                  onClick={() => setSelectedEmotion(emo)}
+                  style={{
+                    padding: '8px 14px',
+                    borderRadius: '12px',
+                    border: `1.5px solid ${isSel ? 'var(--primary)' : 'var(--border)'}`,
+                    backgroundColor: isSel ? 'var(--primary)' : 'var(--bg-tertiary)',
+                    color: isSel ? '#ffffff' : 'var(--text-primary)',
+                    fontSize: '13px',
+                    fontWeight: isSel ? '900' : '700',
+                    cursor: readOnly ? 'default' : 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '7px',
+                    boxShadow: isSel ? '0 4px 12px var(--primary-light)' : 'none',
+                    transform: isSel ? 'scale(1.02)' : 'scale(1)',
+                    transition: 'all 0.15s ease'
+                  }}
+                >
+                  <span style={{ fontSize: '16px', lineHeight: 1 }}>{emoji}</span>
+                  <span>{emo}</span>
+                </button>
+              );
+            })}
+          </div>
         </div>
 
-        {/* Barra de Intensidad */}
-        <div style={{ marginBottom: '18px', padding: '14px', backgroundColor: 'var(--bg-secondary)', borderRadius: '12px', border: '1px solid var(--border)' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', fontWeight: '800', marginBottom: '8px' }}>
-            <span>Nivel de Intensidad:</span>
-            <span style={{ color: 'var(--primary)' }}>{intensity} / 10</span>
+        {/* Barra de Intensidad con Badge Visual */}
+        <div style={{ marginBottom: '20px', padding: '16px', backgroundColor: 'var(--bg-tertiary)', borderRadius: '16px', border: '1px solid var(--border)' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '12.5px', fontWeight: '800', marginBottom: '10px' }}>
+            <span style={{ color: 'var(--text-primary)' }}>Nivel de Intensidad:</span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <span style={{ fontSize: '12px', color: intensityInfo.color, fontWeight: '900' }}>
+                {intensityInfo.emoji} {intensityInfo.text}
+              </span>
+              <span style={{ padding: '2px 8px', borderRadius: '8px', backgroundColor: 'var(--bg-secondary)', color: 'var(--primary)', fontWeight: '900', fontSize: '12px', border: '1px solid var(--border)' }}>
+                {intensity} / 10
+              </span>
+            </div>
           </div>
           <input
             type="range"
@@ -1022,14 +1455,15 @@ const EmotionalLogPlayer = ({ resource, config, savedAnswers, onSaveAnswers, onC
           />
         </div>
 
-        {/* Tags de Contexto */}
-        <div style={{ marginBottom: '16px' }}>
-          <label style={{ fontSize: '11.5px', fontWeight: '800', color: 'var(--text-secondary)', display: 'block', marginBottom: '6px' }}>
+        {/* Tags de Contexto con Emojis */}
+        <div style={{ marginBottom: '18px' }}>
+          <label style={{ fontSize: '11.5px', fontWeight: '800', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px', display: 'block', marginBottom: '8px' }}>
             ÁREA O CONTEXTO PRINCIPAL:
           </label>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
             {tags.map((t, idx) => {
               const isSel = selectedTag === t;
+              const emoji = getTagEmoji(t);
               return (
                 <button
                   key={idx}
@@ -1037,17 +1471,22 @@ const EmotionalLogPlayer = ({ resource, config, savedAnswers, onSaveAnswers, onC
                   disabled={readOnly}
                   onClick={() => setSelectedTag(t)}
                   style={{
-                    padding: '4px 10px',
-                    borderRadius: '8px',
-                    border: `1px solid ${isSel ? 'var(--primary)' : 'var(--border)'}`,
+                    padding: '6px 12px',
+                    borderRadius: '10px',
+                    border: `1.5px solid ${isSel ? 'var(--primary)' : 'var(--border)'}`,
                     backgroundColor: isSel ? 'var(--primary-light)' : 'var(--bg-tertiary)',
                     color: isSel ? 'var(--primary)' : 'var(--text-secondary)',
-                    fontSize: '11.5px',
-                    fontWeight: isSel ? '800' : '600',
-                    cursor: readOnly ? 'default' : 'pointer'
+                    fontSize: '12px',
+                    fontWeight: isSel ? '900' : '700',
+                    cursor: readOnly ? 'default' : 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '5px',
+                    transition: 'all 0.15s ease'
                   }}
                 >
-                  #{t}
+                  <span style={{ fontSize: '13px' }}>{emoji}</span>
+                  <span>#{t}</span>
                 </button>
               );
             })}
@@ -1062,7 +1501,7 @@ const EmotionalLogPlayer = ({ resource, config, savedAnswers, onSaveAnswers, onC
             placeholder="Comentario o reflexión breve (opcional)..."
             value={note}
             onChange={(e) => setNote(e.target.value)}
-            style={{ width: '100%', padding: '10px 12px', borderRadius: '10px', border: '1px solid var(--border)', backgroundColor: 'var(--bg-secondary)', color: 'var(--text-primary)', fontSize: '12.5px', resize: 'vertical' }}
+            style={{ width: '100%', padding: '10px 12px', borderRadius: '10px', border: '1px solid var(--border)', backgroundColor: 'var(--bg-tertiary)', color: 'var(--text-primary)', fontSize: '12.5px', resize: 'vertical' }}
           />
         </div>
 
@@ -1071,9 +1510,9 @@ const EmotionalLogPlayer = ({ resource, config, savedAnswers, onSaveAnswers, onC
             type="button" 
             onClick={handleSave}
             className="btn btn-primary"
-            style={{ width: '100%', padding: '10px', fontSize: '13px', fontWeight: '900', borderRadius: '10px' }}
+            style={{ width: '100%', padding: '12px', fontSize: '13.5px', fontWeight: '900', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
           >
-            <Heart size={14} /> {isSaved ? 'Registro Guardado con Éxito' : 'Registrar Estado Emocional (+15 XP)'}
+            <Heart size={16} /> {isSaved ? '✨ Registro Guardado con Éxito' : 'Registrar Estado Emocional (+15 XP)'}
           </button>
         )}
       </div>
@@ -1461,26 +1900,31 @@ const ReflectionPlayer = ({ type, resource, config, savedAnswers, onSaveAnswers,
   // ============================================================================
 
 const AdvicePlayer = ({ resource, config }) => {
+  // Evitar duplicación: el contenido completo ya se muestra formateado y se lee por voz
+  // en el visor principal de la página. Solo mostramos una píldora si hay una regla/tip resumido y diferente al contenido.
+  const takeaway = config?.rule || config?.tip || config?.key_takeaway;
+  if (!takeaway || takeaway === resource?.content) {
+    return null;
+  }
 
-    return (
-      <div className="futuristic-card-item" style={{ padding: '24px', borderRadius: '16px', backgroundColor: 'var(--bg-secondary)', border: '1px solid var(--primary-light)', display: 'flex', alignItems: 'flex-start', gap: '16px' }}>
-        <div style={{ width: '42px', height: '42px', borderRadius: '12px', backgroundColor: 'var(--primary-light)', color: 'var(--primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-          <Lightbulb size={24} />
-        </div>
-        <div>
-          <h4 style={{ fontSize: '15px', fontWeight: '800', marginBottom: '6px', color: 'var(--primary)' }}>
-            Consejo de Equilibrio
-          </h4>
-          <p style={{ fontSize: '13.5px', color: 'var(--text-primary)', lineHeight: '1.5', margin: 0 }}>
-            {config.key_takeaway || resource.content}
-          </p>
-        </div>
+  return (
+    <div className="futuristic-card-item" style={{ padding: '16px 20px', borderRadius: '14px', backgroundColor: 'var(--bg-secondary)', border: '1px solid var(--primary-light)', display: 'flex', alignItems: 'flex-start', gap: '14px', marginBottom: '16px' }}>
+      <div style={{ width: '38px', height: '38px', borderRadius: '10px', backgroundColor: 'var(--primary-light)', color: 'var(--primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+        <Lightbulb size={20} />
       </div>
-    );
+      <div>
+        <h4 style={{ fontSize: '13.5px', fontWeight: '800', marginBottom: '4px', color: 'var(--primary)' }}>
+          {config?.tip_badge || 'Regla Práctica'}
+        </h4>
+        <p style={{ fontSize: '12.5px', color: 'var(--text-primary)', lineHeight: '1.45', margin: 0 }}>
+          {takeaway}
+        </p>
+      </div>
+    </div>
+  );
 };
 
 // ============================================================================
-};
 
 export const ResourceInteractivePlayer = ({ 
   resource, 
@@ -1498,7 +1942,7 @@ export const ResourceInteractivePlayer = ({
     type === 'respiracion' || 
     type === 'pausa_activa' || 
     type === 'grounding' || 
-    (type === 'ejercicio' && (config.steps || config.inhale || config.total_cycles))
+    type === 'ejercicio'
   );
 
   if (isGuidedExercise) {

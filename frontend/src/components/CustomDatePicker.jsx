@@ -139,14 +139,17 @@ const CustomDatePicker = ({
             ? { bottom: 'calc(100% + 8px)' } 
             : { top: 'calc(100% + 8px)' }
           ),
-          left: 0,
+          left: 'auto',
+          right: 'auto',
           backgroundColor: 'var(--bg-secondary)',
           border: '1.5px solid var(--primary)',
           borderRadius: '20px',
           boxShadow: '0 20px 48px rgba(0,0,0,0.4)',
           zIndex: 999999,
-          padding: '16px',
-          width: '320px',
+          padding: '14px',
+          width: 'min(320px, calc(100vw - 24px))',
+          maxWidth: 'calc(100vw - 24px)',
+          boxSizing: 'border-box',
           animation: 'fadeIn 0.15s ease'
         }}>
           {/* Presets Rápidos */}

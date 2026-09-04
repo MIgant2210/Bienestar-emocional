@@ -8,13 +8,20 @@ class User(db.Model):
     
     id = db.Column(db.UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     email = db.Column(db.String(120), unique=True, nullable=False, index=True)
-    password_hash = db.Column(db.String(128), nullable=False)
+    password_hash = db.Column(db.String(128), nullable=True)
     first_name = db.Column(db.String(80), nullable=False)
     last_name = db.Column(db.String(80), nullable=False)
     role = db.Column(db.String(30), nullable=False, default='miembro')  # 'superadmin', 'admin_institucion', 'profesional_apoyo', 'lider_depto', 'miembro'
     department_id = db.Column(db.UUID(as_uuid=True), db.ForeignKey('departments.id', ondelete='SET NULL'), nullable=True)
     department = db.Column(db.String(80), nullable=True, default='General') # 'Tecnología', 'Administración', etc.
     institution_id = db.Column(db.UUID(as_uuid=True), db.ForeignKey('institutions.id', ondelete='CASCADE'), nullable=True)
+    
+    # Proveedor de Autenticación y OAuth
+    auth_provider = db.Column(db.String(30), nullable=False, default='local') # 'local', 'google', 'facebook'
+    provider_id = db.Column(db.String(120), nullable=True, index=True) # Google sub / Facebook user id
+    avatar_url = db.Column(db.String(500), nullable=True)
+    avatar_name = db.Column(db.String(80), nullable=True, default='Mi Avatar')
+    avatar_config = db.Column(db.JSON, nullable=True)
     
     # Estado de Cuenta y Verificación de Correo
     status = db.Column(db.String(20), nullable=False, default='PENDING')  # 'PENDING', 'ACTIVE', 'SUSPENDED', 'INACTIVE'
@@ -51,6 +58,8 @@ class User(db.Model):
         self.password_hash = bcrypt.hashpw(password.encode('utf-8'), salt).decode('utf-8')
         
     def check_password(self, password):
+        if not self.password_hash:
+            return False
         try:
             if bcrypt.checkpw(password.encode('utf-8'), self.password_hash.encode('utf-8')):
                 return True
@@ -84,6 +93,11 @@ class User(db.Model):
             'department': dept_name,
             'institution_id': str(self.institution_id) if self.institution_id else None,
             'institution_name': self.institution.name if self.institution else None,
+            'auth_provider': self.auth_provider or 'local',
+            'provider_id': self.provider_id,
+            'avatar_url': self.avatar_url,
+            'avatar_name': self.avatar_name or 'Mi Avatar',
+            'avatar_config': self.avatar_config or None,
             'status': self.status or 'PENDIENTE',
             'is_active': (self.status or '').upper() in ['ACTIVE', 'ACTIVO'],
             'email_verified': bool(self.email_verified),

@@ -3,17 +3,21 @@ import {
   Settings as SettingsIcon, User, Palette, Bell, Shield, Lock, 
   Check, Save, Moon, Sun, ShieldAlert, ShieldCheck, KeyRound, 
   LogOut, Laptop, CheckCircle2, AlertCircle, Loader, RefreshCw,
-  Sparkles, Bot, Globe, ToggleLeft, ToggleRight, HeartHandshake
+  Sparkles, Bot, Globe, ToggleLeft, ToggleRight, HeartHandshake,
+  Compass, Briefcase, Smile
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { AuthContext } from '../contexts/AuthContext';
+import { useDialog } from '../contexts/DialogContext';
 import { ThemeContext } from '../contexts/ThemeContext';
 import api from '../services/api';
 import ConsentModal from '../components/ConsentModal';
+import AvatarCreator from '../components/AvatarCreator';
 
 const Settings = () => {
   const navigate = useNavigate();
   const { user, loginUser, logout } = useContext(AuthContext);
+  const { confirm: confirmDialog, showAlert } = useDialog();
   const { theme, toggleTheme, colorPalette, changePalette, PALETTES } = useContext(ThemeContext);
 
   const [activeTab, setActiveTab] = useState('account'); // 'account', 'ai_culture', 'appearance', 'notifications', 'privacy', 'security'
@@ -24,7 +28,7 @@ const Settings = () => {
   const [accountLoading, setAccountLoading] = useState(false);
   const [accountMsg, setAccountMsg] = useState({ type: '', text: '' });
 
-  // Estados de Preferencias de IA & Cultura Guatemalteca 🇬🇹
+  // Estados de Preferencias de IA & Cultura Guatemalteca
   const [aiStyle, setAiStyle] = useState(user?.ai_communication_style || 'guatemalteco');
   const [useGtExpr, setUseGtExpr] = useState(user?.use_guatemalan_expressions !== undefined ? user.use_guatemalan_expressions : true);
   const [aiPrefsLoading, setAiPrefsLoading] = useState(false);
@@ -146,13 +150,21 @@ const Settings = () => {
 
   // Revocar Consentimiento
   const handleRevokeConsent = async (consentType) => {
-    if (!window.confirm('¿Estás seguro de que deseas revocar este consentimiento? Algunas funcionalidades automáticas se pausarán.')) return;
+    const isConfirmed = await confirmDialog({
+      title: '¿Revocar consentimiento?',
+      message: '¿Estás seguro de que deseas revocar este consentimiento? Algunas funcionalidades automáticas se pausarán.',
+      confirmText: 'Sí, revocar',
+      cancelText: 'Cancelar',
+      type: 'warning'
+    });
+    if (!isConfirmed) return;
     try {
       await api.post('/wellbeing/consents/revoke', { consent_type: consentType });
       const res = await api.get('/wellbeing/consents');
       setConsents(res.data);
+      showAlert('success', 'Consentimiento Actualizado', 'El consentimiento ha sido revocado correctamente.');
     } catch (err) {
-      alert(err.response?.data?.message || 'Error al revocar consentimiento.');
+      showAlert('danger', 'Error', err.response?.data?.message || 'Error al revocar consentimiento.');
     }
   };
 
@@ -248,13 +260,14 @@ const Settings = () => {
       </div>
 
       {/* Layout de Pestañas */}
-      <div style={{ display: 'grid', gridTemplateColumns: '240px 1fr', gap: '20px', alignItems: 'start' }}>
+      <div className="responsive-settings-grid" style={{ display: 'grid', gridTemplateColumns: '240px 1fr', gap: '20px', alignItems: 'start' }}>
         
         {/* Menú Lateral */}
-        <div className="glass-card" style={{ padding: '12px', display: 'grid', gap: '6px' }}>
+        <div className="glass-card responsive-settings-nav" style={{ padding: '12px', display: 'grid', gap: '6px' }}>
           {[
             { id: 'account', label: 'Mi Cuenta', icon: User },
-            { id: 'ai_culture', label: 'Asistente IA & Cultura 🇬🇹', icon: Sparkles },
+            { id: 'my_avatar', label: 'Mi Avatar', icon: Smile },
+            { id: 'ai_culture', label: 'Asistente IA & Cultura', icon: Sparkles },
             { id: 'appearance', label: 'Apariencia', icon: Palette },
             { id: 'notifications', label: 'Notificaciones', icon: Bell },
             { id: 'privacy', label: 'Privacidad y Consentimientos', icon: Shield },
@@ -384,14 +397,21 @@ const Settings = () => {
           )}
 
           {/* ======================================================== */}
-          {/* PESTAÑA: ASISTENTE IA & CULTURA GUATEMALTECA 🇬🇹          */}
+          {/* PESTAÑA: MI AVATAR (ESTUDIO CREATIVO Y BIBLIOTECA)      */}
+          {/* ======================================================== */}
+          {activeTab === 'my_avatar' && (
+            <AvatarCreator />
+          )}
+
+          {/* ======================================================== */}
+          {/* PESTAÑA: ASISTENTE IA & CULTURA GUATEMALTECA            */}
           {/* ======================================================== */}
           {activeTab === 'ai_culture' && (
             <div className="animate-fade" style={{ display: 'grid', gap: '20px' }}>
               <div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
                   <span style={{ fontSize: '10.5px', fontWeight: '900', padding: '3px 8px', borderRadius: '10px', backgroundColor: 'var(--primary-light)', color: 'var(--primary)' }}>
-                    🇬🇹 ADAPTACIÓN CULTURAL
+                    ADAPTACIÓN CULTURAL
                   </span>
                   <span style={{ fontSize: '11px', color: 'var(--text-muted)', fontWeight: '700' }}>
                     Personalización del Asistente
@@ -453,51 +473,67 @@ const Settings = () => {
                     {[
                       {
                         id: 'guatemalteco',
-                        icon: '🇬🇹',
+                        icon: Compass,
                         title: 'Guatemalteco (Recomendado)',
                         desc: 'Tono cálido, cercano y empático propio de Guatemala. Utiliza voseo respetuoso e incorpora de forma sutil modismos cotidianos apropiados (cabal, chilero, pilas).'
                       },
                       {
                         id: 'cercano',
-                        icon: '🤝',
+                        icon: HeartHandshake,
                         title: 'Cercano y Amigable',
                         desc: 'Tono cálido y comprensivo en español neutro estándar (tuteo), enfocado en la empatía y la contención sin expresiones locales específicas.'
                       },
                       {
                         id: 'formal',
-                        icon: '👔',
+                        icon: Briefcase,
                         title: 'Formal e Institucional',
                         desc: 'Tono sobrio, profesional y estructurado (trato de usted), ideal para un enfoque directo y formal sin coloquialismos.'
                       }
-                    ].map(styleOpt => (
-                      <div
-                        key={styleOpt.id}
-                        onClick={() => setAiStyle(styleOpt.id)}
-                        className={`duo-card ${aiStyle === styleOpt.id ? 'selected' : ''}`}
-                        style={{
-                          padding: '14px 18px',
-                          borderRadius: '14px',
-                          display: 'flex',
-                          alignItems: 'flex-start',
-                          gap: '14px',
-                          cursor: 'pointer',
-                          border: aiStyle === styleOpt.id ? '2px solid var(--primary)' : '1px solid var(--border)',
-                          backgroundColor: aiStyle === styleOpt.id ? 'var(--primary-light)' : 'var(--bg-primary)',
-                          transition: 'all 0.2s ease'
-                        }}
-                      >
-                        <span style={{ fontSize: '24px', flexShrink: 0 }}>{styleOpt.icon}</span>
-                        <div style={{ flex: 1 }}>
-                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                            <strong style={{ fontSize: '13.5px', color: 'var(--text-primary)' }}>{styleOpt.title}</strong>
-                            {aiStyle === styleOpt.id && <Check size={16} style={{ color: 'var(--primary)' }} />}
+                    ].map(styleOpt => {
+                      const IconComp = styleOpt.icon;
+                      return (
+                        <div
+                          key={styleOpt.id}
+                          onClick={() => setAiStyle(styleOpt.id)}
+                          className={`duo-card ${aiStyle === styleOpt.id ? 'selected' : ''}`}
+                          style={{
+                            padding: '14px 18px',
+                            borderRadius: '14px',
+                            display: 'flex',
+                            gap: '14px',
+                            alignItems: 'center',
+                            cursor: 'pointer',
+                            transition: 'all 0.2s ease',
+                            border: aiStyle === styleOpt.id ? '2px solid var(--primary)' : '1px solid var(--border)',
+                            backgroundColor: aiStyle === styleOpt.id ? 'var(--primary-light)' : 'var(--bg-primary)'
+                          }}
+                        >
+                          <div style={{
+                            width: '40px',
+                            height: '40px',
+                            borderRadius: '10px',
+                            backgroundColor: 'var(--bg-secondary)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            flexShrink: 0
+                          }}>
+                            <IconComp size={20} style={{ color: 'var(--primary)' }} />
                           </div>
-                          <p style={{ fontSize: '11.5px', color: 'var(--text-secondary)', marginTop: '3px', lineHeight: '1.4' }}>
-                            {styleOpt.desc}
-                          </p>
+                          <div style={{ flex: 1 }}>
+                            <h4 style={{ fontSize: '13.5px', fontWeight: '900', color: 'var(--text-primary)', margin: 0 }}>
+                              {styleOpt.title}
+                            </h4>
+                            <p style={{ fontSize: '11.5px', color: 'var(--text-secondary)', margin: '3px 0 0 0', lineHeight: '1.4' }}>
+                              {styleOpt.desc}
+                            </p>
+                          </div>
+                          {aiStyle === styleOpt.id && (
+                            <CheckCircle2 size={18} style={{ color: 'var(--primary)', flexShrink: 0 }} />
+                          )}
                         </div>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 </div>
 
@@ -578,7 +614,7 @@ const Settings = () => {
               }}>
                 <div>
                   <h4 style={{ fontSize: '13.5px', fontWeight: '800', color: 'var(--text-primary)', margin: 0 }}>
-                    Tema de la Interfaz: {theme === 'light' ? 'Modo Claro ☀️' : 'Modo Oscuro 🌙'}
+                    Tema de la Interfaz: {theme === 'light' ? 'Modo Claro' : 'Modo Oscuro'}
                   </h4>
                   <p style={{ fontSize: '11.5px', color: 'var(--text-secondary)', marginTop: '2px', margin: 0 }}>
                     Alterna entre modo luminoso u oscuro para cuidar tu visión.

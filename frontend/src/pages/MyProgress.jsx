@@ -79,11 +79,11 @@ export default function MyProgress({ onBack }) {
   ];
 
   return (
-    <div className="animate-fade" style={{ display: 'grid', gap: '24px', maxWidth: '1200px', margin: '0 auto', paddingBottom: '40px' }}>
+    <div className="animate-fade" style={{ display: 'grid', gap: '24px', maxWidth: '1200px', width: '100%', margin: '0 auto', paddingBottom: '40px', boxSizing: 'border-box' }}>
       
       {/* BARRA SUPERIOR DE NAVEGACIÓN */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px', width: '100%', boxSizing: 'border-box' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
           {onBack && (
             <button
               type="button"
@@ -95,10 +95,10 @@ export default function MyProgress({ onBack }) {
             </button>
           )}
           <div>
-            <h2 style={{ fontSize: '22px', fontWeight: '900', color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <Trophy style={{ color: 'var(--primary)' }} /> Mi Progreso de Bienestar Emocional
+            <h2 style={{ fontSize: 'clamp(18px, 4.5vw, 22px)', fontWeight: '900', color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+              <Trophy style={{ color: 'var(--primary)', flexShrink: 0 }} /> Mi Progreso de Bienestar Emocional
             </h2>
-            <p style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>
+            <p style={{ fontSize: '12.5px', color: 'var(--text-secondary)' }}>
               Seguimiento de nivel, racha de constancia, medallas obtenidas y ranking institucional.
             </p>
           </div>
@@ -115,8 +115,8 @@ export default function MyProgress({ onBack }) {
       </div>
 
       {/* TARJETA PRINCIPAL DE PERFIL Y NIVEL */}
-      <div className="glass-card" style={{ padding: '28px', background: 'linear-gradient(135deg, var(--card-bg) 0%, var(--bg-secondary) 100%)' }}>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '24px', alignItems: 'center' }}>
+      <div className="glass-card" style={{ padding: 'clamp(16px, 3vw, 28px)', background: 'linear-gradient(135deg, var(--card-bg) 0%, var(--bg-secondary) 100%)', width: '100%', boxSizing: 'border-box' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 250px), 1fr))', gap: '20px', alignItems: 'center' }}>
           
           {/* Avatar y Datos Personales */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '18px' }}>
@@ -168,7 +168,7 @@ export default function MyProgress({ onBack }) {
               }} />
             </div>
 
-            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', color: 'var(--text-secondary)', fontWeight: '700' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', color: 'var(--text-secondary)', fontWeight: '700', flexWrap: 'wrap', gap: '6px' }}>
               <span>{lvl.xp_in_current_level || 0} / {lvl.xp_for_next_level - lvl.xp_for_current_level} XP acumulados</span>
               <span style={{ color: 'var(--primary)' }}>Faltan {lvl.xp_remaining || 0} XP para Nivel {(lvl.level || 1) + 1}</span>
             </div>
@@ -178,10 +178,10 @@ export default function MyProgress({ onBack }) {
       </div>
 
       {/* SECCIÓN DE RACHA Y CALENDARIO DE ACTIVIDAD */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '20px' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 280px), 1fr))', gap: '20px', width: '100%', boxSizing: 'border-box' }}>
         
         {/* Ficha de Racha Real */}
-        <div className="glass-card">
+        <div className="glass-card" style={{ width: '100%', boxSizing: 'border-box' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '16px' }}>
             <Flame size={24} style={{ color: '#f97316' }} />
             <div>
@@ -191,18 +191,20 @@ export default function MyProgress({ onBack }) {
           </div>
 
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '16px' }}>
-            <div className="futuristic-card-item" style={{ textAlign: 'center', padding: '16px' }}>
+            <div className="futuristic-card-item" style={{ textAlign: 'center', padding: '14px 10px' }}>
               <span style={{ fontSize: '11px', fontWeight: '800', color: 'var(--text-muted)' }}>RACHA ACTUAL</span>
-              <h2 style={{ fontSize: '32px', fontWeight: '900', color: '#f97316', margin: '4px 0 0 0' }}>
-                🔥 {profile?.current_streak || 0}
+              <h2 style={{ fontSize: 'clamp(24px, 6vw, 32px)', fontWeight: '900', color: '#f97316', margin: '4px 0 0 0', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
+                <Flame size={24} />
+                <span>{profile?.current_streak || 0}</span>
               </h2>
               <span style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>Días consecutivos</span>
             </div>
 
-            <div className="futuristic-card-item" style={{ textAlign: 'center', padding: '16px' }}>
+            <div className="futuristic-card-item" style={{ textAlign: 'center', padding: '14px 10px' }}>
               <span style={{ fontSize: '11px', fontWeight: '800', color: 'var(--text-muted)' }}>MEJOR RACHA</span>
-              <h2 style={{ fontSize: '32px', fontWeight: '900', color: 'var(--primary)', margin: '4px 0 0 0' }}>
-                🏆 {profile?.longest_streak || 0}
+              <h2 style={{ fontSize: 'clamp(24px, 6vw, 32px)', fontWeight: '900', color: 'var(--primary)', margin: '4px 0 0 0', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
+                <Trophy size={24} />
+                <span>{profile?.longest_streak || 0}</span>
               </h2>
               <span style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>Récord histórico</span>
             </div>
@@ -214,9 +216,9 @@ export default function MyProgress({ onBack }) {
         </div>
 
         {/* Calendario de Actividad Visual */}
-        <div className="glass-card">
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
-            <h3 style={{ fontSize: '16px', fontWeight: '900', display: 'flex', alignItems: 'center', gap: '8px' }}>
+        <div className="glass-card" style={{ width: '100%', boxSizing: 'border-box' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px', flexWrap: 'wrap', gap: '6px' }}>
+            <h3 style={{ fontSize: '15.5px', fontWeight: '900', display: 'flex', alignItems: 'center', gap: '8px' }}>
               <CalendarIcon size={18} style={{ color: 'var(--primary)' }} /> Calendario de Participación ({monthNames[month]} {year})
             </h3>
             <span style={{ fontSize: '11px', fontWeight: '800', color: '#10b981', display: 'flex', alignItems: 'center', gap: '4px' }}>
@@ -225,14 +227,14 @@ export default function MyProgress({ onBack }) {
           </div>
 
           {/* Días de la Semana Header */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '6px', textAlign: 'center', fontSize: '11px', fontWeight: '800', color: 'var(--text-muted)', marginBottom: '8px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 'clamp(2px, 1vw, 6px)', textAlign: 'center', fontSize: 'clamp(9px, 2.2vw, 11px)', fontWeight: '800', color: 'var(--text-muted)', marginBottom: '8px' }}>
             <span>Dom</span><span>Lun</span><span>Mar</span><span>Mié</span><span>Jue</span><span>Vie</span><span>Sáb</span>
           </div>
 
           {/* Cuadrícula de Días */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '6px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 'clamp(2px, 1vw, 6px)' }}>
             {Array.from({ length: firstDayIndex }).map((_, i) => (
-              <div key={`empty-${i}`} style={{ height: '36px' }} />
+              <div key={`empty-${i}`} style={{ height: 'clamp(28px, 7vw, 36px)' }} />
             ))}
 
             {Array.from({ length: daysInMonth }).map((_, i) => {
@@ -245,18 +247,19 @@ export default function MyProgress({ onBack }) {
                   key={dateStr}
                   title={isActive ? `¡Participaste el ${dateStr}!` : `Sin actividad el ${dateStr}`}
                   style={{
-                    height: '36px',
-                    borderRadius: '10px',
+                    height: 'clamp(28px, 7vw, 36px)',
+                    borderRadius: '8px',
                     backgroundColor: isActive ? 'var(--primary)' : 'var(--bg-secondary)',
                     color: isActive ? '#ffffff' : 'var(--text-muted)',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    fontSize: '12px',
+                    fontSize: 'clamp(10px, 2.5vw, 12px)',
                     fontWeight: isActive ? '900' : '600',
                     border: isActive ? '1px solid var(--primary)' : '1px solid var(--border)',
                     boxShadow: isActive ? '0 2px 8px rgba(139, 92, 246, 0.3)' : 'none',
-                    transition: 'all 0.2s ease'
+                    transition: 'all 0.2s ease',
+                    padding: 0
                   }}
                 >
                   {dayNum}
@@ -269,10 +272,10 @@ export default function MyProgress({ onBack }) {
       </div>
 
       {/* SECCIÓN DE LAS 6 MEDALLAS OFICIALES */}
-      <div className="glass-card">
+      <div className="glass-card" style={{ width: '100%', boxSizing: 'border-box' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px', marginBottom: '18px' }}>
           <div>
-            <h3 style={{ fontSize: '18px', fontWeight: '900', display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <h3 style={{ fontSize: 'clamp(16px, 4vw, 18px)', fontWeight: '900', display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
               <Award size={22} style={{ color: 'var(--primary)' }} /> Galería Oficial de Medallas de Bienestar (6 Medallas)
             </h3>
             <p style={{ fontSize: '12.5px', color: 'var(--text-secondary)', marginTop: '2px' }}>
@@ -286,7 +289,7 @@ export default function MyProgress({ onBack }) {
         </div>
 
         {/* Grid de las 6 Medallas */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '16px' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 260px), 1fr))', gap: '14px', width: '100%', boxSizing: 'border-box' }}>
           {badges.map((badge) => {
             const IconComp = ICON_MAP[badge.icon] || Award;
             const isUnlocked = badge.unlocked;
@@ -298,7 +301,7 @@ export default function MyProgress({ onBack }) {
                   backgroundColor: 'var(--bg-secondary)',
                   borderRadius: '18px',
                   border: isUnlocked ? `2px solid ${badge.color}` : '1.5px dashed var(--border)',
-                  padding: '18px',
+                  padding: 'clamp(12px, 3vw, 18px)',
                   display: 'flex',
                   gap: '14px',
                   alignItems: 'flex-start',
@@ -396,16 +399,16 @@ export default function MyProgress({ onBack }) {
         </div>
 
         {/* Tabla de Ranking */}
-        <div style={{ backgroundColor: 'var(--bg-secondary)', borderRadius: '16px', border: '1px solid var(--border)', overflowX: 'auto' }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12.5px', textAlign: 'left' }}>
+        <div className="table-responsive" style={{ backgroundColor: 'var(--bg-secondary)', borderRadius: '16px', border: '1px solid var(--border)', overflowX: 'auto' }}>
+          <table style={{ width: '100%', minWidth: '600px', borderCollapse: 'collapse', fontSize: '12.5px', textAlign: 'left' }}>
             <thead>
               <tr style={{ borderBottom: '2px solid var(--border)', color: 'var(--text-muted)', fontSize: '11px', textTransform: 'uppercase' }}>
                 <th style={{ padding: '12px 16px' }}>POSICIÓN</th>
                 <th style={{ padding: '12px 16px' }}>COLABORADOR</th>
                 <th style={{ padding: '12px 16px' }}>DEPARTAMENTO</th>
                 <th style={{ padding: '12px 16px' }}>NIVEL</th>
-                <th style={{ padding: '12px 16px' }}>RACHA (🔥)</th>
-                <th style={{ padding: '12px 16px' }}>MEDALLAS (🏅)</th>
+                <th style={{ padding: '12px 16px' }}>RACHA</th>
+                <th style={{ padding: '12px 16px' }}>MEDALLAS</th>
                 <th style={{ padding: '12px 16px', textAlign: 'right' }}>XP TOTAL</th>
               </tr>
             </thead>
@@ -427,7 +430,21 @@ export default function MyProgress({ onBack }) {
                     }}
                   >
                     <td style={{ padding: '12px 16px', fontWeight: '900' }}>
-                      {item.rank === 1 ? '🥇 #1' : item.rank === 2 ? '🥈 #2' : item.rank === 3 ? '🥉 #3' : `#${item.rank}`}
+                      {item.rank === 1 ? (
+                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', color: '#eab308' }}>
+                          <Trophy size={14} /> #1
+                        </span>
+                      ) : item.rank === 2 ? (
+                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', color: '#94a3b8' }}>
+                          <Award size={14} /> #2
+                        </span>
+                      ) : item.rank === 3 ? (
+                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', color: '#b45309' }}>
+                          <Award size={14} /> #3
+                        </span>
+                      ) : (
+                        `#${item.rank}`
+                      )}
                     </td>
                     <td style={{ padding: '12px 16px', color: 'var(--text-primary)', fontWeight: '800' }}>
                       {item.first_name} {item.last_name} {item.is_current_user && <span style={{ fontSize: '10px', color: 'var(--primary)', marginLeft: '4px' }}>(TÚ)</span>}
@@ -441,10 +458,14 @@ export default function MyProgress({ onBack }) {
                       </span>
                     </td>
                     <td style={{ padding: '12px 16px', fontWeight: '800', color: '#f97316' }}>
-                      🔥 {item.current_streak} días
+                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                        <Flame size={14} /> {item.current_streak} días
+                      </span>
                     </td>
                     <td style={{ padding: '12px 16px', fontWeight: '800', color: 'var(--primary)' }}>
-                      🏅 {item.badges_count}
+                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                        <Award size={14} /> {item.badges_count}
+                      </span>
                     </td>
                     <td style={{ padding: '12px 16px', textAlign: 'right', fontWeight: '900', color: 'var(--primary)' }}>
                       {item.total_xp} XP
@@ -464,13 +485,13 @@ export default function MyProgress({ onBack }) {
           <h3 style={{ fontSize: '17px', fontWeight: '900' }}>Historial Real de Transacciones de XP</h3>
         </div>
 
-        <div style={{ backgroundColor: 'var(--bg-secondary)', borderRadius: '16px', border: '1px solid var(--border)', overflowX: 'auto' }}>
+        <div className="table-responsive" style={{ backgroundColor: 'var(--bg-secondary)', borderRadius: '16px', border: '1px solid var(--border)', overflowX: 'auto' }}>
           {history.length === 0 ? (
             <div style={{ textAlign: 'center', padding: '24px', color: 'var(--text-muted)', fontSize: '13px' }}>
               Aún no tienes registros en tu historial de XP. ¡Completa tu primera evaluación o registro diario!
             </div>
           ) : (
-            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12.5px', textAlign: 'left' }}>
+            <table style={{ width: '100%', minWidth: '500px', borderCollapse: 'collapse', fontSize: '12.5px', textAlign: 'left' }}>
               <thead>
                 <tr style={{ borderBottom: '2px solid var(--border)', color: 'var(--text-muted)', fontSize: '11px' }}>
                   <th style={{ padding: '10px 14px' }}>CONCEPTO / ACCIÓN</th>

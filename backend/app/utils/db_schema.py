@@ -119,3 +119,55 @@ def ensure_ai_knowledge_and_culture_schema(db):
         return False
 
 
+def ensure_auth_oauth_schema(db):
+    """Asegura que la tabla users tenga soporte para OAuth (Google, Facebook) y campos de perfil extendido."""
+    try:
+        db.create_all()
+        inspector = inspect(db.engine)
+        if inspector.has_table('users'):
+            existing_columns = {column['name'] for column in inspector.get_columns('users')}
+            statements = []
+            if 'auth_provider' not in existing_columns:
+                statements.append("ALTER TABLE users ADD COLUMN auth_provider VARCHAR(30) DEFAULT 'local' NOT NULL")
+            if 'provider_id' not in existing_columns:
+                statements.append("ALTER TABLE users ADD COLUMN provider_id VARCHAR(120)")
+            if 'avatar_url' not in existing_columns:
+                statements.append("ALTER TABLE users ADD COLUMN avatar_url VARCHAR(500)")
+
+            # Permitir password_hash nullable para cuentas de terceros (OAuth)
+            for col in inspector.get_columns('users'):
+                if col['name'] == 'password_hash' and not col.get('nullable', True):
+                    statements.append("ALTER TABLE users ALTER COLUMN password_hash DROP NOT NULL")
+
+            if statements:
+                with db.engine.begin() as conn:
+                    for statement in statements:
+                        conn.execute(text(statement))
+
+        return True
+    except Exception as e:
+        print(f"Error ensuring auth OAuth schema: {e}")
+        return False
+
+
+def ensure_user_avatar_schema(db):
+    """Asegura la creación de la tabla user_avatars y agrega avatar_config / avatar_name a users si no existen."""
+    try:
+        from app.models.user_avatar import UserAvatar
+        db.create_all()
+        inspector = inspect(db.engine)
+        if inspector.has_table('users'):
+            existing_columns = {column['name'] for column in inspector.get_columns('users')}
+            statements = []
+            if 'avatar_name' not in existing_columns:
+                statements.append("ALTER TABLE users ADD COLUMN avatar_name VARCHAR(80) DEFAULT 'Mi Avatar'")
+            if 'avatar_config' not in existing_columns:
+                statements.append("ALTER TABLE users ADD COLUMN avatar_config JSON")
+            if statements:
+                with db.engine.begin() as conn:
+                    for statement in statements:
+                        conn.execute(text(statement))
+        return True
+    except Exception as e:
+        print(f"Error ensuring user avatar schema: {e}")
+        return False

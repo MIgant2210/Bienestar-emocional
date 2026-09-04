@@ -1,7 +1,7 @@
 import React, { useState, useContext } from 'react';
 import { Link } from 'react-router-dom';
 import { ThemeContext } from '../contexts/ThemeContext';
-import { Mail, ArrowRight, Loader, CheckCircle2, AlertCircle, Sun, Moon, KeyRound, ArrowLeft } from 'lucide-react';
+import { Mail, ArrowRight, Loader, CheckCircle2, AlertCircle, Sun, Moon, KeyRound, ArrowLeft, Send } from 'lucide-react';
 import api from '../services/api';
 import StarryBackground from '../components/StarryBackground';
 
@@ -27,11 +27,15 @@ const ForgotPassword = () => {
     try {
       const res = await api.post('/auth/forgot-password', { email: normalizedEmail });
       setSubmitted(true);
-      setMessage(res.data.message || 'Si la cuenta puede realizar una recuperación, la solicitud ha sido registrada en el sistema.');
+      setMessage(res.data.message || 'Si la cuenta existe en EquilibrIA, recibirás un correo electrónico con instrucciones para restablecer tu contraseña en los próximos minutos.');
     } catch (err) {
-      // Incluso en caso de error no crítico, mantener mensaje genérico de seguridad
-      setSubmitted(true);
-      setMessage('Si la cuenta puede realizar una recuperación, la solicitud ha sido registrada en el sistema.');
+      if (err.response?.status === 429) {
+        setErrorMsg('Has superado el límite de solicitudes. Por favor espera unos minutos antes de volver a intentarlo.');
+      } else {
+        // Respuesta genérica de seguridad
+        setSubmitted(true);
+        setMessage('Si la cuenta existe en EquilibrIA, recibirás un correo electrónico con instrucciones para restablecer tu contraseña en los próximos minutos.');
+      }
     } finally {
       setLoading(false);
     }
@@ -63,9 +67,10 @@ const ForgotPassword = () => {
           right: '24px',
           zIndex: 100,
           background: 'var(--bg-card)',
-          border: '1px solid var(--border)'
+          border: '1px solid var(--border)',
+          boxShadow: 'var(--shadow-sm)'
         }}
-        title="Cambiar tema"
+        title={theme === 'dark' ? 'Cambiar a modo claro' : 'Cambiar a modo oscuro'}
       >
         {theme === 'dark' ? <Sun size={20} /> : <Moon size={20} />}
       </button>
@@ -79,18 +84,19 @@ const ForgotPassword = () => {
         zIndex: 10,
         borderRadius: '24px',
         boxShadow: 'var(--shadow-lg)',
-        border: '1px solid var(--border)'
+        border: '1px solid var(--border)',
+        backgroundColor: 'var(--bg-card)'
       }}>
         
-        {/* LOGO */}
-        <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '20px' }}>
+        {/* LOGO EQUILIBRIA */}
+        <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '16px' }}>
           <img 
             src="/logo.png" 
             alt="EquilibrIA Logo" 
             style={{ 
-              height: '54px', 
-              objectFit: 'contain',
-              filter: 'drop-shadow(0 4px 12px rgba(255, 122, 0, 0.25))' 
+              height: '56px', 
+              objectFit: 'contain', 
+              filter: 'drop-shadow(0 4px 12px rgba(99, 102, 241, 0.25))' 
             }} 
           />
         </div>
@@ -100,8 +106,8 @@ const ForgotPassword = () => {
             <div style={{
               width: '56px',
               height: '56px',
-              borderRadius: '50%',
-              backgroundColor: 'var(--primary-light)',
+              borderRadius: '16px',
+              backgroundColor: 'rgba(99, 102, 241, 0.1)',
               color: 'var(--primary)',
               display: 'flex',
               alignItems: 'center',
@@ -111,18 +117,18 @@ const ForgotPassword = () => {
               <KeyRound size={28} />
             </div>
 
-            <h2 style={{ fontSize: '20px', fontWeight: '900', letterSpacing: '-0.5px', marginBottom: '6px' }}>
+            <h2 style={{ fontSize: '20px', fontWeight: '900', letterSpacing: '-0.5px', marginBottom: '6px', color: 'var(--text-primary)' }}>
               Recuperar Contraseña
             </h2>
             
             <p style={{ fontSize: '13px', color: 'var(--text-secondary)', lineHeight: '1.5', marginBottom: '22px' }}>
-              Ingresa el correo electrónico asociado a tu cuenta institucional para solicitar la recuperación de tu acceso.
+              Ingresa el correo electrónico asociado a tu cuenta en EquilibrIA para recibir un enlace seguro de restablecimiento.
             </p>
 
             {errorMsg && (
               <div style={{
-                backgroundColor: 'var(--danger-light)',
-                border: '1px solid var(--danger)',
+                backgroundColor: 'rgba(239, 68, 68, 0.1)',
+                border: '1px solid rgba(239, 68, 68, 0.25)',
                 color: 'var(--danger)',
                 padding: '10px 14px',
                 borderRadius: '12px',
@@ -134,24 +140,34 @@ const ForgotPassword = () => {
                 gap: '8px',
                 textAlign: 'left'
               }}>
-                <AlertCircle size={16} />
+                <AlertCircle size={16} style={{ flexShrink: 0 }} />
                 <span>{errorMsg}</span>
               </div>
             )}
 
             <form onSubmit={handleSubmit} style={{ display: 'grid', gap: '16px', textAlign: 'left' }}>
               <div>
-                <label style={{ fontSize: '11px', fontWeight: '800', color: 'var(--text-secondary)', display: 'block', marginBottom: '6px' }}>
-                  CORREO ELECTRÓNICO:
+                <label style={{ fontSize: '11px', fontWeight: '800', color: 'var(--text-secondary)', display: 'block', marginBottom: '6px', textTransform: 'uppercase' }}>
+                  Correo Electrónico:
                 </label>
                 <div style={{ position: 'relative' }}>
                   <input
                     type="email"
-                    placeholder="ejemplo@universidad.edu.gt"
+                    placeholder="nombre@universidad.edu"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     required
-                    style={{ width: '100%', padding: '12px 14px 12px 42px', borderRadius: '12px', fontSize: '13.5px' }}
+                    autoComplete="email"
+                    style={{
+                      width: '100%',
+                      padding: '12px 14px 12px 42px',
+                      borderRadius: '12px',
+                      fontSize: '13.5px',
+                      border: '1px solid var(--border)',
+                      backgroundColor: 'var(--bg-primary)',
+                      color: 'var(--text-primary)',
+                      boxSizing: 'border-box'
+                    }}
                   />
                   <Mail size={16} style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
                 </div>
@@ -161,9 +177,31 @@ const ForgotPassword = () => {
                 type="submit"
                 className="btn btn-primary"
                 disabled={loading}
-                style={{ width: '100%', padding: '13px', borderRadius: '12px', fontWeight: '900', fontSize: '13.5px', marginTop: '6px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
+                style={{
+                  width: '100%',
+                  padding: '13px',
+                  borderRadius: '12px',
+                  fontWeight: '900',
+                  fontSize: '13.5px',
+                  marginTop: '6px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '8px',
+                  boxShadow: '0 4px 14px rgba(99, 102, 241, 0.35)'
+                }}
               >
-                {loading ? <Loader className="animate-spin" size={16} /> : <><span>Solicitar Recuperación</span><ArrowRight size={16} /></>}
+                {loading ? (
+                  <>
+                    <Loader className="animate-spin" size={16} />
+                    <span>Enviando enlace seguro...</span>
+                  </>
+                ) : (
+                  <>
+                    <span>Enviar Enlace de Recuperación</span>
+                    <Send size={16} />
+                  </>
+                )}
               </button>
             </form>
           </div>
@@ -184,25 +222,47 @@ const ForgotPassword = () => {
             </div>
 
             <h3 style={{ fontSize: '18px', fontWeight: '900', color: 'var(--success)', marginBottom: '8px' }}>
-              Solicitud Registrada
+              Enlace Enviado
             </h3>
 
-            <p style={{ fontSize: '13px', color: 'var(--text-secondary)', lineHeight: '1.6', marginBottom: '24px' }}>
+            <p style={{ fontSize: '13px', color: 'var(--text-secondary)', lineHeight: '1.6', marginBottom: '18px' }}>
               {message}
             </p>
 
             <div style={{
-              backgroundColor: 'var(--bg-secondary)',
+              background: 'var(--primary-light)',
               border: '1px solid var(--border)',
-              borderRadius: '12px',
-              padding: '12px 16px',
+              borderRadius: '14px',
+              padding: '14px 16px',
               fontSize: '12px',
-              color: 'var(--text-muted)',
+              color: 'var(--text-secondary)',
               marginBottom: '20px',
-              textAlign: 'left'
+              textAlign: 'left',
+              lineHeight: '1.5',
+              display: 'flex',
+              alignItems: 'flex-start',
+              gap: '10px'
             }}>
-              💡 <strong>Nota:</strong> Comunícate con el Administrador de tu institución para que genere tu enlace de restablecimiento seguro en el panel.
+              <Mail size={16} style={{ color: 'var(--primary)', flexShrink: 0, marginTop: '2px' }} />
+              <div>
+                <strong>Revisa tu bandeja de entrada:</strong> Si no visualizas el correo en unos momentos, comprueba tu carpeta de <em>Spam</em> o correo no deseado. El enlace es de un solo uso y es válido durante <strong>1 hora</strong>.
+              </div>
             </div>
+
+            <button
+              type="button"
+              onClick={() => { setSubmitted(false); setEmail(''); }}
+              className="btn btn-secondary"
+              style={{
+                width: '100%',
+                padding: '10px',
+                borderRadius: '10px',
+                fontSize: '12.5px',
+                fontWeight: '700'
+              }}
+            >
+              Probar con otro correo
+            </button>
           </div>
         )}
 
@@ -216,8 +276,11 @@ const ForgotPassword = () => {
               color: 'var(--text-secondary)',
               fontSize: '12.5px',
               fontWeight: '700',
-              textDecoration: 'none'
+              textDecoration: 'none',
+              transition: 'color 0.2s ease'
             }}
+            onMouseEnter={(e) => e.currentTarget.style.color = 'var(--primary)'}
+            onMouseLeave={(e) => e.currentTarget.style.color = 'var(--text-secondary)'}
           >
             <ArrowLeft size={14} />
             <span>Volver a Iniciar Sesión</span>

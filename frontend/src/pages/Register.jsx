@@ -289,9 +289,15 @@ const Register = ({ onNavigate }) => {
               fontSize: '12.5px',
               color: 'var(--text-primary)',
               lineHeight: '1.5',
-              marginBottom: '24px'
+              marginBottom: '24px',
+              display: 'flex',
+              alignItems: 'flex-start',
+              gap: '10px'
             }}>
-              ✉️ <strong>Paso siguiente:</strong> Por motivos de seguridad y privacidad en EquilibrIA, debes verificar tu correo electrónico antes de acceder.
+              <Mail size={16} style={{ color: 'var(--primary)', flexShrink: 0, marginTop: '2px' }} />
+              <div>
+                <strong>Paso siguiente:</strong> Por motivos de seguridad y privacidad en EquilibrIA, debes verificar tu correo electrónico antes de acceder.
+              </div>
             </div>
 
             {/* Enlace simulado de activación directa para ambiente local/demo */}
@@ -498,11 +504,21 @@ const Register = ({ onNavigate }) => {
                       <div style={{ flex: 1, borderRadius: '2px', backgroundColor: passValidCount === 5 ? 'var(--success, #10b981)' : 'rgba(255,255,255,0.1)' }} />
                     </div>
                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', fontSize: '11px', color: 'var(--text-secondary)' }}>
-                      <span style={{ color: passChecks.length ? 'var(--success, #10b981)' : 'var(--text-muted)' }}>✓ 8+ car.</span>
-                      <span style={{ color: passChecks.upper ? 'var(--success, #10b981)' : 'var(--text-muted)' }}>✓ Mayús.</span>
-                      <span style={{ color: passChecks.lower ? 'var(--success, #10b981)' : 'var(--text-muted)' }}>✓ Minús.</span>
-                      <span style={{ color: passChecks.number ? 'var(--success, #10b981)' : 'var(--text-muted)' }}>✓ Número</span>
-                      <span style={{ color: passChecks.special ? 'var(--success, #10b981)' : 'var(--text-muted)' }}>✓ Especial</span>
+                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', color: passChecks.length ? 'var(--success, #10b981)' : 'var(--text-muted)' }}>
+                        <Check size={11} /> 8+ car.
+                      </span>
+                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', color: passChecks.upper ? 'var(--success, #10b981)' : 'var(--text-muted)' }}>
+                        <Check size={11} /> Mayús.
+                      </span>
+                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', color: passChecks.lower ? 'var(--success, #10b981)' : 'var(--text-muted)' }}>
+                        <Check size={11} /> Minús.
+                      </span>
+                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', color: passChecks.number ? 'var(--success, #10b981)' : 'var(--text-muted)' }}>
+                        <Check size={11} /> Número
+                      </span>
+                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', color: passChecks.special ? 'var(--success, #10b981)' : 'var(--text-muted)' }}>
+                        <Check size={11} /> Especial
+                      </span>
                     </div>
                   </div>
                 )}

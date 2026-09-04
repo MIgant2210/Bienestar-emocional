@@ -5,7 +5,7 @@
 
 export const GUIDED_EXERCISES_LIBRARY = [
   // ============================================================================
-  // 🌬️ RESPIRACIÓN (4 Ejercicios Guiados por el Colibrí Morado)
+  // RESPIRACIÓN (4 Ejercicios Guiados por el Colibrí Morado)
   // ============================================================================
   {
     id: 'resp_446',
@@ -85,7 +85,7 @@ export const GUIDED_EXERCISES_LIBRARY = [
   },
 
   // ============================================================================
-  // 🌿 RELAJACIÓN (3 Ejercicios Guiados por el Colibrí)
+  // RELAJACIÓN (3 Ejercicios Guiados por el Colibrí)
   // ============================================================================
   {
     id: 'relaj_hombros',
@@ -146,7 +146,7 @@ export const GUIDED_EXERCISES_LIBRARY = [
   },
 
   // ============================================================================
-  // 🏃 PAUSAS ACTIVAS Y ESTIRAMIENTO (4 Ejercicios con Colibrí y Posturas)
+  // PAUSAS ACTIVAS Y ESTIRAMIENTO (4 Ejercicios con Colibrí y Posturas)
   // ============================================================================
   {
     id: 'pausa_rotacion_hombros',
@@ -224,7 +224,7 @@ export const GUIDED_EXERCISES_LIBRARY = [
   },
 
   // ============================================================================
-  // 🧘 BIENESTAR Y MINDFULNESS (3 Ejercicios Guiados por el Colibrí)
+  // BIENESTAR Y MINDFULNESS (3 Ejercicios Guiados por el Colibrí)
   // ============================================================================
   {
     id: 'bienestar_pausa_consciente',

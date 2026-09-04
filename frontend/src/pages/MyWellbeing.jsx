@@ -5,7 +5,8 @@ import {
   Search, Book, ArrowRight, ArrowLeft, UserCheck, HelpCircle, ChevronRight, Eye,
   ShieldCheck, Loader, RefreshCw, Zap, Award, Heart, ShieldAlert,
   Bookmark, BookmarkCheck, Star, Volume2, Play, Plus, Edit, Type, 
-  ExternalLink, Filter, RotateCcw, CheckSquare, Lock, Phone, User, X, ArrowUpDown
+  ExternalLink, Filter, RotateCcw, CheckSquare, Lock, Phone, User, X, ArrowUpDown,
+  Flame, Trophy, Building, BarChart3, Smile, Frown, Meh, Sun, Coffee
 } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 import { useNavigate } from 'react-router-dom';
@@ -111,6 +112,7 @@ const MyWellbeing = ({ onNavigateToTab, initialResourceId, onResourceCompleted }
 
   // Estados de Formulario de Registro Emocional / Reflexión
   const [reflectionText, setReflectionText] = useState('');
+  const [selectedMoodId, setSelectedMoodId] = useState(null);
   const [reflectionLoading, setReflectionLoading] = useState(false);
   const [reflectionSuccess, setReflectionSuccess] = useState('');
   const [reflectionError, setReflectionError] = useState('');
@@ -125,6 +127,20 @@ const MyWellbeing = ({ onNavigateToTab, initialResourceId, onResourceCompleted }
   const recognitionRef = useRef(null);
 
   const [loading, setLoading] = useState(true);
+
+  // Auto-scroll al encabezado del recurso al abrirlo (optimizado para celular, tablet y escritorio)
+  useEffect(() => {
+    if (selectedResource) {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      const timer = setTimeout(() => {
+        const viewerTop = document.getElementById('resource-viewer-top');
+        if (viewerTop) {
+          viewerTop.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+      }, 50);
+      return () => clearTimeout(timer);
+    }
+  }, [selectedResource?.id]);
 
   // Cargar datos iniciales
   const fetchAllData = async () => {
@@ -220,14 +236,14 @@ const MyWellbeing = ({ onNavigateToTab, initialResourceId, onResourceCompleted }
 
       if (completed_tasks_count > 0) {
         setCelebrationToast({
-          message: `🎉 ¡Felicitaciones! Has completado el recurso y validado automáticamente ${completed_tasks_count} tarea(s) vinculada(s). (+${gamification?.xp_gained || 20} XP)`,
+          message: `¡Felicitaciones! Has completado el recurso y validado automáticamente ${completed_tasks_count} tarea(s) vinculada(s). (+${gamification?.xp_gained || 20} XP)`,
           streak: gamification?.current_streak,
           badges: gamification?.new_badges || []
         });
         setTimeout(() => setCelebrationToast(null), 7000);
       } else if (gamification && !gamification.already_awarded && gamification.xp_gained > 0) {
         setCelebrationToast({
-          message: `🎉 ¡Felicitaciones! Has completado el recurso y ganado +${gamification.xp_gained} XP.`,
+          message: `¡Felicitaciones! Has completado el recurso y ganado +${gamification.xp_gained} XP.`,
           streak: gamification.current_streak,
           badges: gamification.new_badges || []
         });
@@ -313,7 +329,7 @@ const MyWellbeing = ({ onNavigateToTab, initialResourceId, onResourceCompleted }
 
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!SpeechRecognition) {
-      alert('Tu navegador no soporta reconocimiento de voz nativo. Puedes escribir tu reflexión.');
+      setReflectionError('Tu navegador no soporta reconocimiento de voz nativo. Puedes escribir tu reflexión en el campo de texto.');
       return;
     }
 
@@ -382,6 +398,7 @@ const MyWellbeing = ({ onNavigateToTab, initialResourceId, onResourceCompleted }
       setLatestAnalysis(res.data.analysis);
       setReflectionSuccess('¡Reflexión registrada exitosamente! (+20 XP ganados)');
       setReflectionText('');
+      setSelectedMoodId(null);
       fetchAllData();
       fetchHistory(historyPeriod);
     } catch (err) {
@@ -477,7 +494,7 @@ const MyWellbeing = ({ onNavigateToTab, initialResourceId, onResourceCompleted }
       </div>
 
       {/* Sub-Navegación Unificada de Mi Bienestar */}
-      <div className="tab-container" style={{ width: '100%', flexWrap: 'wrap', gap: '8px' }}>
+      <div className="tab-container wellbeing-subtabs" style={{ width: '100%', flexWrap: 'wrap', gap: '8px' }}>
         {[
           { id: 'estado_actual', label: 'Estado Actual', icon: Activity },
           { id: 'historial', label: 'Historial de Bienestar', icon: Clock },
@@ -682,30 +699,66 @@ const MyWellbeing = ({ onNavigateToTab, initialResourceId, onResourceCompleted }
                 Registra cómo te has sentido en tu jornada. La información se procesa bajo estricta confidencialidad.
               </p>
 
-              {/* Selector de Emojis */}
-              <div style={{ marginBottom: '12px' }}>
-                <label style={{ fontSize: '11px', fontWeight: '800', color: 'var(--text-secondary)', display: 'block', marginBottom: '6px' }}>
+              {/* Selector de Estado de Ánimo en Primera Persona y Selección Única */}
+              <div style={{ marginBottom: '14px' }}>
+                <label style={{ fontSize: '11px', fontWeight: '800', color: 'var(--text-secondary)', display: 'block', marginBottom: '8px', textTransform: 'uppercase' }}>
                   ESTADO DE ÁNIMO DOMINANTE:
                 </label>
                 <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
                   {[
-                    { emoji: '😫', label: 'Tensión' },
-                    { emoji: '🙁', label: 'Cansancio' },
-                    { emoji: '😐', label: 'Neutro' },
-                    { emoji: '🙂', label: 'Tranquilo' },
-                    { emoji: '😁', label: 'Energético' }
-                  ].map((mood, idx) => (
-                    <button
-                      key={idx}
-                      type="button"
-                      onClick={() => setReflectionText(prev => prev ? `${prev} Me siento ${mood.label.toLowerCase()} ${mood.emoji}.` : `Hoy me siento ${mood.label.toLowerCase()} ${mood.emoji}.`)}
-                      className="duo-pill"
-                      style={{ padding: '6px 10px', fontSize: '11.5px' }}
-                    >
-                      <span>{mood.emoji}</span>
-                      <span>{mood.label}</span>
-                    </button>
-                  ))}
+                    { id: 'tenso', emoji: '😫', label: 'Tenso', sentence: 'Hoy me siento tenso 😫.', bg: 'rgba(239, 68, 68, 0.12)', border: 'rgba(239, 68, 68, 0.35)', color: '#ef4444' },
+                    { id: 'cansado', emoji: '😧', label: 'Cansado', sentence: 'Hoy me siento cansado 😧.', bg: 'rgba(245, 158, 11, 0.12)', border: 'rgba(245, 158, 11, 0.35)', color: '#f59e0b' },
+                    { id: 'neutro', emoji: '😐', label: 'Neutro', sentence: 'Hoy me siento neutro 😐.', bg: 'rgba(156, 163, 175, 0.12)', border: 'rgba(156, 163, 175, 0.35)', color: '#6b7280' },
+                    { id: 'tranquilo', emoji: '😊', label: 'Tranquilo', sentence: 'Hoy me siento tranquilo 😊.', bg: 'rgba(16, 185, 129, 0.12)', border: 'rgba(16, 185, 129, 0.35)', color: '#10b981' },
+                    { id: 'energetico', emoji: '😁', label: 'Energético', sentence: 'Hoy me siento energético 😁.', bg: 'rgba(99, 102, 241, 0.12)', border: 'rgba(99, 102, 241, 0.35)', color: '#6366f1' }
+                  ].map((mood) => {
+                    const isSelected = selectedMoodId === mood.id;
+                    return (
+                      <button
+                        key={mood.id}
+                        type="button"
+                        onClick={() => {
+                          setSelectedMoodId(mood.id);
+                          setReflectionText(prev => {
+                            const trimmed = (prev || '').trim();
+                            const newSentence = `${mood.sentence} `;
+                            if (!trimmed) {
+                              return newSentence;
+                            }
+                            // Expresión regular que detecta frases previas de estado de ánimo tanto nuevas como heredadas
+                            const existingMoodRegex = /^(Hoy me siento|Me siento)\s+[^\.\!\?]+[\.\!\?]\s*/i;
+                            if (existingMoodRegex.test(trimmed)) {
+                              return trimmed.replace(existingMoodRegex, newSentence);
+                            }
+                            return `${newSentence}${trimmed}`;
+                          });
+                        }}
+                        className="duo-pill"
+                        style={{
+                          padding: '7px 14px',
+                          fontSize: '12px',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '6px',
+                          backgroundColor: isSelected ? mood.bg : 'var(--bg-secondary)',
+                          borderColor: isSelected ? mood.color : mood.border,
+                          borderWidth: isSelected ? '2px' : '1px',
+                          borderStyle: 'solid',
+                          color: isSelected ? mood.color : 'var(--text-primary)',
+                          fontWeight: isSelected ? '900' : '700',
+                          boxShadow: isSelected ? `0 0 0 3px ${mood.bg}` : 'none',
+                          transform: isSelected ? 'scale(1.04)' : 'scale(1)',
+                          transition: 'all 0.15s ease',
+                          cursor: 'pointer'
+                        }}
+                        onMouseEnter={(e) => { if (!isSelected) e.currentTarget.style.transform = 'scale(1.05)'; }}
+                        onMouseLeave={(e) => { if (!isSelected) e.currentTarget.style.transform = 'scale(1)'; }}
+                      >
+                        <span style={{ fontSize: '17px', lineHeight: 1 }}>{mood.emoji}</span>
+                        <span>{mood.label}</span>
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
 
@@ -812,24 +865,105 @@ const MyWellbeing = ({ onNavigateToTab, initialResourceId, onResourceCompleted }
 
               {/* Recursos Recomendados para ti */}
               <div className="glass-card" style={{ padding: '18px' }}>
-                <h4 style={{ fontSize: '13.5px', fontWeight: '800', marginBottom: '10px', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                  <Sparkles size={15} style={{ color: 'var(--accent)' }} /> Recomendación para tu bienestar
-                </h4>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+                  <h4 style={{ fontSize: '13.5px', fontWeight: '800', margin: 0, display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <Sparkles size={15} style={{ color: 'var(--accent)' }} /> Recomendación para tu bienestar
+                  </h4>
+                  <span style={{ fontSize: '10.5px', fontWeight: '800', color: 'var(--primary)', backgroundColor: 'var(--primary-light)', padding: '2px 8px', borderRadius: '6px' }}>
+                    🎯 Sugerencia Personalizada
+                  </span>
+                </div>
+
+                <p style={{ fontSize: '11.5px', color: 'var(--text-secondary)', marginBottom: '12px', lineHeight: '1.4' }}>
+                  Recursos seleccionados certeramente según tus indicadores y reflexiones recientes:
+                </p>
+
                 {recommendedResources.length > 0 ? (
-                  <div style={{ display: 'grid', gap: '8px' }}>
-                    <p style={{ fontSize: '12px', color: 'var(--text-secondary)', margin: 0 }}>
-                      {recommendedResources[0].description}
-                    </p>
+                  <div style={{ display: 'grid', gap: '10px' }}>
+                    {recommendedResources.slice(0, 2).map((recRes) => (
+                      <div
+                        key={recRes.id}
+                        style={{
+                          padding: '10px 12px',
+                          borderRadius: '12px',
+                          backgroundColor: 'var(--bg-secondary)',
+                          border: '1px solid var(--border)',
+                          display: 'flex',
+                          flexDirection: 'column',
+                          gap: '6px',
+                          transition: 'all 0.15s ease'
+                        }}
+                      >
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <span style={{ fontSize: '10.5px', fontWeight: '800', color: 'var(--primary)', textTransform: 'capitalize', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                            {recRes.resource_type === 'respiracion' && '🧘 Respiración'}
+                            {recRes.resource_type === 'ejercicio' && '⚡ Ejercicio'}
+                            {recRes.resource_type === 'checklist' && '📝 Checklist'}
+                            {recRes.resource_type === 'grounding' && '🌿 Grounding'}
+                            {recRes.resource_type === 'audio' && '🎧 Audio'}
+                            {recRes.resource_type === 'video' && '🎬 Video'}
+                            {recRes.resource_type === 'reflexion' && '🧠 Reflexión'}
+                            {recRes.resource_type === 'diario' && '📔 Diario'}
+                            {recRes.resource_type === 'gratitud' && '💛 Gratitud'}
+                            {recRes.resource_type === 'quiz' && '💡 Quiz'}
+                            {recRes.resource_type === 'reto' && '🎯 Reto'}
+                            {recRes.resource_type === 'consejo' && '💡 Consejo'}
+                            {recRes.resource_type === 'actividad' && '🚶 Actividad'}
+                            {recRes.resource_type === 'infografia' && '📊 Infografía'}
+                            {recRes.resource_type === 'articulo' && '📖 Lectura'}
+                          </span>
+                          <span style={{ fontSize: '10px', color: 'var(--text-muted)', fontWeight: '600' }}>
+                            ~{recRes.reading_time_minutes || 3} min • +{recRes.xp_reward || 20} XP
+                          </span>
+                        </div>
+
+                        <strong style={{ fontSize: '12px', color: 'var(--text-primary)', lineHeight: '1.3' }}>
+                          {recRes.title}
+                        </strong>
+
+                        <button
+                          onClick={() => {
+                            setSelectedResource(recRes);
+                            setActiveSection('recursos');
+                          }}
+                          className="btn btn-primary"
+                          style={{
+                            marginTop: '4px',
+                            padding: '6px 12px',
+                            fontSize: '11px',
+                            fontWeight: '800',
+                            borderRadius: '8px',
+                            justifyContent: 'center'
+                          }}
+                        >
+                          <Play size={12} />
+                          <span>Iniciar Actividad</span>
+                        </button>
+                      </div>
+                    ))}
+
                     <button
                       onClick={() => {
-                        setSelectedResource(recommendedResources[0]);
+                        setResourceTab('recommended');
                         setActiveSection('recursos');
                       }}
-                      className="btn btn-secondary"
-                      style={{ marginTop: '6px', width: '100%', fontSize: '11.5px', fontWeight: '800', justifyContent: 'center' }}
+                      style={{
+                        background: 'transparent',
+                        border: 'none',
+                        color: 'var(--primary)',
+                        fontSize: '11.5px',
+                        fontWeight: '800',
+                        cursor: 'pointer',
+                        padding: '4px 0',
+                        textAlign: 'center',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '4px'
+                      }}
                     >
-                      <BookOpen size={14} />
-                      <span>Leer: {recommendedResources[0].title}</span>
+                      <span>Ver más en el Centro de Recursos</span>
+                      <ArrowRight size={13} />
                     </button>
                   </div>
                 ) : (
@@ -892,8 +1026,8 @@ const MyWellbeing = ({ onNavigateToTab, initialResourceId, onResourceCompleted }
                 No hay registros disponibles en el período seleccionado.
               </div>
             ) : (
-              <div style={{ width: '100%', height: '260px' }}>
-                <ResponsiveContainer width="100%" height="100%">
+              <div className="chart-container-responsive">
+                <ResponsiveContainer width="100%" height="100%" minWidth={0}>
                   <LineChart data={historyData.chart_data}>
                     <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
                     <XAxis dataKey="fecha" stroke="var(--text-muted)" fontSize={11} />
@@ -1030,9 +1164,10 @@ const MyWellbeing = ({ onNavigateToTab, initialResourceId, onResourceCompleted }
                                 else navigate('/tests');
                               }}
                               className="btn btn-primary"
-                              style={{ padding: '8px 16px', borderRadius: '10px', fontSize: '12px', fontWeight: '800' }}
+                              style={{ padding: '8px 16px', borderRadius: '10px', fontSize: '12px', fontWeight: '800', display: 'inline-flex', alignItems: 'center', gap: '6px' }}
                             >
-                              Completar Test ➔
+                              <span>Completar Test</span>
+                              <ArrowRight size={13} />
                             </button>
                           )}
                         </div>
@@ -1155,6 +1290,65 @@ const MyWellbeing = ({ onNavigateToTab, initialResourceId, onResourceCompleted }
                       </button>
                     </div>
                   </div>
+
+                  {/* Recursos Certeros Vinculados a esta Recomendación */}
+                  {rec.resources && rec.resources.length > 0 && (
+                    <div style={{ width: '100%', marginTop: '14px', paddingTop: '12px', borderTop: '1px solid var(--border)' }}>
+                      <span style={{ fontSize: '11px', fontWeight: '800', color: 'var(--text-muted)', textTransform: 'uppercase', display: 'block', marginBottom: '8px' }}>
+                        Recursos recomendados para esta área:
+                      </span>
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '10px' }}>
+                        {rec.resources.map(r => (
+                          <div
+                            key={r.id}
+                            onClick={() => {
+                              setSelectedResource(r);
+                              setActiveSection('recursos');
+                            }}
+                            style={{
+                              padding: '10px 12px',
+                              borderRadius: '12px',
+                              backgroundColor: 'var(--bg-secondary)',
+                              border: '1px solid var(--border)',
+                              cursor: 'pointer',
+                              display: 'flex',
+                              flexDirection: 'column',
+                              gap: '4px',
+                              transition: 'all 0.15s ease'
+                            }}
+                            onMouseEnter={(e) => {
+                              e.currentTarget.style.borderColor = 'var(--primary)';
+                              e.currentTarget.style.transform = 'translateY(-1px)';
+                            }}
+                            onMouseLeave={(e) => {
+                              e.currentTarget.style.borderColor = 'var(--border)';
+                              e.currentTarget.style.transform = 'translateY(0)';
+                            }}
+                          >
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                              <span style={{ fontSize: '10px', fontWeight: '800', color: 'var(--primary)', textTransform: 'capitalize' }}>
+                                {r.resource_type === 'respiracion' ? '🧘 Respiración' :
+                                 r.resource_type === 'ejercicio' ? '⚡ Ejercicio' :
+                                 r.resource_type === 'grounding' ? '🌿 Grounding' :
+                                 r.resource_type === 'checklist' ? '📝 Checklist' :
+                                 r.resource_type === 'audio' ? '🎧 Audio' :
+                                 r.resource_type === 'video' ? '🎬 Video' :
+                                 r.resource_type === 'quiz' ? '💡 Quiz' :
+                                 r.resource_type === 'reto' ? '🎯 Reto' :
+                                 r.resource_type === 'reflexion' ? '🧠 Reflexión' :
+                                 r.resource_type === 'diario' ? '📔 Diario' :
+                                 r.resource_type === 'gratitud' ? '💛 Gratitud' : '📖 ' + r.resource_type}
+                              </span>
+                              <span style={{ fontSize: '9.5px', color: 'var(--text-muted)' }}>+{r.xp_reward || 20} XP</span>
+                            </div>
+                            <strong style={{ fontSize: '11.5px', color: 'var(--text-primary)', lineHeight: '1.3' }}>
+                              {r.title}
+                            </strong>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
               ))}
             </div>
@@ -1187,8 +1381,9 @@ const MyWellbeing = ({ onNavigateToTab, initialResourceId, onResourceCompleted }
                     {celebrationToast.message}
                   </div>
                   {celebrationToast.streak && (
-                    <div style={{ fontSize: '11.5px', color: 'var(--text-secondary)' }}>
-                      🔥 Tu racha de participación activa ahora es de <strong>{celebrationToast.streak} días</strong>.
+                    <div style={{ fontSize: '11.5px', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '4px', marginTop: '2px' }}>
+                      <Flame size={14} style={{ color: '#f97316' }} />
+                      <span>Tu racha de participación activa ahora es de <strong>{celebrationToast.streak} días</strong>.</span>
                     </div>
                   )}
                 </div>
@@ -1217,7 +1412,7 @@ const MyWellbeing = ({ onNavigateToTab, initialResourceId, onResourceCompleted }
             />
           ) : selectedResource ? (
             /* VISTA DIRECTA EN PÁGINA: Lectura e Interacción Directa con el Recurso (Sin Popups ni Fondos Oscuros) */
-            <div className="glass-card animate-fade" style={{
+            <div id="resource-viewer-top" className="glass-card resource-viewer-card animate-fade" style={{
               width: '100%',
               backgroundColor: 'var(--bg-secondary)',
               borderRadius: '20px',
@@ -1229,7 +1424,7 @@ const MyWellbeing = ({ onNavigateToTab, initialResourceId, onResourceCompleted }
             }}>
               
               {/* Barra Superior con Navegación Directa de Retorno */}
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px', borderBottom: '1px solid var(--border)', paddingBottom: '14px' }}>
+              <div className="resource-header-toolbar" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px', borderBottom: '1px solid var(--border)', paddingBottom: '14px' }}>
                 <button
                   type="button"
                   onClick={() => {
@@ -1282,8 +1477,9 @@ const MyWellbeing = ({ onNavigateToTab, initialResourceId, onResourceCompleted }
                   <span style={{ fontSize: '10.5px', fontWeight: '800', color: 'var(--text-secondary)', backgroundColor: 'var(--bg-primary)', padding: '3px 9px', borderRadius: '6px', textTransform: 'uppercase' }}>
                     {selectedResource.resource_type}
                   </span>
-                  <span style={{ fontSize: '10.5px', fontWeight: '800', color: 'var(--accent)', backgroundColor: 'rgba(234, 179, 8, 0.12)', padding: '3px 9px', borderRadius: '6px' }}>
-                    ⭐ +{selectedResource.xp_reward || 15} XP al completar
+                  <span style={{ fontSize: '10.5px', fontWeight: '800', color: 'var(--accent)', backgroundColor: 'rgba(234, 179, 8, 0.12)', padding: '3px 9px', borderRadius: '6px', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                    <Sparkles size={12} />
+                    <span>+{selectedResource.xp_reward || 15} XP al completar</span>
                   </span>
                   {selectedResource.level && (
                     <span style={{ fontSize: '10.5px', color: 'var(--text-muted)', backgroundColor: 'var(--bg-primary)', padding: '3px 9px', borderRadius: '6px' }}>
@@ -1296,54 +1492,64 @@ const MyWellbeing = ({ onNavigateToTab, initialResourceId, onResourceCompleted }
                   {selectedResource.title}
                 </h2>
 
-                <div style={{ fontSize: '12px', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
-                  <span>👤 {selectedResource.author}</span>
-                  <span>⏱️ {selectedResource.reading_time_minutes} min estimados</span>
+                <div style={{ fontSize: '12px', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '14px', flexWrap: 'wrap' }}>
+                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                    <User size={13} /> {selectedResource.author}
+                  </span>
+                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                    <Clock size={13} /> {selectedResource.reading_time_minutes} min estimados
+                  </span>
                   {selectedResource.source_institution && (
-                    <span>🏛️ {selectedResource.source_institution}</span>
+                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                      <Building size={13} /> {selectedResource.source_institution}
+                    </span>
                   )}
                 </div>
               </div>
 
-              {/* Barra de Accesibilidad (Ajuste de Tamaño de Letra) */}
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '6px 14px', backgroundColor: 'var(--bg-primary)', borderRadius: '10px', fontSize: '11.5px', border: '1px solid var(--border)' }}>
-                <span style={{ color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                  <Type size={14} /> Tamaño de lectura:
-                </span>
-                <div style={{ display: 'flex', gap: '4px' }}>
-                  {[
-                    { id: 'small', label: 'A-', size: '12.5px' },
-                    { id: 'normal', label: 'A', size: '14.5px' },
-                    { id: 'large', label: 'A+', size: '16.5px' }
-                  ].map(f => (
-                    <button
-                      key={f.id}
-                      type="button"
-                      onClick={() => setFontSizeMode(f.id)}
-                      style={{
-                        padding: '3px 9px',
-                        borderRadius: '6px',
-                        border: '1px solid',
-                        borderColor: fontSizeMode === f.id ? 'var(--primary)' : 'var(--border)',
-                        backgroundColor: fontSizeMode === f.id ? 'var(--primary)' : 'transparent',
-                        color: fontSizeMode === f.id ? '#fff' : 'var(--text-secondary)',
-                        fontSize: '11px',
-                        fontWeight: '800',
-                        cursor: 'pointer'
-                      }}
-                    >
-                      {f.label}
-                    </button>
-                  ))}
+              {/* Barra de Accesibilidad (Ajuste de Tamaño de Letra - Solo para lecturas y artículos) */}
+              {!['ejercicio', 'respiracion', 'grounding', 'pausa_activa'].includes(selectedResource.resource_type) && (
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '6px 14px', backgroundColor: 'var(--bg-primary)', borderRadius: '10px', fontSize: '11.5px', border: '1px solid var(--border)' }}>
+                  <span style={{ color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <Type size={14} /> Tamaño de lectura:
+                  </span>
+                  <div style={{ display: 'flex', gap: '4px' }}>
+                    {[
+                      { id: 'small', label: 'A-', size: '12.5px' },
+                      { id: 'normal', label: 'A', size: '14.5px' },
+                      { id: 'large', label: 'A+', size: '16.5px' }
+                    ].map(f => (
+                      <button
+                        key={f.id}
+                        type="button"
+                        onClick={() => setFontSizeMode(f.id)}
+                        style={{
+                          padding: '3px 9px',
+                          borderRadius: '6px',
+                          border: '1px solid',
+                          borderColor: fontSizeMode === f.id ? 'var(--primary)' : 'var(--border)',
+                          backgroundColor: fontSizeMode === f.id ? 'var(--primary)' : 'transparent',
+                          color: fontSizeMode === f.id ? '#fff' : 'var(--text-secondary)',
+                          fontSize: '11px',
+                          fontWeight: '800',
+                          cursor: 'pointer'
+                        }}
+                      >
+                        {f.label}
+                      </button>
+                    ))}
+                  </div>
                 </div>
-              </div>
+              )}
 
-              {/* Lector en Voz Alta con Voces Juveniles, Preview y Filtro de Asteriscos */}
-              <ResourceAudioPlayer
-                content={selectedResource.content}
-                title={selectedResource.title}
-                onParagraphChange={(idx) => setActiveParagraphIndex(idx)}
-              />
+              {/* Lector en Voz Alta con Voces Juveniles (Exclusivo para Artículos, Consejos y Lecturas, no para Ejercicios Guiados) */}
+              {!['ejercicio', 'respiracion', 'grounding', 'pausa_activa'].includes(selectedResource.resource_type) && (
+                <ResourceAudioPlayer
+                  content={selectedResource.content}
+                  title={selectedResource.title}
+                  onParagraphChange={(idx) => setActiveParagraphIndex(idx)}
+                />
+              )}
 
               {/* Módulo Interactivo Dinámico para los 15 Tipos de Recursos */}
               <ResourceInteractivePlayer
@@ -1398,36 +1604,38 @@ const MyWellbeing = ({ onNavigateToTab, initialResourceId, onResourceCompleted }
                 </div>
               )}
 
-              {/* Contenido Completo del Recurso con Formateo Markdown Limpio */}
-              <div style={{
-                fontSize: fontSizeMode === 'large' ? '16.5px' : (fontSizeMode === 'small' ? '13px' : '14.5px'),
-                color: 'var(--text-primary)',
-                lineHeight: '1.8',
-                backgroundColor: 'var(--bg-primary)',
-                padding: '22px',
-                borderRadius: '14px',
-                border: '1px solid var(--border)'
-              }}>
-                {selectedResource.content.split(/\n+/).map((par, pIdx) => {
-                  const isCurrent = activeParagraphIndex === pIdx;
-                  return (
-                    <p
-                      key={pIdx}
-                      style={{
-                        margin: '0 0 14px 0',
-                        backgroundColor: isCurrent ? 'var(--primary-light)' : 'transparent',
-                        color: isCurrent ? 'var(--primary)' : 'inherit',
-                        fontWeight: isCurrent ? '700' : 'normal',
-                        padding: isCurrent ? '6px 10px' : '0',
-                        borderRadius: isCurrent ? '8px' : '0',
-                        transition: 'all 0.2s ease'
-                      }}
-                    >
-                      {renderFormattedText(par)}
-                    </p>
-                  );
-                })}
-              </div>
+              {/* Contenido Completo del Recurso con Formateo Markdown Limpio (Exclusivo para Lecturas/Guías) */}
+              {!['ejercicio', 'respiracion', 'grounding', 'pausa_activa'].includes(selectedResource.resource_type) && (
+                <div className="resource-content-box" style={{
+                  fontSize: fontSizeMode === 'large' ? '16.5px' : (fontSizeMode === 'small' ? '13px' : '14.5px'),
+                  color: 'var(--text-primary)',
+                  lineHeight: '1.8',
+                  backgroundColor: 'var(--bg-primary)',
+                  padding: '22px',
+                  borderRadius: '14px',
+                  border: '1px solid var(--border)'
+                }}>
+                  {selectedResource.content.split(/\n+/).map((par, pIdx) => {
+                    const isCurrent = activeParagraphIndex === pIdx;
+                    return (
+                      <p
+                        key={pIdx}
+                        style={{
+                          margin: '0 0 14px 0',
+                          backgroundColor: isCurrent ? 'var(--primary-light)' : 'transparent',
+                          color: isCurrent ? 'var(--primary)' : 'inherit',
+                          fontWeight: isCurrent ? '700' : 'normal',
+                          padding: isCurrent ? '6px 10px' : '0',
+                          borderRadius: isCurrent ? '8px' : '0',
+                          transition: 'all 0.2s ease'
+                        }}
+                      >
+                        {renderFormattedText(par)}
+                      </p>
+                    );
+                  })}
+                </div>
+              )}
 
               {/* Respaldo Institucional y Enlace Oficial */}
               {selectedResource.source_url && (
@@ -1488,9 +1696,9 @@ const MyWellbeing = ({ onNavigateToTab, initialResourceId, onResourceCompleted }
             <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
               {[
                 { id: 'all', label: `Todos (${resources.length})`, icon: BookOpen },
-                { id: 'favorites', label: '⭐ Guardados', icon: Bookmark },
-                { id: 'in_progress', label: '⏳ Continuar leyendo', icon: Clock },
-                { id: 'completed', label: '✅ Completados', icon: CheckCircle2 }
+                { id: 'favorites', label: 'Guardados', icon: Bookmark },
+                { id: 'in_progress', label: 'Continuar leyendo', icon: Clock },
+                { id: 'completed', label: 'Completados', icon: CheckCircle2 }
               ].map(tab => {
                 const isCurrent = resourceTab === tab.id;
                 const Icon = tab.icon;
@@ -1660,8 +1868,13 @@ const MyWellbeing = ({ onNavigateToTab, initialResourceId, onResourceCompleted }
                       </h5>
                     </div>
                     <div style={{ fontSize: '11px', color: 'var(--text-muted)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '8px' }}>
-                      <span>⏱️ {rec.reading_time_minutes} min</span>
-                      <span style={{ color: 'var(--primary)', fontWeight: '800' }}>Explorar ➔</span>
+                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                        <Clock size={12} /> {rec.reading_time_minutes} min
+                      </span>
+                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', color: 'var(--primary)', fontWeight: '800' }}>
+                        <span>Explorar</span>
+                        <ArrowRight size={12} />
+                      </span>
                     </div>
                   </div>
                 ))}
@@ -1741,9 +1954,15 @@ const MyWellbeing = ({ onNavigateToTab, initialResourceId, onResourceCompleted }
 
                       {/* Metadatos: Nivel, Duración, XP */}
                       <div style={{ display: 'flex', gap: '12px', fontSize: '11px', color: 'var(--text-muted)', marginBottom: '12px', flexWrap: 'wrap' }}>
-                        <span>⏱️ {res.reading_time_minutes} min</span>
-                        <span>📊 {res.level || 'Principiante'}</span>
-                        <span style={{ color: 'var(--accent)', fontWeight: '800' }}>⭐ +{res.xp_reward || 15} XP</span>
+                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                          <Clock size={12} /> {res.reading_time_minutes} min
+                        </span>
+                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                          <BarChart3 size={12} /> {res.level || 'Principiante'}
+                        </span>
+                        <span style={{ color: 'var(--accent)', fontWeight: '800', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                          <Sparkles size={12} /> +{res.xp_reward || 15} XP
+                        </span>
                       </div>
 
                       {/* Barra de Progreso */}

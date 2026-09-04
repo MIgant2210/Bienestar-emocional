@@ -13,7 +13,7 @@ from app.services.audit_service import AuditService
 from app.services.gamification_service import GamificationService
 from app.services.resource_seed_service import ResourceSeedService
 from datetime import datetime, timedelta
-from sqlalchemy import or_, desc, func, and_
+from sqlalchemy import or_, desc, func, and_, case
 
 from app.models.task_model import Task
 from app.models.notification import Notification
@@ -375,7 +375,8 @@ def get_wellbeing_trends(current_user):
 @token_required
 def get_wellbeing_recommendations(current_user):
     """
-    Genera recomendaciones preventivas y no diagnósticas, orientadas al autocuidado.
+    Genera recomendaciones preventivas y no diagnósticas, orientadas al autocuidado,
+    vinculando recursos reales y certeros del Centro de Recursos.
     """
     reflections = Reflection.query.filter_by(user_id=current_user.id).order_by(desc(Reflection.created_at)).limit(5).all()
     
@@ -385,51 +386,70 @@ def get_wellbeing_recommendations(current_user):
         avg_stress = sum(r.stress_score for r in reflections) / len(reflections)
         avg_burnout = sum(r.burnout_score for r in reflections) / len(reflections)
         avg_motivation = sum(r.motivation_score for r in reflections) / len(reflections)
+        latest_text = (reflections[0].original_text or '').lower()
         
-        if avg_stress > 65:
+        if avg_stress > 50 or any(k in latest_text for k in ['tenso', 'tensión', 'estrés', 'presión', 'ansiedad']):
             recommendations.append({
                 'id': 'rec_stress',
-                'title': 'Estrategias para el manejo de la tensión',
-                'text': 'Durante tus registros recientes se han identificado indicadores relacionados con estrés. Puedes consultar estos recursos para conocer técnicas de respiración y pausas activas.',
+                'title': 'Estrategias para el manejo de la tensión y calma mental',
+                'text': 'Durante tus registros recientes se han identificado indicadores relacionados con estrés o tensión muscular. Te sugerimos realizar ejercicios de respiración guiada, pausas activas o grounding sensorial.',
                 'target_indicator': 'estres',
-                'action_label': 'Ver recursos de estrés',
+                'action_label': 'Ver Recursos de Calma',
                 'action_category': 'Manejo del estrés'
             })
             
-        if avg_burnout > 65:
+        if avg_burnout > 50 or any(k in latest_text for k in ['cansado', 'cansancio', 'agotado', 'agotamiento', 'fatiga', 'sueño']):
             recommendations.append({
                 'id': 'rec_burnout',
-                'title': 'Recuperación y límites saludables',
-                'text': 'Tus registros sugieren acumulación de fatiga. Te recomendamos revisar guías sobre descanso restaurador y desconexión digital fuera de tu jornada.',
+                'title': 'Recuperación de energía, descanso e higiene del sueño',
+                'text': 'Tus registros sugieren acumulación de fatiga física o mental. Te recomendamos revisar protocolos de desconexión digital, higiene del sueño y pausas posturales.',
                 'target_indicator': 'agotamiento',
-                'action_label': 'Ver recursos de descanso',
+                'action_label': 'Ver Recursos de Descanso',
                 'action_category': 'Descanso'
             })
             
-        if avg_motivation < 45:
+        if avg_motivation < 55 or any(k in latest_text for k in ['desmotivado', 'bloqueado', 'estancado']):
             recommendations.append({
                 'id': 'rec_motivation',
-                'title': 'Impulso y organización de metas',
-                'text': 'Observamos una oportunidad para renovar tu enfoque diario. La técnica de bloques de tiempo y pausas conscientes puede ayudarte a recuperar ritmo.',
+                'title': 'Impulso, autoeficacia y organización de metas',
+                'text': 'Observamos una oportunidad para renovar tu enfoque diario. La técnica de bloques de tiempo, las prácticas de gratitud y los retos de bienestar pueden ayudarte a recuperar tu ritmo.',
                 'target_indicator': 'motivacion',
-                'action_label': 'Ver recursos de motivación',
-                'action_category': 'Organización del tiempo'
+                'action_label': 'Ver Recursos de Motivación',
+                'action_category': 'Motivación'
             })
             
-    # Recomendación general siempre presente
+    # Recomendación general siempre presente si no hay alertas específicas
     if not recommendations:
         recommendations.append({
             'id': 'rec_general',
-            'title': 'Mantenimiento del bienestar integral',
-            'text': 'Tus indicadores se encuentran en equilibrio. Mantener hábitos constantes de hidratación, pausas activas y desconexión oportuna refuerza tu energía.',
+            'title': 'Mantenimiento del bienestar integral y hábitos saludables',
+            'text': 'Tus indicadores se encuentran en un rango equilibrado. Mantener hábitos constantes de hidratación, pausas activas breves y rutinas de autocuidado refuerza tu energía.',
             'target_indicator': 'general',
             'action_label': 'Explorar Centro de Recursos',
-            'action_category': 'Hábitos saludables'
+            'action_category': 'Autocuidado'
         })
+
+    # Vincular recursos certeros de la base de datos a cada tarjeta de recomendación
+    for rec in recommendations:
+        ind = rec.get('target_indicator', 'general')
+        cat = rec.get('action_category')
+        
+        q = Resource.query.filter_by(is_published=True)
+        if ind != 'general':
+            matched = q.filter(
+                or_(Resource.target_indicator == ind, Resource.category == cat, Resource.target_indicator == 'general')
+            ).order_by(
+                case((Resource.target_indicator == ind, 0), else_=1),
+                Resource.created_at.desc()
+            ).limit(3).all()
+        else:
+            matched = q.order_by(Resource.created_at.desc()).limit(3).all()
+            
+        rec['resources'] = [r.to_dict(current_user.id) for r in matched]
         
     return jsonify({
         'recommendations': recommendations,
-        'support_prompt': 'Si consideras que requieres acompañamiento profesional personalizado, puedes agendar una sesión 1 a 1 con el equipo de orientación.'
+        'support_prompt': 'Si consideras que requieres acompañamiento profesional personalizado, puedes agendar una sesión 1 a 1 con el equipo de orientación en la pestaña Agenda de Citas.'
     }), 200
 
 
@@ -572,22 +592,30 @@ def get_resources(current_user):
     # Identificar recursos recomendados basados en la última reflexión del usuario (Lenguaje neutral y respetuoso)
     last_ref = Reflection.query.filter_by(user_id=current_user.id).order_by(desc(Reflection.created_at)).first()
     recommended_indicator = 'general'
-    recommended_label = "Recursos recomendados para tu equilibrio diario"
+    recommended_label = "Recursos recomendados para tu equilibrio diario y autocuidado integral"
+    
     if last_ref:
-        if last_ref.stress_score > 60:
+        ref_text = (last_ref.original_text or '').lower()
+        if last_ref.stress_score > 50 or any(k in ref_text for k in ['tenso', 'tensión', 'estrés', 'presión', 'ansiedad']):
             recommended_indicator = 'estres'
-            recommended_label = "Recursos orientados al manejo de la tensión y técnicas de calma"
-        elif last_ref.burnout_score > 60:
+            recommended_label = "Recomendaciones certeras para disipar la tensión y calmar la mente"
+        elif last_ref.burnout_score > 50 or any(k in ref_text for k in ['cansado', 'cansancio', 'agotado', 'agotamiento', 'fatiga', 'sueño']):
             recommended_indicator = 'agotamiento'
-            recommended_label = "Recursos orientados a la recuperación de energía y descanso"
-        elif last_ref.motivation_score < 50:
+            recommended_label = "Recomendaciones certeras para recargar energía y descanso reparador"
+        elif last_ref.motivation_score < 55 or any(k in ref_text for k in ['desmotivado', 'bloqueado', 'estancado']):
             recommended_indicator = 'motivacion'
-            recommended_label = "Recursos para potenciar la motivación, propósito y autocuidado"
+            recommended_label = "Recomendaciones certeras para activar tu motivación y enfoque"
 
     rec_query = Resource.query.filter_by(is_published=True)
     if recommended_indicator != 'general':
-        rec_query = rec_query.filter(or_(Resource.target_indicator == recommended_indicator, Resource.target_indicator == 'general'))
-    recommended_resources = rec_query.order_by(Resource.created_at.desc()).limit(3).all()
+        recommended_resources = rec_query.filter(
+            or_(Resource.target_indicator == recommended_indicator, Resource.target_indicator == 'general')
+        ).order_by(
+            case((Resource.target_indicator == recommended_indicator, 0), else_=1),
+            Resource.created_at.desc()
+        ).limit(4).all()
+    else:
+        recommended_resources = rec_query.order_by(Resource.created_at.desc()).limit(4).all()
 
     # Combinar categorías de la BD con las 19 oficiales
     db_cats = [c[0] for c in db.session.query(Resource.category).distinct().all() if c[0]]

@@ -8,7 +8,7 @@ import {
   UserCheck, Lock, FileSpreadsheet, RefreshCw, RotateCcw, Zap, Layers, HelpCircle, Eye, Sliders,
   Target, ChevronRight, Check, ArrowLeft, Volume2, Mic, Bell, UserX, Key, Palette, Edit3, KeyRound, Heart, Bot, SendHorizontal, Building, MessageSquare, Smile, UserPlus, Plus, X, Printer, Trophy, Brain,
   Search, Filter, Copy, CheckCircle, ExternalLink, Shield, ToggleLeft, ToggleRight, ChevronLeft,
-  ThumbsUp, ThumbsDown, BookOpen, Globe, Tag
+  ThumbsUp, ThumbsDown, BookOpen, Globe, Tag, Hash, Menu
 } from 'lucide-react';
 import api from '../services/api';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
@@ -16,6 +16,7 @@ import DrawingCanvas from '../components/DrawingCanvas';
 import CustomSelect from '../components/CustomSelect';
 import CustomDatePicker from '../components/CustomDatePicker';
 import SystemAlert from '../components/SystemAlert';
+import { useDialog } from '../contexts/DialogContext';
 import GamificationWidget from '../components/GamificationWidget';
 import NotificationCenter from '../components/NotificationCenter';
 import TestResponseViewer from '../components/TestResponseViewer';
@@ -50,10 +51,12 @@ const AdminDashboard = ({ initialTab = 'analytics' }) => {
   const { theme, toggleTheme, colorPalette, changePalette, PALETTES } = useContext(ThemeContext);
   const navigate = useNavigate();
 
-  // System Alert Toast State
+  // Dialog & System Alert Hook
+  const { confirm: confirmDialog, showAlert: showGlobalAlert } = useDialog();
   const [systemAlert, setSystemAlert] = useState({ show: false, type: 'info', title: '', message: '' });
   const showAlert = (type, title, message) => {
     setSystemAlert({ show: true, type, title, message });
+    if (showGlobalAlert) showGlobalAlert(type, title, message);
   };
 
   const cleanEvalTitle = (title) => {
@@ -105,18 +108,14 @@ const AdminDashboard = ({ initialTab = 'analytics' }) => {
       if (saved) return JSON.parse(saved);
     } catch (e) {}
     return [
-      { id: 'g1', name: 'Equipo de Bienestar 💡', members: ['Ana Martínez', 'Dra. Sofía Ramírez'] },
-      { id: 'g2', name: 'Proyecto Innovación 🚀', members: ['Mateo Fernández', 'Carlos Mendoza'] }
+      { id: 'g1', name: 'Equipo de Bienestar ', members: ['Ana Martínez', 'Dra. Sofía Ramírez'] },
+      { id: 'g2', name: 'Proyecto Innovación ', members: ['Mateo Fernández', 'Carlos Mendoza'] }
     ];
   });
   const [selectedGroup, setSelectedGroup] = useState(null);
   const [showCreateGroupModal, setShowCreateGroupModal] = useState(false);
   const [newGroupName, setNewGroupName] = useState('');
   const [newGroupMembers, setNewGroupMembers] = useState([]);
-
-  // Emoji Picker State
-  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
-  const modernEmojis = ['😊', '🚀', '👍', '❤️', '💡', '🔥', '🙏', '🎉', '⭐', '💪', '👏', '😄', '🌟', '✨', '🧠', '💬', '💯', '🤝', '🙌', '🎯', '🍀', '🌈', '☕', '🎁'];
 
   const handleCreateGroup = (e) => {
     e.preventDefault();
@@ -141,6 +140,8 @@ const AdminDashboard = ({ initialTab = 'analytics' }) => {
 
   // Paletas & Edición de Usuario
   const [showPaletteMenu, setShowPaletteMenu] = useState(false);
+  const [mobilePaletteOpen, setMobilePaletteOpen] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const paletteMenuRef = useRef(null);
 
   useEffect(() => {
@@ -162,6 +163,8 @@ const AdminDashboard = ({ initialTab = 'analytics' }) => {
   const [editDeptId, setEditDeptId] = useState('');
   const [editStatus, setEditStatus] = useState('ACTIVE');
   const [editPassword, setEditPassword] = useState('');
+  const [editUserDepts, setEditUserDepts] = useState([]);
+  const [loadingEditDepts, setLoadingEditDepts] = useState(false);
   const [userUpdateLoading, setUserUpdateLoading] = useState(false);
   const [userUpdateMsg, setUserUpdateMsg] = useState('');
 
@@ -251,6 +254,8 @@ const AdminDashboard = ({ initialTab = 'analytics' }) => {
   const [auditLogs, setAuditLogs] = useState([]);
   const [rewards, setRewards] = useState([]);
   const [kudosList, setKudosList] = useState([]);
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+  const CHAT_EMOJIS = ['😊', '🚀', '👍', '❤️', '💡', '🔥', '🙏', '🎉', '⭐', '💪', '👏', '😄', '🌟', '✨', '🧠', '💬', '💯', '🤝', '🙌', '🎯', '🍀', '🌈', '☕', '🎁'];
   
   // Suite de 10 Reportes del Sistema States & Filtros Avanzados
   const [selectedReportId, setSelectedReportId] = useState('reporte_1_clima');
@@ -387,7 +392,7 @@ const AdminDashboard = ({ initialTab = 'analytics' }) => {
   const [adminTestMascotMood, setAdminTestMascotMood] = useState('welcome');
   const [showAdminConfirmModal, setShowAdminConfirmModal] = useState(false);
 
-  // Estado para Diccionario Cultural Guatemalteco 🇬🇹 (SuperAdmin)
+  // Estado para Diccionario Cultural Guatemalteco  (SuperAdmin)
   const [culturalExpressions, setCulturalExpressions] = useState([]);
   const [culturalCounts, setCulturalCounts] = useState({ total: 0, allowed: 0, explainable: 0, restricted: 0 });
   const [cultureSafetyFilter, setCultureSafetyFilter] = useState('ALL');
@@ -432,7 +437,7 @@ const AdminDashboard = ({ initialTab = 'analytics' }) => {
   const handleCreateApptManual = async (e) => {
     e.preventDefault();
     if (!apptUserId || !apptDate) {
-      alert('Por favor selecciona el colaborador / paciente y la fecha de la cita.');
+      showAlert('warning', 'Campos Incompletos', 'Por favor selecciona el colaborador / paciente y la fecha de la cita.');
       return;
     }
     setApptLoading(true);
@@ -445,12 +450,12 @@ const AdminDashboard = ({ initialTab = 'analytics' }) => {
         reason: apptReason,
         clinical_notes: apptNotes
       });
-      setApptSuccessMsg('¡Cita agendada exitosamente en la agenda del profesional! 📅');
+      setApptSuccessMsg('¡Cita agendada exitosamente en la agenda del profesional! ');
       setApptDate('');
       setApptNotes('');
       fetchAppointments();
     } catch (err) {
-      alert('Error al agendar cita: ' + (err.response?.data?.message || err.message));
+      showAlert('danger', 'Error al Agendar Cita', err.response?.data?.message || err.message);
     } finally {
       setApptLoading(false);
     }
@@ -464,7 +469,7 @@ const AdminDashboard = ({ initialTab = 'analytics' }) => {
       });
       fetchAppointments();
     } catch (err) {
-      alert('Error al actualizar estado de la cita: ' + (err.response?.data?.message || err.message));
+      showAlert('danger', 'Error en Cita', err.response?.data?.message || err.message);
     }
   };
 
@@ -678,7 +683,14 @@ const AdminDashboard = ({ initialTab = 'analytics' }) => {
   const handleToggleInstitutionStatus = async (instId, currentStatus) => {
     const newStatus = currentStatus === 'ACTIVE' ? 'SUSPENDED' : 'ACTIVE';
     const actionText = newStatus === 'SUSPENDED' ? 'suspender' : 'reactivar';
-    if (!window.confirm(`¿Está seguro de que desea ${actionText} esta institución?`)) return;
+    const isConfirmed = await confirmDialog({
+      title: `¿${actionText.charAt(0).toUpperCase() + actionText.slice(1)} institución?`,
+      message: `¿Está seguro de que desea ${actionText} esta institución?`,
+      confirmText: `Sí, ${actionText}`,
+      cancelText: 'Cancelar',
+      type: newStatus === 'SUSPENDED' ? 'warning' : 'primary'
+    });
+    if (!isConfirmed) return;
     try {
       const res = await api.patch(`/institutions/${instId}/status`, { status: newStatus });
       showAlert('success', 'Estado Actualizado', res.data.message);
@@ -748,7 +760,14 @@ const AdminDashboard = ({ initialTab = 'analytics' }) => {
   };
 
   const handleRevokeInvitation = async (instId, invId) => {
-    if (!window.confirm('¿Está seguro de que desea revocar este código de invitación? No podrá volver a usarse.')) return;
+    const isConfirmed = await confirmDialog({
+      title: '¿Revocar código de invitación?',
+      message: '¿Está seguro de que desea revocar este código de invitación? No podrá volver a usarse.',
+      confirmText: 'Sí, revocar',
+      cancelText: 'Cancelar',
+      type: 'warning'
+    });
+    if (!isConfirmed) return;
     try {
       const res = await api.post(`/institutions/${instId}/invitations/${invId}/revoke`);
       showAlert('success', 'Invitación Revocada', res.data.message);
@@ -767,6 +786,60 @@ const AdminDashboard = ({ initialTab = 'analytics' }) => {
     setEditDeptId(u.department_id || '');
     setEditStatus(u.status || 'ACTIVE');
     setUserUpdateMsg('');
+
+    // 1. Pre-cargar departamentos síncronamente desde allInstitutions o departmentsList
+    let initialDepts = [];
+    if (u.institution_id && allInstitutions && allInstitutions.length > 0) {
+      const targetInst = allInstitutions.find(inst => String(inst.id) === String(u.institution_id));
+      if (targetInst && Array.isArray(targetInst.departments_detail) && targetInst.departments_detail.length > 0) {
+        initialDepts = targetInst.departments_detail;
+      } else if (targetInst && Array.isArray(targetInst.departments) && targetInst.departments.length > 0) {
+        initialDepts = targetInst.departments.map(dName => ({ id: dName, name: dName }));
+      }
+    }
+    if (initialDepts.length === 0 && departmentsList && departmentsList.length > 0) {
+      const filtered = departmentsList.filter(d => !d.institution_id || String(d.institution_id) === String(u.institution_id));
+      if (filtered.length > 0) initialDepts = filtered;
+    }
+
+    if (initialDepts.length > 0) {
+      const match = initialDepts.find(d =>
+        (u.department_id && String(d.id) === String(u.department_id)) ||
+        (u.department && d.name?.toLowerCase() === u.department.toLowerCase())
+      );
+      if (match) {
+        setEditDeptId(match.id);
+        setEditDept(match.name);
+      }
+    }
+    setEditUserDepts(initialDepts);
+
+    // 2. Consulta asíncrona a la API para obtener la lista oficial y actualizada de la institución
+    if (u.institution_id) {
+      setLoadingEditDepts(true);
+      api.get(`/institutions/${u.institution_id}/departments`)
+        .then(res => {
+          if (Array.isArray(res.data) && res.data.length > 0) {
+            setEditUserDepts(res.data);
+            const match = res.data.find(d =>
+              (u.department_id && String(d.id) === String(u.department_id)) ||
+              (u.department && d.name?.toLowerCase() === u.department.toLowerCase())
+            );
+            if (match) {
+              setEditDeptId(match.id);
+              setEditDept(match.name);
+            }
+          }
+        })
+        .catch(err => {
+          console.warn('Error al refrescar departamentos de la institución:', err);
+        })
+        .finally(() => {
+          setLoadingEditDepts(false);
+        });
+    } else {
+      setLoadingEditDepts(false);
+    }
   };
 
   const handleUpdateUser = async (e) => {
@@ -905,7 +978,14 @@ const AdminDashboard = ({ initialTab = 'analytics' }) => {
 
   // Eliminar Tarea
   const handleDeleteTask = async (taskId) => {
-    if (!window.confirm('¿Está seguro de que desea eliminar esta tarea?')) return;
+    const isConfirmed = await confirmDialog({
+      title: '¿Eliminar tarea?',
+      message: '¿Está seguro de que desea eliminar esta tarea asignada?',
+      confirmText: 'Sí, eliminar',
+      cancelText: 'Cancelar',
+      type: 'danger'
+    });
+    if (!isConfirmed) return;
     try {
       await api.delete(`/tasks/${taskId}`);
       setTasks(prev => prev.filter(t => t.id !== taskId));
@@ -918,7 +998,7 @@ const AdminDashboard = ({ initialTab = 'analytics' }) => {
   const handleAttendAlert = async (alertId) => {
     const notes = resolutionNotes[alertId];
     if (!notes || notes.trim().length < 5) {
-      alert('Por favor ingrese notas de atención de al menos 5 caracteres.');
+      showAlert('warning', 'Notas Requeridas', 'Por favor ingrese notas de atención de al menos 5 caracteres.');
       return;
     }
     
@@ -935,7 +1015,7 @@ const AdminDashboard = ({ initialTab = 'analytics' }) => {
       if (statsRes.data) setStats(statsRes.data);
     } catch (err) {
       console.error('Error al atender la alerta:', err);
-      alert(err.response?.data?.message || 'Error al atender la alerta.');
+      showAlert('danger', 'Error de Alerta', err.response?.data?.message || 'Error al atender la alerta.');
     } finally {
       setResolvingId(null);
     }
@@ -1014,13 +1094,13 @@ const AdminDashboard = ({ initialTab = 'analytics' }) => {
         setPreviewTest(null);
       }, 2000);
     } catch (err) {
-      alert(err.response?.data?.message || 'Error al enviar la prueba.');
+      showAlert('danger', 'Error de Envío', err.response?.data?.message || 'Error al enviar la prueba.');
     } finally {
       setPreviewSubmitLoading(false);
     }
   };
 
-  // Funciones para Gestión del Diccionario Cultural Guatemalteco 🇬🇹
+  // Funciones para Gestión del Diccionario Cultural Guatemalteco 
   const fetchCulturalExpressions = async () => {
     try {
       setCultureLoading(true);
@@ -1079,7 +1159,7 @@ const AdminDashboard = ({ initialTab = 'analytics' }) => {
         showAlert('success', 'Expresión Actualizada', `La expresión '${exprForm.term}' fue actualizada exitosamente.`);
       } else {
         await api.post('/culture/expressions', exprForm);
-        showAlert('success', 'Expresión Creada', `La expresión '${exprForm.term}' fue agregada al Diccionario Cultural 🇬🇹.`);
+        showAlert('success', 'Expresión Creada', `La expresión '${exprForm.term}' fue agregada al Diccionario Cultural .`);
       }
       setShowExprModal(false);
       fetchCulturalExpressions();
@@ -1098,7 +1178,14 @@ const AdminDashboard = ({ initialTab = 'analytics' }) => {
   };
 
   const handleDeleteExpression = async (expr) => {
-    if (!window.confirm(`¿Estás seguro de eliminar la expresión '${expr.term}' del diccionario?`)) return;
+    const isConfirmed = await confirmDialog({
+      title: '¿Eliminar expresión cultural?',
+      message: `¿Estás seguro de eliminar la expresión '${expr.term}' del Diccionario Cultural?`,
+      confirmText: 'Sí, eliminar',
+      cancelText: 'Cancelar',
+      type: 'danger'
+    });
+    if (!isConfirmed) return;
     try {
       await api.delete(`/culture/expressions/${expr.id}`);
       showAlert('info', 'Expresión Eliminada', `La expresión '${expr.term}' fue eliminada.`);
@@ -1174,7 +1261,14 @@ const AdminDashboard = ({ initialTab = 'analytics' }) => {
 
   // Eliminar Test
   const handleDeleteEvaluation = async (evalId) => {
-    if (!window.confirm('¿Está seguro de que desea eliminar este test?')) return;
+    const isConfirmed = await confirmDialog({
+      title: '¿Eliminar cuestionario de test?',
+      message: '¿Está seguro de que desea eliminar este test? Esta acción no se puede deshacer.',
+      confirmText: 'Sí, eliminar',
+      cancelText: 'Cancelar',
+      type: 'danger'
+    });
+    if (!isConfirmed) return;
     try {
       await api.delete(`/evaluations/${evalId}`);
       setEvaluations(prev => prev.filter(ev => ev.id !== evalId));
@@ -1393,7 +1487,7 @@ const AdminDashboard = ({ initialTab = 'analytics' }) => {
     );
   };
 
-  // RENDER DE CALENDARIO MENSUAL DE CITAS CLÍNICAS DE LA PSICÓLOGA 📅
+  // RENDER DE CALENDARIO MENSUAL DE CITAS CLÍNICAS DE LA PSICÓLOGA 
   const renderClinicalMonthCalendar = () => {
     const today = new Date();
     const year = today.getFullYear();
@@ -1539,22 +1633,12 @@ const AdminDashboard = ({ initialTab = 'analytics' }) => {
     const progressPercent = totalQ > 0 ? Math.round(((adminTestCurrentQIndex + (isCurrentAnswered ? 1 : 0)) / totalQ) * 100) : 0;
 
     return (
-      <div style={{ 
-        minHeight: '100vh', 
-        background: 'var(--page-bg)', 
-        backgroundColor: 'var(--bg-primary)', 
-        paddingBottom: '60px',
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        position: 'relative',
-        overflow: 'hidden'
-      }} className="animate-fade">
+      <div className="animate-fade eval-fullscreen-wrapper">
         
         {/* Cielo Estrellado Oficial de EquilibrIA */}
         <StarryBackground isLogin={false} />
 
-        {/* Modal de Confirmación antes de Enviar */}
+        {/* Modal de Confirmación de Finalización de Test de Prueba */}
         {showAdminConfirmModal && (
           <div style={{
             position: 'fixed',
@@ -1562,22 +1646,25 @@ const AdminDashboard = ({ initialTab = 'analytics' }) => {
             left: 0,
             right: 0,
             bottom: 0,
-            backgroundColor: 'rgba(0,0,0,0.65)',
-            backdropFilter: 'blur(8px)',
+            backgroundColor: 'rgba(15, 23, 42, 0.45)',
+            backdropFilter: 'blur(6px)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
             zIndex: 10000,
             padding: '20px'
           }} className="animate-fade">
-            <div className="glass-card" style={{
+            <div style={{
               maxWidth: '460px',
               width: '100%',
               padding: '32px 28px',
               textAlign: 'center',
               borderRadius: '24px',
-              border: '2px solid var(--border)',
-              boxShadow: 'var(--shadow-lg)'
+              backgroundColor: 'var(--bg-primary)',
+              background: 'var(--bg-primary)',
+              border: '1.5px solid var(--border)',
+              boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
+              boxSizing: 'border-box'
             }}>
               <div style={{
                 width: '60px',
@@ -1593,11 +1680,11 @@ const AdminDashboard = ({ initialTab = 'analytics' }) => {
                 <Sparkles size={30} />
               </div>
 
-              <h3 style={{ fontSize: '20px', fontWeight: '900', marginBottom: '8px' }}>
+              <h3 style={{ fontSize: '20px', fontWeight: '900', color: 'var(--text-primary)', marginBottom: '8px' }}>
                 ¿Deseas finalizar la prueba del test?
               </h3>
 
-              <p style={{ fontSize: '13.5px', color: 'var(--text-secondary)', lineHeight: '1.5', marginBottom: '24px' }}>
+              <p style={{ fontSize: '13.5px', color: 'var(--text-secondary)', lineHeight: '1.5', marginBottom: '24px', fontWeight: '500' }}>
                 Has completado las preguntas en modo prueba. La respuesta quedará registrada para fines de validación y métricas de analítica.
               </p>
 
@@ -1611,8 +1698,15 @@ const AdminDashboard = ({ initialTab = 'analytics' }) => {
                 <button
                   type="button"
                   onClick={() => setShowAdminConfirmModal(false)}
-                  className="btn btn-secondary"
-                  style={{ padding: '12px', borderRadius: '14px', fontWeight: '800' }}
+                  style={{
+                    padding: '12px',
+                    borderRadius: '14px',
+                    fontWeight: '800',
+                    backgroundColor: 'var(--bg-secondary)',
+                    border: '1.5px solid var(--border)',
+                    color: 'var(--text-primary)',
+                    cursor: 'pointer'
+                  }}
                   disabled={previewSubmitLoading}
                 >
                   Revisar
@@ -1632,22 +1726,10 @@ const AdminDashboard = ({ initialTab = 'analytics' }) => {
         )}
 
         {/* Cabecera Fija Superior con Progreso */}
-        <div style={{
-          width: '100%',
-          backgroundColor: 'var(--bg-secondary)',
-          borderBottom: '1px solid var(--border)',
-          padding: '12px 28px',
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          boxShadow: 'var(--shadow-sm)',
-          position: 'sticky',
-          top: 0,
-          zIndex: 100,
-          backdropFilter: 'blur(10px)'
-        }}>
+        <div className="eval-sticky-header">
           <button 
             onClick={() => { setPreviewTest(null); setAdminTestStep('intro'); }}
+            className="eval-exit-btn"
             style={{
               display: 'flex',
               alignItems: 'center',
@@ -1666,7 +1748,7 @@ const AdminDashboard = ({ initialTab = 'analytics' }) => {
           
           <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
             <span style={{ fontSize: '11px', fontWeight: '900', padding: '3px 10px', borderRadius: '12px', backgroundColor: 'var(--primary-light)', color: 'var(--primary)', textTransform: 'uppercase' }}>
-              🛡️ Modo Prueba Admin
+               Modo Prueba Admin
             </span>
 
             {adminTestStep === 'question' && totalQ > 0 && (
@@ -1674,7 +1756,7 @@ const AdminDashboard = ({ initialTab = 'analytics' }) => {
                 <span style={{ fontSize: '12px', color: 'var(--text-secondary)', fontWeight: '800' }}>
                   {progressPercent}%
                 </span>
-                <div style={{ width: '120px', height: '8px', backgroundColor: 'var(--bg-primary)', borderRadius: '6px', overflow: 'hidden', border: '1px solid var(--border)' }}>
+                <div className="eval-progress-bar-wrap" style={{ width: '120px', height: '8px', backgroundColor: 'var(--bg-primary)', borderRadius: '6px', overflow: 'hidden', border: '1px solid var(--border)' }}>
                   <div style={{ width: `${progressPercent}%`, height: '100%', backgroundColor: 'var(--primary)', transition: 'width 0.3s ease' }} />
                 </div>
               </div>
@@ -1683,26 +1765,16 @@ const AdminDashboard = ({ initialTab = 'analytics' }) => {
         </div>
 
         {/* CONTENEDOR PRINCIPAL CENTRADO Y AMPLIO EN PC */}
-        <div style={{ 
-          width: '100%', 
-          maxWidth: '1060px', 
-          margin: 'auto 0',
-          padding: '40px 24px', 
-          position: 'relative', 
-          zIndex: 10,
-          display: 'flex',
-          flexDirection: 'column',
-          justifyContent: 'center'
-        }}>
+        <div className="eval-content-container">
           
           {/* PASO 1: PANTALLA INTRODUCTORIA / ENCABEZADO DEL TEST */}
           {adminTestStep === 'intro' && (
-            <div className="animate-fade" style={{ display: 'grid', gridTemplateColumns: 'minmax(300px, 340px) 1fr', gap: '32px', alignItems: 'center' }}>
+            <div className="animate-fade responsive-eval-preview" style={{ display: 'grid', gridTemplateColumns: 'minmax(300px, 340px) 1fr', gap: '32px', alignItems: 'center' }}>
               
               {/* Mascota Colibrí en estado de bienvenida */}
               <ColibriMascot 
                 mood="welcome" 
-                customMessage="¡Hola Administrador! Te acompaño en la prueba de este test. Así experimentarán tus colaboradores cada evaluación. 🌿"
+                customMessage="¡Hola Administrador! Te acompaño en la prueba de este test. Así experimentarán tus colaboradores cada evaluación. "
                 progressPercent={0}
               />
 
@@ -1734,11 +1806,11 @@ const AdminDashboard = ({ initialTab = 'analytics' }) => {
                 {/* Chips de Información del Test */}
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px', marginBottom: '28px' }}>
                   <div style={{ backgroundColor: 'var(--bg-secondary)', border: '1px solid var(--border)', padding: '8px 14px', borderRadius: '12px', fontSize: '12.5px', fontWeight: '800', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                    <span>📋</span>
+                    <span></span>
                     <span>{totalQ} preguntas interactivas</span>
                   </div>
                   <div style={{ backgroundColor: 'var(--bg-secondary)', border: '1px solid var(--border)', padding: '8px 14px', borderRadius: '12px', fontSize: '12.5px', fontWeight: '800', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                    <span>⏱️</span>
+                    <span></span>
                     <span>~{Math.max(2, Math.round(totalQ * 0.6))} minutos estimados</span>
                   </div>
                   <div style={{ backgroundColor: 'var(--primary-light)', color: 'var(--primary)', padding: '8px 14px', borderRadius: '12px', fontSize: '12.5px', fontWeight: '900', display: 'flex', alignItems: 'center', gap: '6px' }}>
@@ -1778,10 +1850,10 @@ const AdminDashboard = ({ initialTab = 'analytics' }) => {
 
           {/* PASO 2: PREGUNTAS INDIVIDUALES (UNA A LA VEZ) */}
           {adminTestStep === 'question' && currentQ && (
-            <div className="animate-fade" style={{ display: 'grid', gridTemplateColumns: 'minmax(300px, 340px) 1fr', gap: '32px', alignItems: 'flex-start' }}>
+            <div className="animate-fade responsive-eval-preview" style={{ display: 'grid', gridTemplateColumns: 'minmax(300px, 340px) 1fr', gap: '32px', alignItems: 'flex-start' }}>
               
               {/* Mascota Colibrí en el lateral */}
-              <div style={{ position: 'sticky', top: '80px' }}>
+              <div className="eval-mascot-wrapper" style={{ position: 'sticky', top: '80px' }}>
                 <ColibriMascot 
                   mood={adminTestMascotMood}
                   progressPercent={progressPercent}
@@ -1789,7 +1861,7 @@ const AdminDashboard = ({ initialTab = 'analytics' }) => {
               </div>
 
               {/* Tarjeta de la Pregunta Actual */}
-              <div className="glass-card" style={{
+              <div className="glass-card eval-question-card" style={{
                 padding: '38px 36px',
                 borderRadius: '24px',
                 border: '2px solid var(--border)',
@@ -1831,13 +1903,14 @@ const AdminDashboard = ({ initialTab = 'analytics' }) => {
                 </h2>
 
                 {/* COMPONENTES DE RESPUESTA POR TIPO */}
-                <div style={{ marginBottom: '32px' }}>
+                <div className="eval-answers-container" style={{ marginBottom: '32px' }}>
                   
                   {/* Tipo Texto con Dictado por Voz */}
                   {currentQ.type === 'text' && (
                     <div>
                       <textarea
-                        rows="5"
+                        className="eval-textarea"
+                        rows="4"
                         placeholder="Escribe o dicta por micrófono la respuesta de prueba..."
                         value={previewAnswers[currentQ.id] || ''}
                         onChange={(e) => {
@@ -1853,7 +1926,7 @@ const AdminDashboard = ({ initialTab = 'analytics' }) => {
                           onClick={() => {
                             const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
                             if (!SpeechRecognition) {
-                              alert('El dictado por voz nativo no es soportado por este navegador.');
+                              showAlert('info', 'Reconocimiento de Voz', 'El dictado por voz nativo no es soportado por este navegador.');
                               return;
                             }
                             const rec = new SpeechRecognition();
@@ -1882,7 +1955,7 @@ const AdminDashboard = ({ initialTab = 'analytics' }) => {
                         <span>{currentQ.type === 'scale_1_10' ? 'Máximo (10)' : 'Máximo (5)'}</span>
                       </div>
                       
-                      <div style={{ display: 'grid', gridTemplateColumns: currentQ.type === 'scale_1_10' ? 'repeat(5, 1fr)' : 'repeat(5, 1fr)', gap: '10px' }}>
+                      <div className="eval-scale-grid" style={{ display: 'grid', gridTemplateColumns: currentQ.type === 'scale_1_10' ? 'repeat(5, 1fr)' : 'repeat(5, 1fr)', gap: '10px' }}>
                         {(currentQ.type === 'scale_1_10' ? [1, 2, 3, 4, 5, 6, 7, 8, 9, 10] : [1, 2, 3, 4, 5]).map((val) => {
                           const isSelected = previewAnswers[currentQ.id] === val;
                           return (
@@ -1893,7 +1966,7 @@ const AdminDashboard = ({ initialTab = 'analytics' }) => {
                                 setPreviewAnswers(prev => ({ ...prev, [currentQ.id]: val }));
                                 setAdminTestMascotMood('happy');
                               }}
-                              className={`duo-card ${isSelected ? 'selected' : ''}`}
+                              className={`duo-card eval-scale-btn ${isSelected ? 'selected' : ''}`}
                               style={{ justifyContent: 'center', padding: '16px 8px', fontSize: '17px', fontWeight: '900', borderRadius: '14px' }}
                             >
                               <span>{val}</span>
@@ -1908,13 +1981,13 @@ const AdminDashboard = ({ initialTab = 'analytics' }) => {
                   {currentQ.type === 'emoji_scale_5' && (
                     <div>
                       <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '12px', fontSize: '12px', fontWeight: '800', color: 'var(--text-muted)' }}>
-                        <span>😡 Muy Bajo / Difícil</span>
-                        <span>😁 Excelente / Pleno</span>
+                        <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}><span>😫</span> Muy Bajo / Difícil</span>
+                        <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}><span>😁</span> Excelente / Pleno</span>
                       </div>
                       
-                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '10px' }}>
+                      <div className="eval-emoji-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '10px' }}>
                         {[
-                          { emoji: '😡', label: 'Molesto' },
+                          { emoji: '😫', label: 'Molesto' },
                           { emoji: '🙁', label: 'Agotado' },
                           { emoji: '😐', label: 'Neutral' },
                           { emoji: '🙂', label: 'Tranquilo' },
@@ -1929,11 +2002,11 @@ const AdminDashboard = ({ initialTab = 'analytics' }) => {
                                 setPreviewAnswers(prev => ({ ...prev, [currentQ.id]: `${item.emoji} ${item.label}` }));
                                 setAdminTestMascotMood('happy');
                               }}
-                              className={`duo-card ${isSelected ? 'selected' : ''}`}
+                              className={`duo-card eval-emoji-btn ${isSelected ? 'selected' : ''}`}
                               style={{ justifyContent: 'center', padding: '14px 6px', flexDirection: 'column', gap: '6px', borderRadius: '16px' }}
                             >
-                              <span style={{ fontSize: '30px' }}>{item.emoji}</span>
-                              <span style={{ fontSize: '11px', fontWeight: '800' }}>{item.label}</span>
+                              <span className="eval-emoji-icon" style={{ fontSize: '30px', transform: isSelected ? 'scale(1.15)' : 'scale(1)', transition: 'transform 0.15s ease' }}>{item.emoji}</span>
+                              <span className="eval-emoji-label" style={{ fontSize: '11px', fontWeight: '800' }}>{item.label}</span>
                             </button>
                           );
                         })}
@@ -1956,14 +2029,14 @@ const AdminDashboard = ({ initialTab = 'analytics' }) => {
 
                   {/* Opción Booleana (Sí / No) */}
                   {currentQ.type === 'boolean' && (
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+                    <div className="eval-boolean-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
                       <button
                         type="button"
                         onClick={() => {
                           setPreviewAnswers(prev => ({ ...prev, [currentQ.id]: 'Sí' }));
                           setAdminTestMascotMood('happy');
                         }}
-                        className={`duo-card ${previewAnswers[currentQ.id] === 'Sí' ? 'selected' : ''}`}
+                        className={`duo-card eval-boolean-btn ${previewAnswers[currentQ.id] === 'Sí' ? 'selected' : ''}`}
                         style={{ justifyContent: 'center', padding: '18px', fontSize: '15px', fontWeight: '900', borderRadius: '14px' }}
                       >
                         <ThumbsUp size={20} />
@@ -1976,7 +2049,7 @@ const AdminDashboard = ({ initialTab = 'analytics' }) => {
                           setPreviewAnswers(prev => ({ ...prev, [currentQ.id]: 'No' }));
                           setAdminTestMascotMood('happy');
                         }}
-                        className={`duo-card ${previewAnswers[currentQ.id] === 'No' ? 'selected' : ''}`}
+                        className={`duo-card eval-boolean-btn ${previewAnswers[currentQ.id] === 'No' ? 'selected' : ''}`}
                         style={{ justifyContent: 'center', padding: '18px', fontSize: '15px', fontWeight: '900', borderRadius: '14px' }}
                       >
                         <ThumbsDown size={20} />
@@ -1987,7 +2060,7 @@ const AdminDashboard = ({ initialTab = 'analytics' }) => {
 
                   {/* Opciones de Selección Única */}
                   {currentQ.type === 'single_choice' && Array.isArray(currentQ.options) && (
-                    <div style={{ display: 'grid', gap: '10px' }}>
+                    <div className="eval-choice-grid" style={{ display: 'grid', gap: '10px' }}>
                       {currentQ.options.map((opt, oIdx) => {
                         const isSelected = previewAnswers[currentQ.id] === opt;
                         return (
@@ -1998,7 +2071,7 @@ const AdminDashboard = ({ initialTab = 'analytics' }) => {
                               setPreviewAnswers(prev => ({ ...prev, [currentQ.id]: opt }));
                               setAdminTestMascotMood('happy');
                             }}
-                            className={`duo-card ${isSelected ? 'selected' : ''}`}
+                            className={`duo-card eval-choice-btn ${isSelected ? 'selected' : ''}`}
                             style={{ padding: '14px 18px', fontSize: '14px', fontWeight: '800', textAlign: 'left', borderRadius: '14px' }}
                           >
                             <span>{opt}</span>
@@ -2010,7 +2083,7 @@ const AdminDashboard = ({ initialTab = 'analytics' }) => {
                 </div>
 
                 {/* BARRA DE NAVEGACIÓN INFERIOR (ANTERIOR / SIGUIENTE) */}
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: '20px', borderTop: '1px solid var(--border)' }}>
+                <div className="eval-footer-nav" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: '20px', borderTop: '1px solid var(--border)' }}>
                   <button
                     type="button"
                     onClick={() => {
@@ -2077,94 +2150,241 @@ const AdminDashboard = ({ initialTab = 'analytics' }) => {
 
   // RENDER NORMAL DEL PANEL DE ADMINISTRACIÓN
   return (
-    <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', position: 'relative' }}>
+    <div style={{ minHeight: '100vh', width: '100%', maxWidth: '100vw', display: 'flex', flexDirection: 'column', position: 'relative', overflowX: 'hidden', boxSizing: 'border-box' }}>
       
       {/* Navbar Superior Compacta con Centro de Notificaciones */}
       <header style={{
         display: 'flex',
         justifyContent: 'space-between',
         alignItems: 'center',
-        padding: '12px 24px',
+        padding: '12px 20px',
         backgroundColor: 'var(--bg-secondary)',
         borderBottom: '1px solid var(--border)',
         boxShadow: 'var(--shadow)',
-        zIndex: 10,
-        position: 'relative'
+        zIndex: 100,
+        position: 'relative',
+        width: '100%',
+        maxWidth: '100vw',
+        boxSizing: 'border-box'
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
           <img 
             src="/logo.png" 
             alt="EquilibrIA Logo" 
             style={{ 
-              height: '46px', 
+              height: '42px', 
               objectFit: 'contain',
               filter: 'drop-shadow(0 2px 8px rgba(99, 102, 241, 0.25))' 
             }} 
           />
-          <div>
-            <h1 style={{ fontSize: '17px', fontWeight: '900', letterSpacing: '-0.5px' }}>EquilibrIA</h1>
-            <p style={{ fontSize: '11px', color: 'var(--text-secondary)', fontWeight: '500' }}>Sistema inteligente de análisis del bienestar emocional</p>
+          <div className="app-header-title">
+            <h1 style={{ fontSize: '17px', fontWeight: '900', letterSpacing: '-0.5px', margin: 0 }}>EquilibrIA</h1>
+            <p style={{ fontSize: '11px', color: 'var(--text-secondary)', fontWeight: '500', margin: 0 }}>Sistema inteligente de análisis del bienestar emocional</p>
           </div>
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
           
-          {/* Centro de Notificaciones */}
-          <div style={{ position: 'relative' }}>
-            <button 
-              onClick={() => { setShowNotifications(!showNotifications); setShowPaletteMenu(false); }}
-              className="theme-toggle"
-              style={{ border: '1px solid var(--border)', width: '36px', height: '36px', borderRadius: '50%', position: 'relative' }}
-              title="Centro de Notificaciones"
-            >
-              <Bell size={16} style={{ color: 'var(--primary)' }} />
+          {/* Desktop Navigation Items (Oculto en móvil/tablet < 1024px) */}
+          <div className="desktop-nav-items">
+            {/* Centro de Notificaciones */}
+            <div style={{ position: 'relative' }}>
+              <button 
+                onClick={() => { setShowNotifications(!showNotifications); setShowPaletteMenu(false); }}
+                className="theme-toggle"
+                style={{ border: '1px solid var(--border)', width: '36px', height: '36px', borderRadius: '50%', position: 'relative' }}
+                title="Centro de Notificaciones"
+              >
+                <Bell size={16} style={{ color: 'var(--primary)' }} />
+              </button>
+              <NotificationCenter isOpen={showNotifications} onClose={() => setShowNotifications(false)} />
+            </div>
+
+            {/* Botón Selector de Paletas de Colores */}
+            <div ref={paletteMenuRef} style={{ position: 'relative' }}>
+              <button 
+                onClick={() => { setShowPaletteMenu(!showPaletteMenu); setShowNotifications(false); }}
+                className="theme-toggle"
+                style={{ border: '1px solid var(--border)', width: '36px', height: '36px', borderRadius: '50%' }}
+                title="Personalizar Paleta de Colores del Sistema"
+              >
+                <Palette size={16} style={{ color: 'var(--primary)' }} />
+              </button>
+
+              {showPaletteMenu && (
+                <div className="notification-popover" style={{ width: '220px', right: 0 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px', borderBottom: '1px solid var(--border)', paddingBottom: '6px' }}>
+                    <h4 style={{ fontSize: '12px', fontWeight: '900', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <Palette size={14} style={{ color: 'var(--primary)' }} /> Paleta de Colores
+                    </h4>
+                  </div>
+                  <div style={{ display: 'grid', gap: '6px' }}>
+                    {PALETTES.map((p) => (
+                      <button
+                        key={p.id}
+                        type="button"
+                        onClick={() => { changePalette(p.id); setShowPaletteMenu(false); }}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'space-between',
+                          padding: '8px 10px',
+                          borderRadius: '8px',
+                          border: colorPalette === p.id ? '2px solid var(--primary)' : '1px solid var(--border)',
+                          backgroundColor: colorPalette === p.id ? 'var(--primary-light)' : 'var(--bg-primary)',
+                          cursor: 'pointer',
+                          fontSize: '11.5px',
+                          fontWeight: '700',
+                          color: 'var(--text-primary)'
+                        }}
+                      >
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <span>{p.icon}</span>
+                          <span>{p.name}</span>
+                        </div>
+                        <div style={{ display: 'flex', gap: '3px' }}>
+                          <div style={{ width: '10px', height: '10px', borderRadius: '50%', backgroundColor: p.primary }} />
+                          <div style={{ width: '10px', height: '10px', borderRadius: '50%', backgroundColor: p.accent }} />
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <button onClick={toggleTheme} className="theme-toggle" style={{ border: '1px solid var(--border)', width: '36px', height: '36px', borderRadius: '50%' }} title="Cambiar Modo Claro/Oscuro">
+              {theme === 'light' ? <Moon size={15} /> : <Sun size={15} />}
             </button>
-            <NotificationCenter isOpen={showNotifications} onClose={() => setShowNotifications(false)} />
+
+            {/* Botón Acceso a Configuración */}
+            <button 
+              onClick={() => navigate('/configuracion')} 
+              className="theme-toggle" 
+              style={{ border: '1px solid var(--border)', width: '36px', height: '36px', borderRadius: '50%' }} 
+              title="Configuración de la Cuenta y Privacidad"
+            >
+              <Settings size={15} style={{ color: 'var(--text-primary)' }} />
+            </button>
+            
+            <div style={{ textAlign: 'right', fontSize: '12.5px' }}>
+              <span style={{ fontWeight: '800', display: 'block' }}>{user?.first_name} {user?.last_name}</span>
+              <span style={{ color: 'var(--text-secondary)', fontSize: '10.5px', fontWeight: '500' }}>
+                {user?.role === 'superadmin' ? 'Super Administrador' : (user?.role === 'lider_depto' ? 'Líder de Departamento' : 'Gestor de Bienestar')}
+              </span>
+            </div>
+
+            <button onClick={logout} className="theme-toggle" style={{ color: 'var(--danger)', border: '1px solid var(--border)', width: '36px', height: '36px', borderRadius: '50%' }} title="Cerrar Sesión">
+              <LogOut size={15} />
+            </button>
           </div>
 
-          {/* Botón Selector de Paletas de Colores 🎨 */}
-          <div ref={paletteMenuRef} style={{ position: 'relative' }}>
-            <button 
-              onClick={() => { setShowPaletteMenu(!showPaletteMenu); setShowNotifications(false); }}
-              className="theme-toggle"
-              style={{ border: '1px solid var(--border)', width: '36px', height: '36px', borderRadius: '50%' }}
-              title="Personalizar Paleta de Colores del Sistema"
-            >
-              <Palette size={16} style={{ color: 'var(--primary)' }} />
-            </button>
+          {/* Botón Hamburguesa Móvil (Visible solo en < 1024px) */}
+          <button 
+            type="button"
+            className="hamburger-btn" 
+            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+            aria-label="Abrir menú de navegación"
+            title="Abrir menú"
+          >
+            {mobileMenuOpen ? <X size={20} /> : <Menu size={20} />}
+          </button>
+        </div>
+      </header>
 
-            {showPaletteMenu && (
-              <div className="notification-popover" style={{ width: '220px', right: 0 }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px', borderBottom: '1px solid var(--border)', paddingBottom: '6px' }}>
-                  <h4 style={{ fontSize: '12px', fontWeight: '900', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                    <Palette size={14} style={{ color: 'var(--primary)' }} /> Paleta de Colores
-                  </h4>
+      {/* Drawer Móvil de Navegación de Administrador */}
+      {mobileMenuOpen && (
+        <>
+          <div className="mobile-drawer-backdrop" onClick={() => setMobileMenuOpen(false)} />
+          <div className="mobile-drawer">
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '18px', paddingBottom: '12px', borderBottom: '1px solid var(--border)' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <div style={{ width: '38px', height: '38px', borderRadius: '50%', backgroundColor: 'var(--primary)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '900', fontSize: '15px' }}>
+                  {user?.first_name ? user.first_name.charAt(0) : 'A'}
                 </div>
+                <div>
+                  <h4 style={{ margin: 0, fontSize: '14px', fontWeight: '800' }}>{user?.first_name} {user?.last_name}</h4>
+                  <span style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>
+                    {user?.role === 'superadmin' ? 'Super Administrador' : (user?.role === 'lider_depto' ? 'Líder Departamento' : 'Gestor de Bienestar')}
+                  </span>
+                </div>
+              </div>
+              <button 
+                type="button" 
+                onClick={() => setMobileMenuOpen(false)} 
+                className="theme-toggle" 
+                style={{ width: '32px', height: '32px', borderRadius: '50%', border: '1px solid var(--border)' }}
+              >
+                <X size={16} />
+              </button>
+            </div>
+
+            {/* Acciones Rápidas Táctiles */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '8px', marginBottom: '20px' }}>
+              <button 
+                onClick={toggleTheme} 
+                className="theme-toggle" 
+                style={{ width: '100%', height: '40px', borderRadius: '10px', border: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'center' }} 
+                title="Modo Claro/Oscuro"
+              >
+                {theme === 'light' ? <Moon size={16} /> : <Sun size={16} />}
+              </button>
+
+              <button 
+                onClick={() => setMobilePaletteOpen(!mobilePaletteOpen)} 
+                className="theme-toggle" 
+                style={{ width: '100%', height: '40px', borderRadius: '10px', border: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'center' }} 
+                title="Paleta de Colores"
+              >
+                <Palette size={16} style={{ color: 'var(--primary)' }} />
+              </button>
+
+              <button 
+                onClick={() => { navigate('/configuracion'); setMobileMenuOpen(false); }} 
+                className="theme-toggle" 
+                style={{ width: '100%', height: '40px', borderRadius: '10px', border: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'center' }} 
+                title="Configuración"
+              >
+                <Settings size={16} />
+              </button>
+
+              <button 
+                onClick={logout} 
+                className="theme-toggle" 
+                style={{ width: '100%', height: '40px', borderRadius: '10px', border: '1px solid var(--border)', color: 'var(--danger)', display: 'flex', alignItems: 'center', justifyContent: 'center' }} 
+                title="Cerrar Sesión"
+              >
+                <LogOut size={16} />
+              </button>
+            </div>
+
+            {/* Submenú de Paletas en el Drawer */}
+            {mobilePaletteOpen && (
+              <div style={{ backgroundColor: 'var(--bg-tertiary)', padding: '10px', borderRadius: '12px', marginBottom: '16px', border: '1px solid var(--border)' }}>
+                <span style={{ fontSize: '11px', fontWeight: '800', color: 'var(--text-muted)', display: 'block', marginBottom: '6px' }}>PALETA DE COLORES</span>
                 <div style={{ display: 'grid', gap: '6px' }}>
                   {PALETTES.map((p) => (
                     <button
                       key={p.id}
                       type="button"
-                      onClick={() => { changePalette(p.id); setShowPaletteMenu(false); }}
+                      onClick={() => { changePalette(p.id); setMobilePaletteOpen(false); }}
                       style={{
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'space-between',
-                        padding: '8px 10px',
-                        borderRadius: '8px',
+                        padding: '8px 12px',
+                        borderRadius: '10px',
                         border: colorPalette === p.id ? '2px solid var(--primary)' : '1px solid var(--border)',
-                        backgroundColor: colorPalette === p.id ? 'var(--primary-light)' : 'var(--bg-primary)',
-                        cursor: 'pointer',
-                        fontSize: '11.5px',
+                        backgroundColor: colorPalette === p.id ? 'var(--primary-light)' : 'var(--bg-secondary)',
+                        fontSize: '12px',
                         fontWeight: '700',
-                        color: 'var(--text-primary)'
+                        color: 'var(--text-primary)',
+                        cursor: 'pointer',
+                        width: '100%'
                       }}
                     >
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <span>{p.icon}</span>
-                        <span>{p.name}</span>
-                      </div>
-                      <div style={{ display: 'flex', gap: '3px' }}>
+                      <span style={{ fontWeight: '700' }}>{p.name}</span>
+                      <div style={{ display: 'flex', gap: '4px' }}>
                         <div style={{ width: '10px', height: '10px', borderRadius: '50%', backgroundColor: p.primary }} />
                         <div style={{ width: '10px', height: '10px', borderRadius: '50%', backgroundColor: p.accent }} />
                       </div>
@@ -2173,37 +2393,73 @@ const AdminDashboard = ({ initialTab = 'analytics' }) => {
                 </div>
               </div>
             )}
-          </div>
 
-          <button onClick={toggleTheme} className="theme-toggle" style={{ border: '1px solid var(--border)', width: '36px', height: '36px', borderRadius: '50%' }} title="Cambiar Modo Claro/Oscuro">
-            {theme === 'light' ? <Moon size={15} /> : <Sun size={15} />}
-          </button>
-
-          {/* Botón Acceso a Configuración */}
-          <button 
-            onClick={() => navigate('/configuracion')} 
-            className="theme-toggle" 
-            style={{ border: '1px solid var(--border)', width: '36px', height: '36px', borderRadius: '50%' }} 
-            title="Configuración de la Cuenta y Privacidad"
-          >
-            <Settings size={15} style={{ color: 'var(--text-primary)' }} />
-          </button>
-          
-          <div style={{ textAlign: 'right', fontSize: '12.5px' }}>
-            <span style={{ fontWeight: '800', display: 'block' }}>{user?.first_name} {user?.last_name}</span>
-            <span style={{ color: 'var(--text-secondary)', fontSize: '10.5px', fontWeight: '500' }}>
-              {user?.role === 'superadmin' ? 'Super Administrador' : 'Gestor de Bienestar'}
+            {/* Lista Completa de Módulos Permitidos por RBAC */}
+            <span style={{ fontSize: '11px', fontWeight: '900', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '10px', display: 'block' }}>
+              Módulos Institucionales
             </span>
+            <div style={{ display: 'grid', gap: '6px' }}>
+              {[
+                { id: 'bienestar', moduleKey: 'wellbeing', label: 'Mi Bienestar', icon: Brain },
+                { id: 'analytics', moduleKey: 'analytics', label: 'Analíticas', icon: BarChart3 },
+                { id: 'tasks', moduleKey: 'tasks', label: 'Tareas', icon: ClipboardList },
+                { id: 'alerts', moduleKey: 'alerts', label: 'Alertas', icon: AlertTriangle, badge: alerts.length, badgeColor: 'var(--danger)' },
+                { id: 'evaluations', moduleKey: 'evaluations', label: 'Tests', icon: Calendar },
+                { id: 'clinical_appointments', moduleKey: 'clinical_appointments', label: 'Agenda de Citas', icon: Calendar },
+                { id: 'members', moduleKey: 'members', label: user?.role === 'lider_depto' ? 'Directorio Depto' : 'Roles y Usuarios', icon: Users },
+                { id: 'institutions', moduleKey: 'institutions', label: 'Instituciones y Deptos', icon: Building },
+                { id: 'progress', moduleKey: 'progress', label: 'Mi Progreso / Gamificación', icon: Trophy },
+                { id: 'kudos', moduleKey: 'kudos', label: 'Chat & Grupos', icon: MessageSquare },
+                { id: 'reports', moduleKey: 'reports', label: 'Reportes', icon: FileSpreadsheet },
+                { id: 'audit', moduleKey: 'audit', label: 'Auditoría', icon: ShieldCheck },
+                { id: 'ai_plans', moduleKey: 'ai_plans', label: 'Sugerencias IA', icon: Sparkles },
+                { id: 'chat_ia', moduleKey: 'chat_ia', label: 'Chatbot IA', icon: Bot },
+                { id: 'culture', moduleKey: 'culture', label: 'Diccionario Cultural', icon: BookOpen }
+              ]
+                .filter(item => hasModuleAccess(user?.role, item.moduleKey))
+                .map(item => {
+                  const Icon = item.icon;
+                  const isActive = activeTab === item.id;
+                  return (
+                    <button
+                      key={item.id}
+                      type="button"
+                      onClick={() => { handleTabChange(item.id); setMobileMenuOpen(false); }}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        padding: '12px 14px',
+                        borderRadius: '12px',
+                        border: isActive ? '1.5px solid var(--primary)' : '1px solid transparent',
+                        backgroundColor: isActive ? 'var(--primary-light)' : 'transparent',
+                        color: isActive ? 'var(--primary)' : 'var(--text-primary)',
+                        fontWeight: isActive ? '800' : '600',
+                        fontSize: '13px',
+                        textAlign: 'left',
+                        cursor: 'pointer',
+                        transition: 'all 0.15s ease'
+                      }}
+                    >
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                        <Icon size={16} style={{ color: isActive ? 'var(--primary)' : 'var(--text-secondary)' }} />
+                        <span>{item.label}</span>
+                      </div>
+                      {item.badge > 0 && (
+                        <span style={{ backgroundColor: item.badgeColor, color: '#fff', fontSize: '10px', padding: '2px 7px', borderRadius: '12px', fontWeight: '800' }}>
+                          {item.badge}
+                        </span>
+                      )}
+                    </button>
+                  );
+                })}
+            </div>
           </div>
-
-          <button onClick={logout} className="theme-toggle" style={{ color: 'var(--danger)', border: '1px solid var(--border)', width: '36px', height: '36px', borderRadius: '50%' }} title="Cerrar Sesión">
-            <LogOut size={15} />
-          </button>
-        </div>
-      </header>
+        </>
+      )}
 
       {/* Contenido Principal */}
-      <main style={{ flex: 1, padding: '24px 24px', maxWidth: '1300px', width: '100%', margin: '0 auto' }}>
+      <main className="dashboard-main-content" style={{ flex: 1, padding: '24px 24px', maxWidth: '1300px', width: '100%', margin: '0 auto', boxSizing: 'border-box' }}>
         
         {/* Banner de Confidencialidad Flotante (Toast Fijo en Esquina para Evitar Desfase de Diseño) */}
         {showPrivacyNotice && (
@@ -2306,7 +2562,7 @@ const AdminDashboard = ({ initialTab = 'analytics' }) => {
           {hasModuleAccess(user?.role, 'culture') && (
             <button className={`tab-btn ${activeTab === 'culture' ? 'active' : ''}`} onClick={() => handleTabChange('culture')}>
               <BookOpen size={15} />
-              <span>Diccionario Cultural 🇬🇹</span>
+              <span>Diccionario Cultural</span>
             </button>
           )}
         </div>
@@ -2354,8 +2610,8 @@ const AdminDashboard = ({ initialTab = 'analytics' }) => {
                 {!stats.historical_trends || stats.historical_trends.length === 0 ? (
                   <div style={{ height: '240px', display: 'flex', justifyContent: 'center', alignItems: 'center', color: 'var(--text-muted)' }}>Sin suficientes datos históricos registrados.</div>
                 ) : (
-                  <div style={{ width: '100%', height: '240px' }}>
-                    <ResponsiveContainer width="100%" height="100%">
+                  <div className="chart-container-responsive" style={{ height: '240px' }}>
+                    <ResponsiveContainer width="100%" height="100%" minWidth={0}>
                       <LineChart data={stats.historical_trends}>
                         <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
                         <XAxis dataKey="date" stroke="var(--text-muted)" fontSize={11} />
@@ -2378,9 +2634,9 @@ const AdminDashboard = ({ initialTab = 'analytics' }) => {
                 {pieData.every(d => d.value === 0) ? (
                   <div style={{ height: '240px', display: 'flex', justifyContent: 'center', alignItems: 'center', color: 'var(--text-muted)' }}>Sin datos de sentimientos registrados.</div>
                 ) : (
-                  <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '240px', gap: '20px', flexWrap: 'wrap' }}>
-                    <div style={{ width: '180px', height: '180px' }}>
-                      <ResponsiveContainer width="100%" height="100%">
+                  <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '240px', gap: '20px', flexWrap: 'wrap' }}>
+                    <div style={{ width: '180px', height: '180px', minWidth: '180px' }}>
+                      <ResponsiveContainer width="100%" height="100%" minWidth={0}>
                         <PieChart>
                           <Pie data={pieData} cx="50%" cy="50%" innerRadius={48} outerRadius={68} paddingAngle={6} dataKey="value">
                             {pieData.map((entry, index) => (
@@ -2430,7 +2686,7 @@ const AdminDashboard = ({ initialTab = 'analytics' }) => {
                         value: r.id,
                         label: `${r.title} (${r.resource_type})`,
                         sublabel: `${r.category} • ~${r.reading_time_minutes} min • +${r.xp_reward || 15} XP`,
-                        icon: '🧘'
+                        icon: ''
                       }))
                     ]}
                     value={taskResourceId}
@@ -2489,9 +2745,9 @@ const AdminDashboard = ({ initialTab = 'analytics' }) => {
                       <label style={{ fontSize: '11px', fontWeight: '800', color: 'var(--text-secondary)', display: 'block', marginBottom: '6px' }}>NIVEL DE PRIORIDAD:</label>
                       <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
                         {[
-                          { id: 'Alta', label: '🔴 Alta' },
-                          { id: 'Media', label: '🟡 Media' },
-                          { id: 'Baja', label: '🟢 Baja' }
+                          { id: 'Alta', label: ' Alta' },
+                          { id: 'Media', label: ' Media' },
+                          { id: 'Baja', label: ' Baja' }
                         ].map(p => (
                           <button
                             key={p.id}
@@ -2517,7 +2773,7 @@ const AdminDashboard = ({ initialTab = 'analytics' }) => {
                             className={`duo-pill ${taskEstMinutes === m ? 'selected' : ''}`}
                             style={{ padding: '4px 8px', fontSize: '11.5px' }}
                           >
-                            ⏱️ {m}m
+                             {m}m
                           </button>
                         ))}
                       </div>
@@ -2575,7 +2831,7 @@ const AdminDashboard = ({ initialTab = 'analytics' }) => {
                             value: m.email,
                             label: `${m.first_name} ${m.last_name}`,
                             sublabel: `${m.email} • Depto: ${m.department || 'General'}`,
-                            icon: '👤'
+                            icon: ''
                           }))}
                           value={taskAssignedTarget}
                           onChange={(val) => setTaskAssignedTarget(val)}
@@ -2605,7 +2861,7 @@ const AdminDashboard = ({ initialTab = 'analytics' }) => {
                         className="duo-pill"
                         style={{ fontSize: '11.5px', padding: '6px 12px' }}
                       >
-                        📅 {btn.label}
+                         {btn.label}
                       </button>
                     ))}
                   </div>
@@ -2644,7 +2900,7 @@ const AdminDashboard = ({ initialTab = 'analytics' }) => {
                         {task.resource && (
                           <div style={{ marginTop: '6px' }}>
                             <span style={{ fontSize: '10.5px', fontWeight: '800', padding: '2px 8px', borderRadius: '6px', backgroundColor: 'var(--primary-light)', color: 'var(--primary)', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-                              🧘 Vinculada a Recurso: <strong>{task.resource.title}</strong> ({task.resource.resource_type})
+                               Vinculada a Recurso: <strong>{task.resource.title}</strong> ({task.resource.resource_type})
                             </span>
                           </div>
                         )}
@@ -2658,7 +2914,7 @@ const AdminDashboard = ({ initialTab = 'analytics' }) => {
           </div>
         )}
 
-        {/* NUEVO MÓDULO DE LA PSICÓLOGA: AGENDA DE CITAS CLÍNICAS 1 A 1 📅 */}
+        {/* NUEVO MÓDULO DE LA PSICÓLOGA: AGENDA DE CITAS CLÍNICAS 1 A 1  */}
         {activeTab === 'clinical_appointments' && (
           <div className="animate-fade">
             {renderClinicalMonthCalendar()}
@@ -2687,7 +2943,7 @@ const AdminDashboard = ({ initialTab = 'analytics' }) => {
                       value: m.id,
                       label: `${m.first_name} ${m.last_name}`,
                       sublabel: `${m.email} • Depto: ${m.department || 'General'}`,
-                      icon: '👤'
+                      icon: ''
                     }))}
                     value={apptUserId}
                     onChange={(val) => setApptUserId(val)}
@@ -2708,11 +2964,11 @@ const AdminDashboard = ({ initialTab = 'analytics' }) => {
                   <label style={{ fontSize: '11px', fontWeight: '800', textTransform: 'uppercase', marginBottom: '6px', display: 'block' }}>HORARIO DE LA CITA:</label>
                   <CustomSelect
                     options={[
-                      { value: '09:00', label: '09:00 AM (Turno Mañana)', icon: '⏰' },
-                      { value: '10:00', label: '10:00 AM (Turno Mañana)', icon: '⏰' },
-                      { value: '11:00', label: '11:00 AM (Turno Mañana)', icon: '⏰' },
-                      { value: '14:00', label: '02:00 PM (Turno Tarde)', icon: '⏰' },
-                      { value: '16:00', label: '04:00 PM (Turno Tarde)', icon: '⏰' }
+                      { value: '09:00', label: '09:00 AM (Turno Mañana)', icon: '' },
+                      { value: '10:00', label: '10:00 AM (Turno Mañana)', icon: '' },
+                      { value: '11:00', label: '11:00 AM (Turno Mañana)', icon: '' },
+                      { value: '14:00', label: '02:00 PM (Turno Tarde)', icon: '' },
+                      { value: '16:00', label: '04:00 PM (Turno Tarde)', icon: '' }
                     ]}
                     value={apptTime}
                     onChange={(val) => setApptTime(val)}
@@ -2730,7 +2986,7 @@ const AdminDashboard = ({ initialTab = 'analytics' }) => {
                 </div>
 
                 <button type="submit" className="btn btn-primary" disabled={apptLoading} style={{ width: '100%', padding: '12px', borderRadius: '12px', fontWeight: '900' }}>
-                  {apptLoading ? <Loader className="animate-spin" size={16} /> : '📅 Agendar Cita Privada'}
+                  {apptLoading ? <Loader className="animate-spin" size={16} /> : 'Agendar Cita Privada'}
                 </button>
               </form>
             </div>
@@ -2755,10 +3011,10 @@ const AdminDashboard = ({ initialTab = 'analytics' }) => {
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '6px' }}>
                         <div>
                           <h4 style={{ fontSize: '14.5px', fontWeight: '800', color: 'var(--text-primary)' }}>
-                            👤 {a.user_name} <span style={{ fontSize: '11px', color: 'var(--text-secondary)', fontWeight: '500' }}>({a.user_department})</span>
+                            {a.user_name} <span style={{ fontSize: '11px', color: 'var(--text-secondary)', fontWeight: '500' }}>({a.user_department})</span>
                           </h4>
                           <p style={{ fontSize: '12px', color: 'var(--primary)', fontWeight: '700', marginTop: '2px' }}>
-                            📆 {new Date(a.date_time).toLocaleString()}
+                            {new Date(a.date_time).toLocaleString()}
                           </p>
                         </div>
                         <span style={{
@@ -2791,7 +3047,7 @@ const AdminDashboard = ({ initialTab = 'analytics' }) => {
                             className="duo-pill selected"
                             style={{ fontSize: '11px', padding: '4px 10px' }}
                           >
-                            🟢 Aprobar Cita
+                             Aprobar Cita
                           </button>
                         )}
                         {a.status !== 'completada' && (
@@ -2800,7 +3056,7 @@ const AdminDashboard = ({ initialTab = 'analytics' }) => {
                             className="duo-pill"
                             style={{ fontSize: '11px', padding: '4px 10px' }}
                           >
-                            ✅ Marcar Completada
+                             Marcar Completada
                           </button>
                         )}
                         {a.status !== 'cancelada' && (
@@ -2809,7 +3065,7 @@ const AdminDashboard = ({ initialTab = 'analytics' }) => {
                             className="duo-pill"
                             style={{ fontSize: '11px', padding: '4px 10px', color: 'var(--danger)' }}
                           >
-                            ❌ Cancelar Cita
+                            Cancelar Cita
                           </button>
                         )}
                       </div>
@@ -3085,7 +3341,7 @@ const AdminDashboard = ({ initialTab = 'analytics' }) => {
                           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
                             <span style={{ fontSize: '9px', fontWeight: '800', padding: '3px 8px', borderRadius: 'var(--radius-full)', backgroundColor: 'var(--primary-light)', color: 'var(--primary)' }}>{tpl.category}</span>
                             <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
-                              {hasCanvas && <span title="Incluye lienzo gráfico de dibujo" style={{ fontSize: '12px' }}>🎨</span>}
+                              {hasCanvas && <span title="Incluye lienzo gráfico de dibujo" style={{ fontSize: '12px' }}></span>}
                               <span style={{ fontSize: '10.5px', color: 'var(--text-muted)', fontWeight: '700' }}>{tpl.questions.length} preguntas</span>
                             </div>
                           </div>
@@ -3206,10 +3462,10 @@ const AdminDashboard = ({ initialTab = 'analytics' }) => {
 
                   <div style={{ display: 'flex', gap: '8px', marginBottom: '18px', flexWrap: 'wrap' }}>
                     <span style={{ fontSize: '11px', fontWeight: '800', padding: '5px 12px', borderRadius: '10px', backgroundColor: 'rgba(236, 72, 153, 0.12)', color: '#ec4899', border: '1px solid rgba(236, 72, 153, 0.3)', display: 'flex', alignItems: 'center', gap: '5px' }}>
-                      🎨 Incluye Lienzo de Dibujo Canvas Interactivo
+                      Incluye Lienzo de Dibujo Canvas Interactivo
                     </span>
                     <span style={{ fontSize: '11px', fontWeight: '800', padding: '5px 12px', borderRadius: '10px', backgroundColor: 'var(--success-light)', color: 'var(--success)', border: '1px solid var(--success)', display: 'flex', alignItems: 'center', gap: '5px' }}>
-                      🎙️ Dictado de Voz + Emojis de Ánimo
+                      Dictado de Voz y Estados de Ánimo
                     </span>
                   </div>
 
@@ -3225,7 +3481,7 @@ const AdminDashboard = ({ initialTab = 'analytics' }) => {
                         emoji_scale_5: { label: 'Escala 5 Emojis (1-5)', color: 'var(--warning)' },
                         boolean: { label: 'Sí / No', color: 'var(--success)' },
                         text: { label: 'Texto libre / Voz', color: 'var(--info)' },
-                        drawing: { label: '🎨 Lienzo de Dibujo Canvas', color: '#ec4899' }
+                        drawing: { label: 'Lienzo de Dibujo Canvas', color: '#ec4899' }
                       };
                       const tInfo = typeLabels[q.type] || { label: q.type, color: 'var(--text-secondary)' };
 
@@ -3349,7 +3605,7 @@ const AdminDashboard = ({ initialTab = 'analytics' }) => {
                             value: m.email,
                             label: `${m.first_name} ${m.last_name}`,
                             sublabel: `${m.email} • Depto: ${m.department || 'General'}`,
-                            icon: '👤'
+                            icon: ''
                           }))}
                           value={evalAssignedTarget}
                           onChange={(val) => setEvalAssignedTarget(val)}
@@ -3382,12 +3638,12 @@ const AdminDashboard = ({ initialTab = 'analytics' }) => {
                             <span><strong>P{idx+1}:</strong> {q.question}</span>
                           </div>
                           <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-                            <span style={{ fontSize: '10px', color: 'var(--primary)', fontWeight: '800', padding: '2px 8px', borderRadius: '12px', backgroundColor: 'var(--primary-light)' }}>
-                              {q.type === 'scale_1_5' ? 'Numérica 1-5' : 
-                               q.type === 'scale_1_10' ? 'Numérica 1-10' : 
-                               q.type === 'emoji_scale_5' ? '5 Emojis de Ánimo 😡😁' :
-                               q.type === 'drawing' ? '🎨 Dibujo Canvas' :
-                               q.type === 'boolean' ? 'Sí / No' : 'Texto + Voz'}
+                            <span style={{ fontSize: '10px', color: 'var(--primary)', fontWeight: '800', padding: '3px 8px', borderRadius: '12px', backgroundColor: 'var(--primary-light)', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                              {q.type === 'scale_1_5' ? <><Hash size={11} /><span>Numérica 1-5</span></> : 
+                               q.type === 'scale_1_10' ? <><Sliders size={11} /><span>Numérica 1-10</span></> : 
+                               q.type === 'emoji_scale_5' ? <><Smile size={11} /><span>5 Emojis de Ánimo</span></> :
+                               q.type === 'drawing' ? <><Palette size={11} /><span>Dibujo Canvas</span></> :
+                               q.type === 'boolean' ? <><CheckSquare size={11} /><span>Sí / No</span></> : <><Mic size={11} /><span>Texto / Voz</span></>}
                             </span>
                             <button 
                               type="button" 
@@ -3402,27 +3658,40 @@ const AdminDashboard = ({ initialTab = 'analytics' }) => {
                       ))}
                     </div>
                     
-                    <div style={{ marginBottom: '10px' }}>
-                      <label style={{ fontSize: '11px', fontWeight: '800', color: 'var(--text-secondary)', display: 'block', marginBottom: '6px' }}>SELECCIONAR TIPO DE LA NUEVA PREGUNTA:</label>
-                      <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+                    <div style={{ marginBottom: '12px' }}>
+                      <label style={{ fontSize: '11px', fontWeight: '800', color: 'var(--text-secondary)', display: 'block', marginBottom: '8px', textTransform: 'uppercase' }}>SELECCIONAR TIPO DE LA NUEVA PREGUNTA:</label>
+                      <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
                         {[
-                          { id: 'scale_1_5', label: '🔢 Numérica 1 a 5' },
-                          { id: 'scale_1_10', label: '🔟 Numérica 1 a 10' },
-                          { id: 'emoji_scale_5', label: '😡 Escala 5 Emojis de Ánimo' },
-                          { id: 'text', label: '📝 Texto / Voz' },
-                          { id: 'drawing', label: '🎨 Dibujo Canvas' },
-                          { id: 'boolean', label: '🔘 Sí / No' }
-                        ].map(typeOpt => (
-                          <button
-                            key={typeOpt.id}
-                            type="button"
-                            onClick={() => setNewQuestionType(typeOpt.id)}
-                            className={`duo-pill ${newQuestionType === typeOpt.id ? 'selected' : ''}`}
-                            style={{ fontSize: '11.5px', padding: '4px 10px' }}
-                          >
-                            {typeOpt.label}
-                          </button>
-                        ))}
+                          { id: 'scale_1_5', label: 'Numérica 1 a 5', icon: Hash, color: '#6366f1' },
+                          { id: 'scale_1_10', label: 'Numérica 1 a 10', icon: Sliders, color: '#3b82f6' },
+                          { id: 'emoji_scale_5', label: 'Escala 5 Emojis de Ánimo', icon: Smile, color: '#10b981' },
+                          { id: 'text', label: 'Texto / Voz', icon: Mic, color: '#8b5cf6' },
+                          { id: 'drawing', label: 'Dibujo Canvas', icon: Palette, color: '#ec4899' },
+                          { id: 'boolean', label: 'Sí / No', icon: CheckSquare, color: '#f59e0b' }
+                        ].map(typeOpt => {
+                          const IconComp = typeOpt.icon;
+                          const isSelected = newQuestionType === typeOpt.id;
+                          return (
+                            <button
+                              key={typeOpt.id}
+                              type="button"
+                              onClick={() => setNewQuestionType(typeOpt.id)}
+                              className={`duo-pill ${isSelected ? 'selected' : ''}`}
+                              style={{
+                                fontSize: '11.5px',
+                                padding: '6px 12px',
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '6px',
+                                fontWeight: isSelected ? '900' : '700',
+                                borderColor: isSelected ? 'var(--primary)' : undefined
+                              }}
+                            >
+                              <IconComp size={13} style={{ color: isSelected ? 'var(--primary)' : typeOpt.color }} />
+                              <span>{typeOpt.label}</span>
+                            </button>
+                          );
+                        })}
                       </div>
                     </div>
 
@@ -3463,7 +3732,7 @@ const AdminDashboard = ({ initialTab = 'analytics' }) => {
                           className="duo-pill"
                           style={{ fontSize: '11.5px', padding: '6px 12px' }}
                         >
-                          📅 {btn.label}
+                           {btn.label}
                         </button>
                       ))}
 
@@ -3563,12 +3832,12 @@ const AdminDashboard = ({ initialTab = 'analytics' }) => {
                     <div>
                       <CustomSelect
                         options={[
-                          { value: 'todos', label: '👥 Todos los Roles' },
-                          { value: 'superadmin', label: '🛡️ SuperAdmin' },
-                          { value: 'admin_institucion', label: '🏛️ Admin Institucional' },
-                          { value: 'profesional_apoyo', label: '🧠 Profesional / Psicólogo' },
-                          { value: 'lider_depto', label: '👔 Líder de Depto' },
-                          { value: 'miembro', label: '👤 Miembro / Colaborador' }
+                          { value: 'todos', label: 'Todos los Roles' },
+                          { value: 'superadmin', label: 'SuperAdmin' },
+                          { value: 'admin_institucion', label: 'Admin Institucional' },
+                          { value: 'profesional_apoyo', label: 'Profesional / Psicólogo' },
+                          { value: 'lider_depto', label: 'Líder de Depto' },
+                          { value: 'miembro', label: 'Miembro / Colaborador' }
                         ]}
                         value={memberRoleFilter}
                         onChange={(val) => setMemberRoleFilter(val)}
@@ -3579,8 +3848,8 @@ const AdminDashboard = ({ initialTab = 'analytics' }) => {
                     <div>
                       <CustomSelect
                         options={[
-                          { value: 'todos', label: '🏢 Todos los Departamentos' },
-                          ...Array.from(new Set(members.map(m => m.department || 'General'))).map(d => ({ value: d, label: `🏢 ${d}` }))
+                          { value: 'todos', label: 'Todos los Departamentos' },
+                          ...Array.from(new Set(members.map(m => m.department || 'General'))).map(d => ({ value: d, label: d }))
                         ]}
                         value={memberDeptFilter}
                         onChange={(val) => setMemberDeptFilter(val)}
@@ -3591,9 +3860,9 @@ const AdminDashboard = ({ initialTab = 'analytics' }) => {
                     <div>
                       <CustomSelect
                         options={[
-                          { value: 'todos', label: '🔘 Todos los Estados' },
+                          { value: 'todos', label: 'Todos los Estados' },
                           { value: 'ACTIVE', label: '🟢 Activo (ACTIVE)' },
-                          { value: 'PENDING', label: '🟠 Pendiente (PENDING)' },
+                          { value: 'PENDING', label: '🟡 Pendiente (PENDING)' },
                           { value: 'SUSPENDED', label: '🔴 Suspendido (SUSPENDED)' },
                           { value: 'INACTIVE', label: '⚪ Inactivo (INACTIVE)' }
                         ]}
@@ -3607,8 +3876,8 @@ const AdminDashboard = ({ initialTab = 'analytics' }) => {
                       <div>
                         <CustomSelect
                           options={[
-                            { value: 'todos', label: '🌐 Todas las Instituciones' },
-                            ...allInstitutions.map(inst => ({ value: inst.id, label: `🏛️ ${inst.name}` }))
+                            { value: 'todos', label: ' Todas las Instituciones' },
+                            ...allInstitutions.map(inst => ({ value: inst.id, label: ` ${inst.name}` }))
                           ]}
                           value={memberInstFilter}
                           onChange={(val) => setMemberInstFilter(val)}
@@ -3646,7 +3915,7 @@ const AdminDashboard = ({ initialTab = 'analytics' }) => {
                         }}
                         style={{ border: 'none', background: 'none', color: 'var(--primary)', fontWeight: '800', cursor: 'pointer', fontSize: '11px' }}
                       >
-                        ✕ Limpiar Filtros
+                         Limpiar Filtros
                       </button>
                     )}
                   </div>
@@ -3727,13 +3996,73 @@ const AdminDashboard = ({ initialTab = 'analytics' }) => {
                           </div>
                           <div>
                             <label style={{ fontSize: '10px', fontWeight: '800', display: 'block', marginBottom: '4px' }}>DEPARTAMENTO / ÁREA:</label>
-                            <input
-                              type="text"
-                              placeholder="Ej. Tecnología, Recursos Humanos..."
-                              value={editDept}
-                              onChange={(e) => setEditDept(e.target.value)}
-                              style={{ width: '100%', fontSize: '12px', padding: '8px 10px', borderRadius: '8px' }}
-                            />
+                            {loadingEditDepts ? (
+                              <div style={{ width: '100%', fontSize: '12px', padding: '8px 10px', borderRadius: '8px', border: '1px solid var(--border)', backgroundColor: 'var(--bg-primary)', color: 'var(--text-muted)' }}>
+                                Cargando departamentos...
+                              </div>
+                            ) : (
+                              <select
+                                value={
+                                  (editUserDepts.find(d => String(d.id) === String(editDeptId) || d.name?.toLowerCase() === (editDept || '').toLowerCase())?.id)
+                                  || editDeptId
+                                  || editDept
+                                  || ''
+                                }
+                                onChange={(e) => {
+                                  const selectedVal = e.target.value;
+                                  const found = editUserDepts.find(d => String(d.id) === String(selectedVal) || d.name === selectedVal);
+                                  if (found) {
+                                    setEditDeptId(found.id);
+                                    setEditDept(found.name);
+                                  } else {
+                                    setEditDeptId('');
+                                    setEditDept(selectedVal);
+                                  }
+                                }}
+                                style={{
+                                  width: '100%',
+                                  padding: '8px 10px',
+                                  borderRadius: '8px',
+                                  fontSize: '12px',
+                                  border: '1px solid var(--border)',
+                                  backgroundColor: 'var(--bg-primary)',
+                                  color: 'var(--text-primary)'
+                                }}
+                              >
+                                {editUserDepts.length === 0 ? (
+                                  <>
+                                    <option value="General">General</option>
+                                    {editDept && editDept !== 'General' && (
+                                      <option value={editDept}>{editDept}</option>
+                                    )}
+                                  </>
+                                ) : (
+                                  <>
+                                    <option value="">-- Seleccionar Departamento --</option>
+                                    {editUserDepts.map((dept) => {
+                                      const deptVal = dept.id || dept.name;
+                                      const deptLabel = dept.name || dept;
+                                      const deptCode = dept.code ? ` (${dept.code})` : '';
+                                      return (
+                                        <option key={deptVal} value={deptVal}>
+                                          {deptLabel}{deptCode}
+                                        </option>
+                                      );
+                                    })}
+                                    {editDept && editDept !== 'General' && !editUserDepts.some(d => d.name?.toLowerCase() === editDept?.toLowerCase() || String(d.id) === String(editDeptId)) && (
+                                      <option value={editDeptId || editDept}>
+                                        {editDept} (Actual)
+                                      </option>
+                                    )}
+                                  </>
+                                )}
+                              </select>
+                            )}
+                            <span style={{ fontSize: '10px', color: 'var(--text-muted)', marginTop: '4px', display: 'block' }}>
+                              {editUserDepts.length > 0
+                                ? `${editUserDepts.length} departamentos registrados en esta institución`
+                                : 'Mostrando asignación departamental'}
+                            </span>
                           </div>
                         </div>
 
@@ -3750,12 +4079,12 @@ const AdminDashboard = ({ initialTab = 'analytics' }) => {
                               disabled={user?.role !== 'superadmin' && editRole === 'superadmin'}
                               style={{ width: '100%', padding: '8px 10px', borderRadius: '8px', fontSize: '12px', border: '1px solid var(--border)', backgroundColor: 'var(--bg-primary)', color: 'var(--text-primary)' }}
                             >
-                              <option value="miembro">👤 Miembro / Colaborador</option>
-                              <option value="lider_depto">👔 Líder de Departamento</option>
-                              <option value="profesional_apoyo">🧠 Profesional / Psicólogo</option>
-                              <option value="admin_institucion">🏛️ Admin Institucional</option>
+                              <option value="miembro">Miembro / Colaborador</option>
+                              <option value="lider_depto">Líder de Departamento</option>
+                              <option value="profesional_apoyo"> Profesional / Psicólogo</option>
+                              <option value="admin_institucion">Admin Institucional</option>
                               {user?.role === 'superadmin' && (
-                                <option value="superadmin">🛡️ SuperAdmin (Global)</option>
+                                <option value="superadmin"> SuperAdmin (Global)</option>
                               )}
                             </select>
                           </div>
@@ -3767,7 +4096,7 @@ const AdminDashboard = ({ initialTab = 'analytics' }) => {
                               style={{ width: '100%', padding: '8px 10px', borderRadius: '8px', fontSize: '12px', border: '1px solid var(--border)', backgroundColor: 'var(--bg-primary)', color: 'var(--text-primary)' }}
                             >
                               <option value="ACTIVE">🟢 Activa (ACTIVE)</option>
-                              <option value="PENDING">🟠 Pendiente (PENDING)</option>
+                              <option value="PENDING">🟡 Pendiente (PENDING)</option>
                               <option value="SUSPENDED">🔴 Suspendida (SUSPENDED)</option>
                               <option value="INACTIVE">⚪ Inactiva (INACTIVE)</option>
                             </select>
@@ -3914,7 +4243,7 @@ const AdminDashboard = ({ initialTab = 'analytics' }) => {
                             style={{ width: '100%', padding: '10px', borderRadius: '10px', fontSize: '12.5px', backgroundColor: 'var(--bg-secondary)', border: '1px solid var(--border)' }}
                           >
                             {allInstitutions.map(inst => (
-                              <option key={inst.id} value={inst.id}>🏛️ {inst.name} ({inst.code})</option>
+                              <option key={inst.id} value={inst.id}> {inst.name} ({inst.code})</option>
                             ))}
                           </select>
                         </div>
@@ -4006,14 +4335,18 @@ const AdminDashboard = ({ initialTab = 'analytics' }) => {
                                 <span style={{
                                   fontSize: '9.5px',
                                   fontWeight: '900',
-                                  padding: '2px 7px',
+                                  padding: '2px 8px',
                                   borderRadius: '8px',
                                   backgroundColor: statusBgColor,
                                   color: statusBadgeColor,
                                   textTransform: 'uppercase',
-                                  flexShrink: 0
+                                  flexShrink: 0,
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  gap: '4px'
                                 }}>
-                                  {userStatus}
+                                  <span style={{ width: '5px', height: '5px', borderRadius: '50%', backgroundColor: statusBadgeColor, display: 'inline-block' }}></span>
+                                  <span>{userStatus}</span>
                                 </span>
                               </div>
 
@@ -4023,10 +4356,10 @@ const AdminDashboard = ({ initialTab = 'analytics' }) => {
 
                               <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
                                 <span style={{ fontSize: '9.5px', fontWeight: '800', padding: '2px 7px', borderRadius: '8px', backgroundColor: 'var(--primary-light)', color: 'var(--primary)' }}>
-                                  🏢 {m.department || 'General'}
+                                   {m.department || 'General'}
                                 </span>
                                 <span style={{ fontSize: '9.5px', fontWeight: '800', padding: '2px 7px', borderRadius: '8px', backgroundColor: 'var(--bg-primary)', color: 'var(--text-secondary)', border: '1px solid var(--border)' }}>
-                                  {m.role === 'superadmin' ? '🛡️ SuperAdmin' : m.role === 'admin_institucion' ? '🏛️ Admin' : m.role === 'profesional_apoyo' ? '🧠 Psicólogo' : m.role === 'lider_depto' ? '👔 Líder' : '👤 Miembro'}
+                                  {m.role === 'superadmin' ? ' SuperAdmin' : m.role === 'admin_institucion' ? ' Admin' : m.role === 'profesional_apoyo' ? ' Psicólogo' : m.role === 'lider_depto' ? ' Líder' : ' Miembro'}
                                 </span>
                               </div>
                             </div>
@@ -4034,7 +4367,7 @@ const AdminDashboard = ({ initialTab = 'analytics' }) => {
 
                           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid var(--border)', paddingTop: '10px', fontSize: '11px', color: 'var(--text-muted)' }}>
                             <span>
-                              {m.institution_name ? `🏛️ ${m.institution_name}` : 'EquilibrIA'}
+                              {m.institution_name ? ` ${m.institution_name}` : 'EquilibrIA'}
                             </span>
 
                             <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
@@ -4167,7 +4500,7 @@ const AdminDashboard = ({ initialTab = 'analytics' }) => {
                           <p style={{ fontSize: '12px', color: 'var(--text-secondary)', marginBottom: '8px' }}>{m.email}</p>
                           <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
                             <span style={{ fontSize: '10px', fontWeight: '800', padding: '2px 8px', borderRadius: '8px', backgroundColor: 'var(--primary-light)', color: 'var(--primary)' }}>
-                              🏢 {m.department || 'General'}
+                               {m.department || 'General'}
                             </span>
                             <span style={{ fontSize: '10px', fontWeight: '800', padding: '2px 8px', borderRadius: '8px', backgroundColor: 'var(--bg-primary)', color: 'var(--text-secondary)', border: '1px solid var(--border)' }}>
                               Rol: {m.role}
@@ -4213,15 +4546,15 @@ const AdminDashboard = ({ initialTab = 'analytics' }) => {
                   </p>
                 </div>
 
-                <div style={{ overflowX: 'auto' }}>
-                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px', backgroundColor: 'var(--bg-secondary)', borderRadius: '12px', overflow: 'hidden', border: '1px solid var(--border)' }}>
+                <div className="table-responsive">
+                  <table style={{ width: '100%', minWidth: '600px', borderCollapse: 'collapse', fontSize: '13px', backgroundColor: 'var(--bg-secondary)', borderRadius: '12px', overflow: 'hidden', border: '1px solid var(--border)' }}>
                     <thead>
                       <tr style={{ backgroundColor: 'var(--bg-tertiary)', borderBottom: '2px solid var(--border)', textTransform: 'uppercase', fontSize: '11px', letterSpacing: '0.5px' }}>
                         <th style={{ padding: '12px 16px', textAlign: 'left' }}>Permiso / Funcionalidad</th>
-                        <th style={{ padding: '12px 16px', textAlign: 'center' }}>🛡️ Admin General</th>
-                        <th style={{ padding: '12px 16px', textAlign: 'center' }}>🧠 Psicólogo / Apoyo</th>
-                        <th style={{ padding: '12px 16px', textAlign: 'center' }}>👔 Líder de Depto</th>
-                        <th style={{ padding: '12px 16px', textAlign: 'center' }}>👤 Miembro / Colaborador</th>
+                        <th style={{ padding: '12px 16px', textAlign: 'center' }}> Admin General</th>
+                        <th style={{ padding: '12px 16px', textAlign: 'center' }}> Psicólogo / Apoyo</th>
+                        <th style={{ padding: '12px 16px', textAlign: 'center' }}>Líder de Depto</th>
+                        <th style={{ padding: '12px 16px', textAlign: 'center' }}>Miembro / Colaborador</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -4290,7 +4623,7 @@ const AdminDashboard = ({ initialTab = 'analytics' }) => {
           </div>
         )}
 
-        {/* TAB DE GAMIFICACIÓN PROFESIONAL Y MI PROGRESO 🏆 */}
+        {/* TAB DE GAMIFICACIÓN PROFESIONAL Y MI PROGRESO */}
         {activeTab === 'progress' && (
           <MyProgress onBack={() => setActiveTab('analytics')} />
         )}
@@ -4359,7 +4692,7 @@ const AdminDashboard = ({ initialTab = 'analytics' }) => {
               ) : (
                 rewards.map(r => (
                   <div key={r.id} className="futuristic-card-item" style={{ padding: '16px' }}>
-                    <div style={{ fontSize: '28px', marginBottom: '8px' }}>{r.icon || '🏅'}</div>
+                    <div style={{ fontSize: '28px', marginBottom: '8px' }}>{r.icon || ''}</div>
                     <h4 style={{ fontSize: '14.5px', fontWeight: '800' }}>{r.title}</h4>
                     <p style={{ fontSize: '12px', color: 'var(--text-secondary)', margin: '6px 0' }}>{r.description}</p>
                     <span style={{ fontSize: '12px', fontWeight: '900', color: 'var(--primary)' }}>Costo: {r.cost_xp} XP</span>
@@ -4399,7 +4732,7 @@ const AdminDashboard = ({ initialTab = 'analytics' }) => {
                   className={`duo-card ${chatChannel === 'general' ? 'selected' : ''}`}
                   style={{ justifyContent: 'flex-start', padding: '10px 12px', gap: '10px' }}
                 >
-                  <span style={{ fontSize: '20px' }}>💬</span>
+                  <span style={{ fontSize: '20px' }}></span>
                   <div style={{ textAlign: 'left' }}>
                     <h5 style={{ fontSize: '13px', fontWeight: '800' }}>Canal General EquilibrIA</h5>
                     <span style={{ fontSize: '10.5px', color: 'var(--text-muted)' }}>Comunidad Institucional</span>
@@ -4412,7 +4745,7 @@ const AdminDashboard = ({ initialTab = 'analytics' }) => {
                   className={`duo-card ${chatChannel === 'kudos' ? 'selected' : ''}`}
                   style={{ justifyContent: 'flex-start', padding: '10px 12px', gap: '10px' }}
                 >
-                  <span style={{ fontSize: '20px' }}>💖</span>
+                  <span style={{ fontSize: '20px' }}></span>
                   <div style={{ textAlign: 'left' }}>
                     <h5 style={{ fontSize: '13px', fontWeight: '800' }}>Muro de Gratitud e Insignias</h5>
                     <span style={{ fontSize: '10.5px', color: 'var(--text-muted)' }}>Reconocimientos comunitarios</span>
@@ -4435,7 +4768,7 @@ const AdminDashboard = ({ initialTab = 'analytics' }) => {
                     style={{ justifyContent: 'flex-start', padding: '8px 10px', gap: '10px' }}
                   >
                     <div style={{ width: '32px', height: '32px', borderRadius: '50%', backgroundColor: 'var(--accent-light)', color: 'var(--accent)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '900', fontSize: '14px' }}>
-                      👥
+                      
                     </div>
                     <div style={{ textAlign: 'left', flex: 1, overflow: 'hidden' }}>
                       <h5 style={{ fontSize: '12.5px', fontWeight: '800', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{g.name}</h5>
@@ -4480,7 +4813,7 @@ const AdminDashboard = ({ initialTab = 'analytics' }) => {
               <div style={{ padding: '14px 20px', borderBottom: '1px solid var(--border)', backgroundColor: 'var(--bg-secondary)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                   <div style={{ width: '38px', height: '38px', borderRadius: '50%', backgroundColor: 'var(--primary)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '900', fontSize: '16px' }}>
-                    {chatChannel === 'general' ? '💬' : chatChannel === 'kudos' ? '💖' : chatChannel === 'group' ? '👥' : '👤'}
+                    {chatChannel === 'general' ? '' : chatChannel === 'kudos' ? '' : chatChannel === 'group' ? '' : ''}
                   </div>
                   <div>
                     <h4 style={{ fontSize: '14.5px', fontWeight: '900' }}>
@@ -4529,7 +4862,7 @@ const AdminDashboard = ({ initialTab = 'analytics' }) => {
                         <div className={isMe ? 'chat-bubble-sender' : 'chat-bubble-receiver'} style={{ maxWidth: '75%', padding: '12px 16px', borderRadius: '16px' }}>
                           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px', marginBottom: '4px' }}>
                             <span style={{ fontSize: '11.5px', fontWeight: '900', opacity: 0.9 }}>
-                              {isMe ? 'Tú' : k.sender_name} ➔ <span style={{ textDecoration: 'underline' }}>{k.receiver_name}</span>
+                              {isMe ? 'Tú' : k.sender_name}  <span style={{ textDecoration: 'underline' }}>{k.receiver_name}</span>
                             </span>
                             <span style={{ fontSize: '9.5px', padding: '2px 6px', borderRadius: '6px', backgroundColor: 'rgba(255,255,255,0.2)', fontWeight: '800' }}>
                               {k.badge_type}
@@ -4549,27 +4882,27 @@ const AdminDashboard = ({ initialTab = 'analytics' }) => {
               {/* Entrada Fija al Pie de Bienestar con Selector de Emojis */}
               <form onSubmit={handleCreateKudos} style={{ padding: '14px 20px', backgroundColor: 'var(--bg-secondary)', borderTop: '1px solid var(--border)', display: 'flex', flexDirection: 'column', gap: '10px', position: 'relative' }}>
                 
-                {/* Paleta Emergente de Emojis Modernos */}
+                {/* Paleta Emergente de Emojis de Chat */}
                 {showEmojiPicker && (
                   <div style={{
                     position: 'absolute',
-                    bottom: '100%',
+                    bottom: 'calc(100% + 8px)',
                     left: '20px',
-                    marginBottom: '10px',
-                    backgroundColor: 'var(--bg-secondary)',
+                    backgroundColor: 'var(--bg-primary)',
                     border: '1.5px solid var(--border)',
-                    borderRadius: '18px',
+                    borderRadius: '16px',
                     padding: '12px',
-                    boxShadow: '0 10px 30px rgba(0,0,0,0.3)',
+                    boxShadow: '0 10px 30px rgba(0,0,0,0.25)',
                     zIndex: 9999,
-                    width: '300px',
+                    width: '310px',
                     display: 'grid',
                     gridTemplateColumns: 'repeat(6, 1fr)',
-                    gap: '8px'
+                    gap: '6px',
+                    animation: 'fadeIn 0.15s ease'
                   }}>
-                    {modernEmojis.map(emoji => (
+                    {CHAT_EMOJIS.map((emoji, idx) => (
                       <button
-                        key={emoji}
+                        key={idx}
                         type="button"
                         onClick={() => {
                           setKudoMessage(prev => prev + emoji);
@@ -4581,10 +4914,20 @@ const AdminDashboard = ({ initialTab = 'analytics' }) => {
                           background: 'transparent',
                           cursor: 'pointer',
                           borderRadius: '8px',
-                          padding: '4px',
-                          transition: 'transform 0.15s ease'
+                          padding: '6px',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          transition: 'transform 0.12s ease, background-color 0.12s ease'
                         }}
-                        className="calendar-day-box"
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.backgroundColor = 'var(--bg-secondary)';
+                          e.currentTarget.style.transform = 'scale(1.2)';
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.backgroundColor = 'transparent';
+                          e.currentTarget.style.transform = 'scale(1)';
+                        }}
                       >
                         {emoji}
                       </button>
@@ -4594,15 +4937,29 @@ const AdminDashboard = ({ initialTab = 'analytics' }) => {
 
                 <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
                   <span style={{ fontSize: '11px', fontWeight: '800', color: 'var(--text-secondary)' }}>Insignia / Categoría:</span>
-                  {['Gratitud', 'Compañerismo', 'Resiliencia', 'Liderazgo'].map(b => (
+                  {[
+                    { label: 'Gratitud', color: '#ec4899' },
+                    { label: 'Compañerismo', color: '#3b82f6' },
+                    { label: 'Resiliencia', color: '#10b981' },
+                    { label: 'Liderazgo', color: '#f59e0b' }
+                  ].map(b => (
                     <button
-                      key={b}
+                      key={b.label}
                       type="button"
-                      onClick={() => setKudoBadge(b)}
-                      className={`duo-pill ${kudoBadge === b ? 'selected' : ''}`}
-                      style={{ fontSize: '11px', padding: '3px 8px' }}
+                      onClick={() => setKudoBadge(b.label)}
+                      className={`duo-pill ${kudoBadge === b.label ? 'selected' : ''}`}
+                      style={{
+                        fontSize: '11px',
+                        padding: '3px 10px',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                        borderColor: kudoBadge === b.label ? b.color : undefined,
+                        color: kudoBadge === b.label ? b.color : undefined
+                      }}
                     >
-                      {b}
+                      <span style={{ width: '7px', height: '7px', borderRadius: '50%', backgroundColor: b.color, display: 'inline-block' }}></span>
+                      <span>{b.label}</span>
                     </button>
                   ))}
                 </div>
@@ -4613,10 +4970,20 @@ const AdminDashboard = ({ initialTab = 'analytics' }) => {
                     type="button"
                     onClick={() => setShowEmojiPicker(!showEmojiPicker)}
                     className="theme-toggle"
-                    style={{ width: '40px', height: '40px', borderRadius: '50%', border: '1px solid var(--border)', fontSize: '18px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                    style={{
+                      width: '40px',
+                      height: '40px',
+                      borderRadius: '50%',
+                      border: '1px solid var(--border)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      backgroundColor: showEmojiPicker ? 'var(--primary-light)' : 'var(--bg-primary)',
+                      color: showEmojiPicker ? 'var(--primary)' : 'var(--text-secondary)'
+                    }}
                     title="Insertar Emojis"
                   >
-                    <Smile size={20} style={{ color: 'var(--primary)' }} />
+                    <Smile size={20} />
                   </button>
 
                   <input 
@@ -4750,10 +5117,10 @@ const AdminDashboard = ({ initialTab = 'analytics' }) => {
                             <label style={{ fontSize: '11px', fontWeight: '800', display: 'block', marginBottom: '4px' }}>TIPO / SECTOR *:</label>
                             <CustomSelect
                               options={[
-                                { value: 'educativa', label: '🎓 Educativa / Universidad' },
-                                { value: 'laboral', label: '💼 Empresa / Corporativo' },
-                                { value: 'salud', label: '🏥 Salud / Clínica' },
-                                { value: 'comunitaria', label: '🤝 Comunitaria / ONG' }
+                                { value: 'educativa', label: 'Educativa / Universidad' },
+                                { value: 'laboral', label: ' Empresa / Corporativo' },
+                                { value: 'salud', label: 'Salud / Clínica' },
+                                { value: 'comunitaria', label: 'Comunitaria / ONG' }
                               ]}
                               value={newInstType}
                               onChange={(val) => setNewInstType(val)}
@@ -4913,7 +5280,7 @@ const AdminDashboard = ({ initialTab = 'analytics' }) => {
                               <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
                                 {(inst.departments || []).map((d) => (
                                   <span key={d} style={{ fontSize: '10.5px', padding: '2px 8px', borderRadius: '10px', backgroundColor: 'var(--bg-primary)', border: '1px solid var(--border)', fontWeight: '700' }}>
-                                    🏢 {d}
+                                     {d}
                                   </span>
                                 ))}
                               </div>
@@ -4956,7 +5323,7 @@ const AdminDashboard = ({ initialTab = 'analytics' }) => {
                       <label style={{ fontSize: '12px', fontWeight: '800' }}>INSTITUCIÓN A GESTIONAR:</label>
                       <div style={{ minWidth: '260px' }}>
                         <CustomSelect
-                          options={allInstitutions.map(i => ({ value: i.id, label: `🏛️ ${i.name} (${i.code})` }))}
+                          options={allInstitutions.map(i => ({ value: i.id, label: ` ${i.name} (${i.code})` }))}
                           value={selectedInstForDepts}
                           onChange={(val) => setSelectedInstForDepts(val)}
                         />
@@ -5046,8 +5413,8 @@ const AdminDashboard = ({ initialTab = 'analytics' }) => {
                             <p style={{ fontSize: '11.5px', color: 'var(--text-secondary)', marginBottom: '8px' }}>{dept.description || 'Área institucional de trabajo.'}</p>
                             
                             <div style={{ fontSize: '11px', color: 'var(--text-muted)', display: 'flex', flexDirection: 'column', gap: '3px' }}>
-                              <span>👔 Líder: <strong>{dept.leader_name || 'No asignado'}</strong></span>
-                              <span>👥 Miembros Asociados: <strong>{dept.user_count || 0}</strong></span>
+                              <span> Líder: <strong>{dept.leader_name || 'No asignado'}</strong></span>
+                              <span>Miembros Asociados: <strong>{dept.user_count || 0}</strong></span>
                             </div>
                           </div>
 
@@ -5077,7 +5444,7 @@ const AdminDashboard = ({ initialTab = 'analytics' }) => {
                       <label style={{ fontSize: '12px', fontWeight: '800' }}>INSTITUCIÓN:</label>
                       <div style={{ minWidth: '260px' }}>
                         <CustomSelect
-                          options={allInstitutions.map(i => ({ value: i.id, label: `🏛️ ${i.name} (${i.code})` }))}
+                          options={allInstitutions.map(i => ({ value: i.id, label: ` ${i.name} (${i.code})` }))}
                           value={selectedInstForDepts}
                           onChange={(val) => setSelectedInstForDepts(val)}
                         />
@@ -5099,10 +5466,10 @@ const AdminDashboard = ({ initialTab = 'analytics' }) => {
                           onChange={(e) => setNewInvRole(e.target.value)}
                           style={{ width: '100%', fontSize: '12px', padding: '9px', borderRadius: '9px', backgroundColor: 'var(--bg-primary)', border: '1px solid var(--border)', color: 'var(--text-primary)' }}
                         >
-                          <option value="miembro">👤 Miembro / Colaborador</option>
-                          <option value="lider_depto">👔 Líder de Departamento</option>
-                          <option value="profesional_apoyo">🧠 Profesional / Psicólogo</option>
-                          <option value="admin_institucion">🏛️ Admin Institucional</option>
+                          <option value="miembro">Miembro / Colaborador</option>
+                          <option value="lider_depto">Líder de Departamento</option>
+                          <option value="profesional_apoyo"> Profesional / Psicólogo</option>
+                          <option value="admin_institucion">Admin Institucional</option>
                         </select>
                       </div>
 
@@ -5115,7 +5482,7 @@ const AdminDashboard = ({ initialTab = 'analytics' }) => {
                         >
                           <option value="">General / Por Definir</option>
                           {departmentsList.map(d => (
-                            <option key={d.id} value={d.id}>🏢 {d.name} ({d.code})</option>
+                            <option key={d.id} value={d.id}> {d.name} ({d.code})</option>
                           ))}
                         </select>
                       </div>
@@ -5233,7 +5600,7 @@ const AdminDashboard = ({ initialTab = 'analytics' }) => {
           </div>
         )}
 
-        {/* TAB 12: DICCIONARIO CULTURAL GUATEMALTECO 🇬🇹 (SUPERADMIN) */}
+        {/* TAB 12: DICCIONARIO CULTURAL & ÉTICA IA (SUPERADMIN) */}
         {activeTab === 'culture' && (
           <div className="animate-fade" style={{ display: 'grid', gap: '16px' }}>
             
@@ -5253,7 +5620,7 @@ const AdminDashboard = ({ initialTab = 'analytics' }) => {
               <div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
                   <span style={{ fontSize: '10px', fontWeight: '900', padding: '2px 8px', borderRadius: '8px', backgroundColor: 'var(--primary-light)', color: 'var(--primary)', textTransform: 'uppercase' }}>
-                    🇬🇹 Diccionario Cultural & Ética IA
+                    Diccionario Cultural & Ética IA
                   </span>
                   <span style={{ fontSize: '11px', color: 'var(--text-muted)', fontWeight: '700' }}>
                     3 Niveles de Seguridad
@@ -5280,7 +5647,7 @@ const AdminDashboard = ({ initialTab = 'analytics' }) => {
                 style={{ padding: '10px 18px', borderRadius: '12px', fontWeight: '800', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '6px' }}
               >
                 {showExprModal && !editingExpr ? <X size={16} /> : <Plus size={16} />}
-                <span>{showExprModal && !editingExpr ? 'Cerrar Formulario' : '➕ Nueva Expresión'}</span>
+                <span>{showExprModal && !editingExpr ? 'Cerrar Formulario' : 'Nueva Expresión'}</span>
               </button>
             </div>
 
@@ -5296,7 +5663,7 @@ const AdminDashboard = ({ initialTab = 'analytics' }) => {
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px', borderBottom: '1px solid var(--border)', paddingBottom: '10px' }}>
                   <h3 style={{ fontSize: '15px', fontWeight: '900', display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--primary)' }}>
                     <BookOpen size={18} />
-                    <span>{editingExpr ? `Editar Expresión: "${editingExpr.term}"` : '➕ Registrar Nueva Expresión Cultural'}</span>
+                    <span>{editingExpr ? `Editar Expresión: "${editingExpr.term}"` : 'Registrar Nueva Expresión Cultural'}</span>
                   </h3>
                   <button
                     type="button"
@@ -5419,7 +5786,7 @@ const AdminDashboard = ({ initialTab = 'analytics' }) => {
                       className="btn btn-primary"
                       style={{ padding: '8px 22px', borderRadius: '10px', fontSize: '12px', fontWeight: '800' }}
                     >
-                      {editingExpr ? '💾 Guardar Cambios' : '➕ Registrar Expresión'}
+                      {editingExpr ? 'Guardar Cambios' : ' Registrar Expresión'}
                     </button>
                   </div>
                 </form>
@@ -5448,13 +5815,13 @@ const AdminDashboard = ({ initialTab = 'analytics' }) => {
                 />
               </div>
 
-              {/* Botones de Filtro con Conteo Integrado */}
+              {/* Botones de Filtro con Conteo Integrado y Semáforo */}
               <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', alignItems: 'center' }}>
                 {[
-                  { id: 'ALL', label: 'Todos', count: culturalCounts.total, color: 'var(--text-primary)', bg: 'var(--bg-secondary)' },
-                  { id: 'ALLOWED', label: '🟢 Permitidas', count: culturalCounts.allowed, color: 'var(--success)', bg: 'var(--success-light)' },
-                  { id: 'EXPLAINABLE', label: '🟡 Explicables', count: culturalCounts.explainable, color: 'var(--warning)', bg: 'rgba(234, 179, 8, 0.12)' },
-                  { id: 'RESTRICTED', label: '🔴 Restringidas', count: culturalCounts.restricted, color: 'var(--danger)', bg: 'var(--danger-light)' }
+                  { id: 'ALL', label: 'Todos', count: culturalCounts.total, color: 'var(--text-primary)', dotColor: null },
+                  { id: 'ALLOWED', label: 'Permitidas', count: culturalCounts.allowed, color: 'var(--success)', dotColor: '#10b981' },
+                  { id: 'EXPLAINABLE', label: 'Explicables', count: culturalCounts.explainable, color: 'var(--warning)', dotColor: '#f59e0b' },
+                  { id: 'RESTRICTED', label: 'Restringidas', count: culturalCounts.restricted, color: 'var(--danger)', dotColor: '#ef4444' }
                 ].map(f => {
                   const isSelected = cultureSafetyFilter === f.id;
                   return (
@@ -5472,6 +5839,7 @@ const AdminDashboard = ({ initialTab = 'analytics' }) => {
                         fontWeight: isSelected ? '800' : '600'
                       }}
                     >
+                      {f.dotColor && <span style={{ width: '7px', height: '7px', borderRadius: '50%', backgroundColor: f.dotColor, display: 'inline-block' }}></span>}
                       <span>{f.label}</span>
                       <span style={{
                         fontSize: '10px',
@@ -5513,8 +5881,8 @@ const AdminDashboard = ({ initialTab = 'analytics' }) => {
 
                     const badgeColor = isAllowed ? 'var(--success)' : isExplainable ? 'var(--warning)' : 'var(--danger)';
                     const badgeBg = isAllowed ? 'var(--success-light)' : isExplainable ? 'rgba(234, 179, 8, 0.12)' : 'var(--danger-light)';
-                    const badgeIcon = isAllowed ? '🟢 N1' : isExplainable ? '🟡 N2' : '🔴 N3';
-                    const badgeDesc = isAllowed ? 'Permitida' : isExplainable ? 'Solo Explicable' : 'Restringida';
+                    const badgeIcon = isAllowed ? 'N1' : isExplainable ? 'N2' : 'N3';
+                    const badgeDesc = isAllowed ? 'Permitida' : isExplainable ? 'Explicable' : 'Restringida';
 
                     return (
                       <div 
@@ -5533,17 +5901,21 @@ const AdminDashboard = ({ initialTab = 'analytics' }) => {
                         }}
                       >
                         {/* Nivel y Término */}
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', minWidth: '180px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', minWidth: '190px' }}>
                           <span style={{
-                            fontSize: '10px',
+                            fontSize: '10.5px',
                             fontWeight: '900',
-                            padding: '2px 7px',
-                            borderRadius: '6px',
+                            padding: '3px 8px',
+                            borderRadius: '8px',
                             backgroundColor: badgeBg,
                             color: badgeColor,
-                            whiteSpace: 'nowrap'
+                            whiteSpace: 'nowrap',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '5px'
                           }} title={badgeDesc}>
-                            {badgeIcon}
+                            <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: badgeColor, display: 'inline-block' }}></span>
+                            <span>{badgeIcon} • {badgeDesc}</span>
                           </span>
 
                           <div>
@@ -5563,7 +5935,7 @@ const AdminDashboard = ({ initialTab = 'analytics' }) => {
                           </p>
                           {expr.example && (
                             <span style={{ fontSize: '11px', color: 'var(--text-muted)', fontStyle: 'italic', display: 'block', marginTop: '2px' }}>
-                              💡 "{expr.example}"
+                               "{expr.example}"
                             </span>
                           )}
                         </div>
@@ -5683,7 +6055,7 @@ const AdminDashboard = ({ initialTab = 'analytics' }) => {
               {/* Notas Diagnósticas Manuales */}
               <div style={{ borderTop: '1px solid var(--border)', paddingTop: '14px' }}>
                 <label style={{ fontSize: '11.5px', fontWeight: '800', color: 'var(--primary)', display: 'block', marginBottom: '6px' }}>
-                  🧠 DIAGNÓSTICO CLÍNICO Y OBSERVACIONES DE LA PSICÓLOGA:
+                   DIAGNÓSTICO CLÍNICO Y OBSERVACIONES DE LA PSICÓLOGA:
                 </label>
                 <textarea
                   rows="3"
@@ -5702,7 +6074,7 @@ const AdminDashboard = ({ initialTab = 'analytics' }) => {
                   disabled={savingClinicalId === selectedSubmission.id}
                   style={{ width: '100%', padding: '10px', borderRadius: '10px', fontWeight: '900' }}
                 >
-                  {savingClinicalId === selectedSubmission.id ? <Loader className="animate-spin" size={16} /> : '💾 Guardar Diagnóstico Clínico'}
+                  {savingClinicalId === selectedSubmission.id ? <Loader className="animate-spin" size={16} /> : 'Guardar Diagnóstico Clínico'}
                 </button>
               </div>
             </div>
@@ -5744,7 +6116,7 @@ const AdminDashboard = ({ initialTab = 'analytics' }) => {
                   </label>
                   <input
                     type="text"
-                    placeholder="Ej. Proyecto Innovación 🚀 o Equipo Tecnología 💡"
+                    placeholder="Ej. Proyecto Innovación  o Equipo Tecnología "
                     value={newGroupName}
                     onChange={(e) => setNewGroupName(e.target.value)}
                     required
@@ -5774,7 +6146,7 @@ const AdminDashboard = ({ initialTab = 'analytics' }) => {
                           className={`duo-card ${isSelected ? 'selected' : ''}`}
                           style={{ justifyContent: 'space-between', padding: '8px 12px', fontSize: '12px' }}
                         >
-                          <span>👤 {name} ({m.department || 'General'})</span>
+                          <span> {name} ({m.department || 'General'})</span>
                           {isSelected && <Check size={14} style={{ color: 'var(--primary)' }} />}
                         </button>
                       );
@@ -5787,7 +6159,7 @@ const AdminDashboard = ({ initialTab = 'analytics' }) => {
                   className="btn btn-primary"
                   style={{ padding: '12px', borderRadius: '12px', fontWeight: '900', marginTop: '10px' }}
                 >
-                  ✨ Crear y Abrir Grupo
+                   Crear y Abrir Grupo
                 </button>
               </form>
             </div>

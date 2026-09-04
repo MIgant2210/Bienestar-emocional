@@ -62,16 +62,16 @@ const ColibriMascot = ({
       switch (phase) {
         case 'inhala':
         case 'inhale':
-          return 'Inhala suavemente llenando tu abdomen de calma y oxígeno... 🌿';
+          return 'Inhala suavemente llenando tu abdomen de calma y oxígeno...';
         case 'reten_in':
         case 'hold':
-          return 'Mantén la respiración y siente tu centro en equilibrio... 💜';
+          return 'Mantén la respiración y siente tu centro en equilibrio...';
         case 'exhala':
         case 'exhale':
-          return 'Exhala despacio soltando toda la tensión acumulada... ✨';
+          return 'Exhala despacio soltando toda la tensión acumulada...';
         case 'celebrate':
         case 'completado':
-          return '¡Maravilloso trabajo! Has completado tu ejercicio de bienestar. 🎉';
+          return '¡Maravilloso trabajo! Has completado tu ejercicio de bienestar.';
         default:
           return 'Encuentra una postura cómoda y comencemos cuando gustes.';
       }
@@ -79,15 +79,15 @@ const ColibriMascot = ({
 
     switch (mood) {
       case 'welcome':
-        return '¡Hola! Te acompañaré en esta evaluación. Tómate tu tiempo y responde con sinceridad. 🌿';
+        return '¡Hola! Te acompañaré en esta evaluación. Tómate tu tiempo y responde con sinceridad.';
       case 'happy':
-        return '¡Excelente reflexión! Cada respuesta suma a tu bienestar y autoconocimiento. ✨';
+        return '¡Excelente reflexión! Cada respuesta suma a tu bienestar y autoconocimiento.';
       case 'thinking':
-        return 'Respira profundo y escucha lo que sientes. No hay respuestas incorrectas. 💜';
+        return 'Respira profundo y escucha lo que sientes. No hay respuestas incorrectas.';
       case 'almost_done':
-        return '¡Casi terminamos! Estás a un solo paso de completar tu actividad. 🚀';
+        return '¡Casi terminamos! Estás a un solo paso de completar tu actividad.';
       case 'celebrate':
-        return '¡Lo lograste! Has ganado tus puntos de XP y sumado a tu bienestar. ¡Gran trabajo! 🎉';
+        return '¡Lo lograste! Has ganado tus puntos de XP y sumado a tu bienestar. ¡Gran trabajo!';
       default:
         return 'Avanzando paso a paso con calma...';
     }

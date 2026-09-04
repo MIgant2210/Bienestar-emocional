@@ -1,5 +1,5 @@
 import React, { useRef, useState, useEffect } from 'react';
-import { Palette, RotateCcw, Eraser, CheckCircle2 } from 'lucide-react';
+import { Palette, RotateCcw, Eraser, CheckCircle2, PenTool } from 'lucide-react';
 
 const DrawingCanvas = ({ onSaveDrawing, savedImage }) => {
   const canvasRef = useRef(null);
@@ -16,13 +16,16 @@ const DrawingCanvas = ({ onSaveDrawing, savedImage }) => {
     
     // Configurar canvas para alta definición
     const rect = canvas.getBoundingClientRect();
-    canvas.width = rect.width * 2;
-    canvas.height = 240 * 2;
+    const displayWidth = rect.width || canvas.offsetWidth || 340;
+    const displayHeight = rect.height || canvas.offsetHeight || 220;
+
+    canvas.width = displayWidth * 2;
+    canvas.height = displayHeight * 2;
     ctx.scale(2, 2);
     
-    // Fondo blanco suave inicial
+    // Fondo blanco inicial
     ctx.fillStyle = '#ffffff';
-    ctx.fillRect(0, 0, rect.width, 240);
+    ctx.fillRect(0, 0, displayWidth, displayHeight);
     ctx.lineCap = 'round';
     ctx.lineJoin = 'round';
 
@@ -30,27 +33,43 @@ const DrawingCanvas = ({ onSaveDrawing, savedImage }) => {
     if (savedImage) {
       const img = new Image();
       img.onload = () => {
-        ctx.drawImage(img, 0, 0, rect.width, 240);
+        ctx.drawImage(img, 0, 0, displayWidth, displayHeight);
         setHasDrawn(true);
       };
       img.src = savedImage;
+    } else {
+      setHasDrawn(false);
     }
-  }, []);
+  }, [savedImage]);
 
   const getCoordinates = (e) => {
     const canvas = canvasRef.current;
+    if (!canvas) return { x: 0, y: 0 };
     const rect = canvas.getBoundingClientRect();
-    const clientX = e.touches ? e.touches[0].clientX : e.clientX;
-    const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+    
+    const clientX = e.clientX ?? (e.touches && e.touches[0] ? e.touches[0].clientX : 0);
+    const clientY = e.clientY ?? (e.touches && e.touches[0] ? e.touches[0].clientY : 0);
+    
+    const scaleX = (canvas.width / 2) / (rect.width || 1);
+    const scaleY = (canvas.height / 2) / (rect.height || 1);
+
     return {
-      x: clientX - rect.left,
-      y: clientY - rect.top
+      x: (clientX - rect.left) * scaleX,
+      y: (clientY - rect.top) * scaleY
     };
   };
 
   const startDrawing = (e) => {
-    e.preventDefault();
     const canvas = canvasRef.current;
+    if (!canvas) return;
+
+    // Capturar el puntero para trazos continuos fluidos
+    if (e.target && e.pointerId !== undefined) {
+      try {
+        e.target.setPointerCapture(e.pointerId);
+      } catch (_) {}
+    }
+
     const ctx = canvas.getContext('2d');
     const coords = getCoordinates(e);
     
@@ -62,8 +81,8 @@ const DrawingCanvas = ({ onSaveDrawing, savedImage }) => {
 
   const draw = (e) => {
     if (!isDrawing) return;
-    e.preventDefault();
     const canvas = canvasRef.current;
+    if (!canvas) return;
     const ctx = canvas.getContext('2d');
     const coords = getCoordinates(e);
 
@@ -73,10 +92,16 @@ const DrawingCanvas = ({ onSaveDrawing, savedImage }) => {
     ctx.stroke();
   };
 
-  const stopDrawing = () => {
+  const stopDrawing = (e) => {
     if (!isDrawing) return;
     setIsDrawing(false);
     
+    if (e && e.target && e.pointerId !== undefined) {
+      try {
+        e.target.releasePointerCapture(e.pointerId);
+      } catch (_) {}
+    }
+
     // Guardar imagen como Base64 Data URL
     const canvas = canvasRef.current;
     if (canvas) {
@@ -92,8 +117,10 @@ const DrawingCanvas = ({ onSaveDrawing, savedImage }) => {
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
     const rect = canvas.getBoundingClientRect();
+    const displayWidth = rect.width || canvas.offsetWidth || 340;
+    const displayHeight = rect.height || canvas.offsetHeight || 220;
     ctx.fillStyle = '#ffffff';
-    ctx.fillRect(0, 0, rect.width, 240);
+    ctx.fillRect(0, 0, displayWidth, displayHeight);
     setHasDrawn(false);
     if (onSaveDrawing) {
       onSaveDrawing('');
@@ -110,26 +137,29 @@ const DrawingCanvas = ({ onSaveDrawing, savedImage }) => {
   ];
 
   return (
-    <div style={{
+    <div className="eval-canvas-card" style={{
       backgroundColor: 'var(--bg-secondary)',
       borderRadius: '16px',
       border: '2px solid var(--border)',
       padding: '16px',
-      boxShadow: 'var(--shadow-sm)'
+      boxShadow: 'var(--shadow-sm)',
+      width: '100%',
+      boxSizing: 'border-box'
     }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px', flexWrap: 'wrap', gap: '10px' }}>
+      <div className="eval-canvas-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px', flexWrap: 'wrap', gap: '8px' }}>
         <span style={{ fontSize: '11.5px', fontWeight: '800', color: 'var(--primary)', display: 'flex', alignItems: 'center', gap: '6px' }}>
           <Palette size={15} />
-          Lienzo Interactivo de Expresión Gráfica Canvas
+          <span>Lienzo de Expresión Gráfica Canvas</span>
         </span>
 
         {/* Herramientas de Pincel y Paleta */}
-        <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+        <div className="eval-canvas-tools" style={{ display: 'flex', gap: '6px', alignItems: 'center', flexWrap: 'wrap' }}>
           {colorsList.map(c => (
             <button
               key={c.hex}
               type="button"
               onClick={() => { setColor(c.hex); setIsEraser(false); }}
+              className="eval-canvas-color-btn"
               style={{
                 width: '24px',
                 height: '24px',
@@ -138,7 +168,8 @@ const DrawingCanvas = ({ onSaveDrawing, savedImage }) => {
                 border: color === c.hex && !isEraser ? '2.5px solid var(--text-primary)' : '1px solid var(--border)',
                 cursor: 'pointer',
                 transform: color === c.hex && !isEraser ? 'scale(1.15)' : 'scale(1)',
-                transition: 'transform 0.2s ease'
+                transition: 'transform 0.2s ease',
+                padding: 0
               }}
               title={`Color ${c.label}`}
             />
@@ -166,22 +197,21 @@ const DrawingCanvas = ({ onSaveDrawing, savedImage }) => {
         </div>
       </div>
 
-      <div style={{ position: 'relative', width: '100%', height: '240px', borderRadius: '12px', overflow: 'hidden', border: '1px solid var(--border)' }}>
+      <div className="eval-canvas-viewport" style={{ position: 'relative', width: '100%', height: '220px', borderRadius: '12px', overflow: 'hidden', border: '1px solid var(--border)', boxSizing: 'border-box' }}>
         <canvas
           ref={canvasRef}
-          onMouseDown={startDrawing}
-          onMouseMove={draw}
-          onMouseUp={stopDrawing}
-          onMouseLeave={stopDrawing}
-          onTouchStart={startDrawing}
-          onTouchMove={draw}
-          onTouchEnd={stopDrawing}
+          onPointerDown={startDrawing}
+          onPointerMove={draw}
+          onPointerUp={stopDrawing}
+          onPointerCancel={stopDrawing}
+          onPointerLeave={stopDrawing}
           style={{
             width: '100%',
-            height: '240px',
+            height: '100%',
             touchAction: 'none',
             cursor: isEraser ? 'cell' : 'crosshair',
-            backgroundColor: '#ffffff'
+            backgroundColor: '#ffffff',
+            display: 'block'
           }}
         />
         {!hasDrawn && (
@@ -192,11 +222,13 @@ const DrawingCanvas = ({ onSaveDrawing, savedImage }) => {
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
+            gap: '8px',
             color: '#94a3b8',
             fontSize: '13px',
             fontWeight: '600'
           }}>
-            ✏️ Dibuja aquí libremente con tu mouse o pantalla táctil
+            <PenTool size={16} />
+            <span>Dibuja aquí libremente con tu mouse o pantalla táctil</span>
           </div>
         )}
       </div>

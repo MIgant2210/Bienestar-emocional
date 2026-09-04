@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom';
 import { 
   ClipboardList, Image as ImageIcon, Eye, X, ZoomIn, ZoomOut, RotateCcw, 
   Download, CheckCircle2, Smile, AlertCircle, FileText, Sparkles, Brain, 
-  HelpCircle, ChevronRight, Layers, Maximize2
+  HelpCircle, ChevronRight, Layers, Maximize2, Palette
 } from 'lucide-react';
 
 /**
@@ -78,7 +78,7 @@ export const parseTestResponse = (rawText) => {
         let type = 'text';
         if (isDrawing) {
           type = 'drawing';
-        } else if (/^(😫|🙁|😐|🙂|😁|Estresado|Agotado|Neutral|Tranquilo|Excelente|Tensión|Cansancio|Neutro|Energético)/i.test(answerVal)) {
+        } else if (/^(\uD83D[\uDE00-\uDE4F]|Estresado|Agotado|Neutral|Tranquilo|Excelente|Tensi[oó]n|Cansancio|Neutro|Energ[eé]tico|Molesto)/i.test(answerVal)) {
           type = 'emoji';
         } else if (/^\d+(\s*\/\s*10)?$/.test(answerVal) || (!isNaN(Number(answerVal)) && Number(answerVal) <= 10)) {
           type = 'scale';
@@ -486,8 +486,9 @@ export const TestResponseModal = ({ isOpen, rawText, userName = 'Colaborador', d
                   <img src={parsed.drawingImage} alt="Thumbnail boceto" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
                 </div>
                 <div>
-                  <h4 style={{ fontSize: '13.5px', fontWeight: '900', color: 'var(--primary)', margin: 0 }}>
-                    🎨 Boceto / Dibujo Libre Registrado
+                  <h4 style={{ fontSize: '13.5px', fontWeight: '900', color: 'var(--primary)', margin: 0, display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <Palette size={16} />
+                    <span>Boceto / Dibujo Libre Registrado</span>
                   </h4>
                   <p style={{ fontSize: '12px', color: 'var(--text-secondary)', margin: '2px 0 0 0' }}>
                     El usuario incluyó una expresión gráfica en su evaluación.
@@ -586,16 +587,16 @@ export const TestResponseModal = ({ isOpen, rawText, userName = 'Colaborador', d
                         display: 'inline-flex',
                         alignItems: 'center',
                         gap: '10px',
-                        padding: '8px 16px',
+                        padding: '8px 18px',
                         borderRadius: '14px',
                         backgroundColor: 'var(--bg-secondary)',
                         border: '1px solid var(--border)',
-                        fontSize: '14px',
-                        fontWeight: '900',
+                        fontSize: '13.5px',
+                        fontWeight: '800',
                         color: 'var(--text-primary)'
                       }}>
-                        <span style={{ fontSize: '22px' }}>{q.answer.match(/(😫|🙁|😐|🙂|😁)/)?.[0] || '🙂'}</span>
-                        <span>{q.answer.replace(/(😫|🙁|😐|🙂|😁)/g, '').trim() || q.answer}</span>
+                        <span style={{ fontSize: '20px' }}>{q.answer.match(/(😫|🙁|😐|🙂|😁|😡|😣|😟|😊|😄|🤩)/)?.[0] || '🙂'}</span>
+                        <span>{q.answer.replace(/(😫|🙁|😐|🙂|😁|😡|😣|😟|😊|😄|🤩)/g, '').trim() || q.answer}</span>
                       </div>
                     ) : q.type === 'scale' ? (
                       <div style={{ display: 'flex', alignItems: 'center', gap: '14px', flexWrap: 'wrap' }}>
@@ -762,10 +763,11 @@ const TestResponseViewer = ({
             <button
               type="button"
               onClick={() => setShowDrawingModal(true)}
-              className="duo-pill"
+              className="btn btn-secondary"
               style={{
+                fontSize: '12px',
                 padding: '6px 14px',
-                fontSize: '11.5px',
+                borderRadius: '10px',
                 fontWeight: '800',
                 color: 'var(--primary)',
                 borderColor: 'var(--primary)',
@@ -776,7 +778,7 @@ const TestResponseViewer = ({
               }}
             >
               <ImageIcon size={14} />
-              <span>🎨 Ver Dibujo / Boceto Cargado</span>
+              <span>Ver Dibujo / Boceto Cargado</span>
             </button>
           )}
         </div>

@@ -1,7 +1,11 @@
+import os
 import re
+import json
 import time
 import secrets
 import datetime
+import urllib.request
+import urllib.error
 import jwt
 from flask import Blueprint, request, jsonify, current_app
 from sqlalchemy.exc import IntegrityError
@@ -12,6 +16,7 @@ from app.models.invitation import InvitationCode
 from app.models.verification_token import EmailVerificationToken
 from app.models.consent import Consent
 from app.services.audit_service import AuditService
+from app.services.email_service import EmailService
 from app.utils.decorators import token_required
 
 auth_bp = Blueprint('auth', __name__)
@@ -341,13 +346,14 @@ def login():
     data = request.get_json(silent=True) or {}
     email = (data.get('email') or '').strip().lower()
     password = data.get('password') or ''
+    remember_me = bool(data.get('remember_me', False))
     
     if not email or not password:
         return jsonify({'message': 'Correo y contraseña son requeridos.'}), 400
         
     user = User.query.filter_by(email=email).first()
     if not user or not user.check_password(password):
-        return jsonify({'message': 'Credenciales incorrectas.'}), 401
+        return jsonify({'message': 'El correo o la contraseña no son correctos.'}), 401
         
     # Validar Estado de la Cuenta
     user_status = (user.status or 'ACTIVO').upper()
@@ -387,12 +393,13 @@ def login():
     except Exception:
         db.session.rollback()
 
-    # Generar JWT Token solo para cuentas ACTIVE
+    # Generar JWT Token con expiración extendida si activó remember_me
+    token_duration = datetime.timedelta(days=30) if remember_me else datetime.timedelta(hours=24)
     payload = {
         'user_id': str(user.id),
         'role': user.role,
         'institution_id': str(user.institution_id) if user.institution_id else None,
-        'exp': datetime.datetime.utcnow() + datetime.timedelta(hours=24)
+        'exp': datetime.datetime.utcnow() + token_duration
     }
     
     token = jwt.encode(payload, current_app.config['JWT_SECRET_KEY'], algorithm='HS256')
@@ -402,7 +409,7 @@ def login():
         AuditService.log_action(
             user_id=user.id,
             action="LOGIN_SUCCESS",
-            details=f"Inicio de sesión exitoso (Rol: {user.role}, Depto: {user.department})",
+            details=f"Inicio de sesión exitoso (Rol: {user.role}, Depto: {user.department}, Recordarme: {remember_me})",
             ip_address=ip_address
         )
     except Exception:
@@ -410,8 +417,304 @@ def login():
 
     return jsonify({
         'token': token,
-        'user': user.to_dict()
+        'user': user.to_dict(),
+        'remember_me': remember_me
     }), 200
+
+@auth_bp.route('/google', methods=['POST'])
+def google_auth():
+    """
+    Autenticación mediante Google OAuth2 / Google Identity Services.
+    - Si el usuario existe en EquilibrIA: inicia sesión inmediatamente y emite JWT.
+    - Si el usuario es nuevo: devuelve los datos verificados de Google (nombre, apellido, email, avatar)
+      para que en la pantalla de finalización de registro ingrese su Código Institucional y acepte términos.
+    """
+    ip_address = request.headers.get('X-Forwarded-For', request.remote_addr or '127.0.0.1')
+    if ',' in ip_address:
+        ip_address = ip_address.split(',')[0].strip()
+
+    data = request.get_json(silent=True) or {}
+    id_token_str = (data.get('credential') or data.get('id_token') or data.get('token') or data.get('access_token') or '').strip()
+    remember_me = bool(data.get('remember_me', True))
+    invitation_code = (data.get('invitation_code') or '').strip().upper()
+
+    if not id_token_str:
+        return jsonify({'message': 'Se requiere el token de credenciales de Google.'}), 400
+
+    google_client_id = os.environ.get('GOOGLE_CLIENT_ID', '').strip()
+    google_data = None
+
+    # 1. Validación del Token con la API de Google (Soporta Access Token y ID Token JWT)
+    try:
+        url_userinfo = "https://www.googleapis.com/oauth2/v3/userinfo"
+        req = urllib.request.Request(url_userinfo, headers={
+            'Authorization': f'Bearer {id_token_str}',
+            'User-Agent': 'EquilibrIA-Auth/2.0'
+        })
+        with urllib.request.urlopen(req, timeout=6) as response:
+            if response.status == 200:
+                google_data = json.loads(response.read().decode('utf-8'))
+    except Exception:
+        pass
+
+    if not google_data or 'email' not in google_data:
+        try:
+            url = f"https://oauth2.googleapis.com/tokeninfo?id_token={id_token_str}"
+            req = urllib.request.Request(url, headers={'User-Agent': 'EquilibrIA-Auth/2.0'})
+            with urllib.request.urlopen(req, timeout=6) as response:
+                if response.status == 200:
+                    google_data = json.loads(response.read().decode('utf-8'))
+        except Exception:
+            try:
+                from google.oauth2 import id_token
+                from google.auth.transport import requests as google_requests
+                google_data = id_token.verify_oauth2_token(
+                    id_token_str,
+                    google_requests.Request(),
+                    google_client_id if google_client_id else None
+                )
+            except Exception:
+                return jsonify({'message': 'El token de Google es inválido, ha expirado o no pudo ser verificado.'}), 401
+
+    if not google_data or 'email' not in google_data:
+        return jsonify({'message': 'No fue posible verificar la identidad con Google.'}), 401
+
+    email = google_data['email'].strip().lower()
+    first_name = google_data.get('given_name') or google_data.get('name', 'Usuario').split(' ')[0]
+    last_name = google_data.get('family_name') or (' '.join(google_data.get('name', '').split(' ')[1:]) if ' ' in google_data.get('name', '') else '')
+    sub = google_data.get('sub')
+    picture = google_data.get('picture')
+
+    # 2. Localizar usuario existente en la base de datos
+    user = User.query.filter((User.email == email) | ((User.provider_id == sub) & (User.auth_provider == 'google'))).first()
+
+    # CASO A: Usuario existente -> Iniciar sesión directamente
+    if user:
+        if not user.provider_id or user.auth_provider == 'local':
+            user.auth_provider = 'google'
+            user.provider_id = sub
+        if picture and not user.avatar_url:
+            user.avatar_url = picture
+        user.email_verified = True
+        user.email_verified_at = user.email_verified_at or datetime.datetime.utcnow()
+
+        user_status = (user.status or 'ACTIVO').upper()
+        if user_status in ['BLOQUEADO', 'BLOCKED', 'SUSPENDED']:
+            return jsonify({'message': 'Tu cuenta ha sido bloqueada temporalmente.', 'status': 'BLOQUEADO'}), 403
+        if user_status in ['RECHAZADO', 'REJECTED']:
+            return jsonify({'message': 'Tu cuenta fue rechazada por la administración.', 'status': 'RECHAZADO'}), 403
+
+        user.last_login_at = datetime.datetime.utcnow()
+        db.session.commit()
+
+        token_duration = datetime.timedelta(days=30) if remember_me else datetime.timedelta(hours=24)
+        payload = {
+            'user_id': str(user.id),
+            'role': user.role,
+            'institution_id': str(user.institution_id) if user.institution_id else None,
+            'exp': datetime.datetime.utcnow() + token_duration
+        }
+        jwt_token = jwt.encode(payload, current_app.config['JWT_SECRET_KEY'], algorithm='HS256')
+
+        AuditService.log_action(
+            user_id=user.id,
+            action="LOGIN_GOOGLE_SUCCESS",
+            details=f"Inicio de sesión exitoso con Google OAuth (Rol: {user.role})",
+            ip_address=ip_address
+        )
+
+        return jsonify({
+            'is_new_user': False,
+            'token': jwt_token,
+            'user': user.to_dict()
+        }), 200
+
+    # CASO B: Usuario Nuevo -> Si no se envió código de institución, requerir finalización
+    if not invitation_code:
+        return jsonify({
+            'is_new_user': true,
+            'google_profile': {
+                'email': email,
+                'first_name': first_name,
+                'last_name': last_name,
+                'avatar_url': picture,
+                'provider_id': sub
+            },
+            'message': '¡Bienvenido a EquilibrIA! Por favor ingresa el código de tu institución para finalizar tu registro.'
+        }), 200
+
+    # CASO C: Usuario Nuevo con código enviado
+    code_entry = InvitationCode.query.filter_by(code=invitation_code).first()
+    if not code_entry:
+        return jsonify({'message': 'El código de institución ingresado no existe en el sistema.'}), 400
+
+    is_valid, msg = code_entry.is_valid()
+    if not is_valid:
+        return jsonify({'message': f'Código institucional inválido: {msg}'}), 400
+
+    inst_id = code_entry.institution_id
+    role = code_entry.role or 'miembro'
+    department = code_entry.department or 'General'
+    code_entry.used_count += 1
+
+    new_user = User(
+        email=email,
+        first_name=first_name,
+        last_name=last_name or 'Google',
+        role=role,
+        department=department,
+        institution_id=inst_id,
+        status='ACTIVE',
+        email_verified=True,
+        email_verified_at=datetime.datetime.utcnow(),
+        auth_provider='google',
+        provider_id=sub,
+        avatar_url=picture
+    )
+    db.session.add(new_user)
+    db.session.flush()
+
+    db.session.add_all([
+        Consent(user_id=new_user.id, institution_id=inst_id, consent_type='terms_and_conditions', status='accepted', version='v1.0'),
+        Consent(user_id=new_user.id, institution_id=inst_id, consent_type='privacy_notice', status='accepted', version='v1.0'),
+        Consent(user_id=new_user.id, institution_id=inst_id, consent_type='platform_usage', status='accepted', version='v1.0')
+    ])
+
+    try:
+        EmailService.send_welcome_email(new_user.email, f"{new_user.first_name} {new_user.last_name}")
+    except Exception:
+        pass
+
+    new_user.last_login_at = datetime.datetime.utcnow()
+    db.session.commit()
+
+    token_duration = datetime.timedelta(days=30) if remember_me else datetime.timedelta(hours=24)
+    payload = {
+        'user_id': str(new_user.id),
+        'role': new_user.role,
+        'institution_id': str(new_user.institution_id) if new_user.institution_id else None,
+        'exp': datetime.datetime.utcnow() + token_duration
+    }
+    jwt_token = jwt.encode(payload, current_app.config['JWT_SECRET_KEY'], algorithm='HS256')
+
+    AuditService.log_action(
+        user_id=new_user.id,
+        action="REGISTER_GOOGLE_SUCCESS",
+        details=f"Registro exitoso con Google OAuth e institución (Rol: {new_user.role})",
+        ip_address=ip_address
+    )
+
+    return jsonify({
+        'is_new_user': False,
+        'token': jwt_token,
+        'user': new_user.to_dict()
+    }), 201
+
+
+@auth_bp.route('/google/complete-registration', methods=['POST'])
+def google_complete_registration():
+    """
+    Finaliza el registro de un nuevo usuario proveniente de Google OAuth:
+    Valida el código de institución en la BD, la aceptación de términos, crea la cuenta y emite el JWT.
+    """
+    ip_address = request.headers.get('X-Forwarded-For', request.remote_addr or '127.0.0.1')
+    if ',' in ip_address:
+        ip_address = ip_address.split(',')[0].strip()
+
+    data = request.get_json(silent=True) or {}
+    email = (data.get('email') or '').strip().lower()
+    first_name = (data.get('first_name') or '').strip()
+    last_name = (data.get('last_name') or '').strip()
+    invitation_code = (data.get('invitation_code') or '').strip().upper()
+    provider_id = (data.get('provider_id') or '').strip()
+    avatar_url = (data.get('avatar_url') or '').strip()
+    terms_accepted = bool(data.get('terms_accepted', False))
+    remember_me = bool(data.get('remember_me', True))
+    department_input = (data.get('department') or 'General').strip()
+
+    if not email:
+        return jsonify({'message': 'El correo electrónico es requerido.'}), 400
+
+    if not terms_accepted:
+        return jsonify({'message': 'Debes aceptar los términos y condiciones y la política de privacidad para continuar.'}), 400
+
+    if not invitation_code:
+        return jsonify({'message': 'Por favor ingresa el código de institución proporcionado por tu organización.'}), 400
+
+    # Validar código de institución en base de datos
+    code_entry = InvitationCode.query.filter_by(code=invitation_code).first()
+    if not code_entry:
+        return jsonify({'message': 'El código de institución ingresado no es válido o no existe en EquilibrIA.'}), 400
+
+    is_valid, msg = code_entry.is_valid()
+    if not is_valid:
+        return jsonify({'message': f'Código de institución no válido: {msg}'}), 400
+
+    inst_id = code_entry.institution_id
+    role = code_entry.role or 'miembro'
+    department = code_entry.department or department_input
+    code_entry.used_count += 1
+
+    # Verificar si el usuario ya fue creado
+    user = User.query.filter_by(email=email).first()
+    if user:
+        if not user.provider_id:
+            user.provider_id = provider_id
+            user.auth_provider = 'google'
+        if avatar_url and not user.avatar_url:
+            user.avatar_url = avatar_url
+    else:
+        user = User(
+            email=email,
+            first_name=first_name or 'Usuario',
+            last_name=last_name or 'Google',
+            role=role,
+            department=department,
+            institution_id=inst_id,
+            status='ACTIVE',
+            email_verified=True,
+            email_verified_at=datetime.datetime.utcnow(),
+            auth_provider='google',
+            provider_id=provider_id,
+            avatar_url=avatar_url
+        )
+        db.session.add(user)
+        db.session.flush()
+
+        db.session.add_all([
+            Consent(user_id=user.id, institution_id=inst_id, consent_type='terms_and_conditions', status='accepted', version='v1.0'),
+            Consent(user_id=user.id, institution_id=inst_id, consent_type='privacy_notice', status='accepted', version='v1.0'),
+            Consent(user_id=user.id, institution_id=inst_id, consent_type='platform_usage', status='accepted', version='v1.0')
+        ])
+
+        try:
+            EmailService.send_welcome_email(user.email, f"{user.first_name} {user.last_name}")
+        except Exception:
+            pass
+
+    user.last_login_at = datetime.datetime.utcnow()
+    db.session.commit()
+
+    token_duration = datetime.timedelta(days=30) if remember_me else datetime.timedelta(hours=24)
+    payload = {
+        'user_id': str(user.id),
+        'role': user.role,
+        'institution_id': str(user.institution_id) if user.institution_id else None,
+        'exp': datetime.datetime.utcnow() + token_duration
+    }
+    jwt_token = jwt.encode(payload, current_app.config['JWT_SECRET_KEY'], algorithm='HS256')
+
+    AuditService.log_action(
+        user_id=user.id,
+        action="REGISTER_GOOGLE_COMPLETED",
+        details=f"Registro completado mediante Google OAuth y código {invitation_code} (Rol: {user.role})",
+        ip_address=ip_address
+    )
+
+    return jsonify({
+        'token': jwt_token,
+        'user': user.to_dict()
+    }), 201
 
 @auth_bp.route('/institutions', methods=['GET'])
 def get_institutions():
@@ -529,8 +832,12 @@ def get_reset_password_info():
 @auth_bp.route('/reset-password-confirm', methods=['POST'])
 def confirm_reset_password():
     """
-    Endpoint público para aplicar la nueva contraseña usando el token temporal.
+    Endpoint público para aplicar la nueva contraseña usando el token temporal criptográfico.
     """
+    ip_address = request.headers.get('X-Forwarded-For', request.remote_addr or '127.0.0.1')
+    if ',' in ip_address:
+        ip_address = ip_address.split(',')[0].strip()
+
     data = request.get_json(silent=True) or {}
     token_str = (data.get('token') or '').strip()
     new_password = (data.get('new_password') or '').strip()
@@ -549,7 +856,7 @@ def confirm_reset_password():
     token_hash = EmailVerificationToken.hash_token(token_str)
     token_record = EmailVerificationToken.query.filter_by(token_hash=token_hash).first()
     if not token_record:
-        return jsonify({'message': 'El enlace de restablecimiento es inválido o no existe.'}), 404
+        return jsonify({'message': 'El enlace de restablecimiento es inválido o ha expirado.'}), 404
 
     is_valid, token_msg = token_record.is_valid()
     if not is_valid:
@@ -557,7 +864,7 @@ def confirm_reset_password():
 
     user = token_record.user
     if not user:
-        return jsonify({'message': 'Usuario no encontrado.'}), 404
+        return jsonify({'message': 'Usuario asociado no encontrado.'}), 404
 
     try:
         user.set_password(new_password)
@@ -568,25 +875,37 @@ def confirm_reset_password():
             user_id=user.id,
             action="PASSWORD_RESET_COMPLETED",
             details=f"Restablecimiento de contraseña completado exitosamente para '{user.email}'.",
-            ip_address=request.remote_addr
+            ip_address=ip_address
         )
+
+        # Enviar correo de confirmación de cambio de contraseña
+        try:
+            EmailService.send_password_changed_email(user.email, f"{user.first_name} {user.last_name}")
+        except Exception:
+            pass
 
         return jsonify({
             'message': '¡Tu contraseña ha sido restablecida exitosamente! Ya puedes iniciar sesión con tu nueva clave.'
         }), 200
     except Exception as e:
         db.session.rollback()
-        return jsonify({'message': 'Error al actualizar la contraseña.'}), 500
+        return jsonify({'message': 'Error al actualizar la contraseña en el servidor.'}), 500
 
 @auth_bp.route('/forgot-password', methods=['POST'])
 def forgot_password():
     """
-    Solicitud pública de recuperación de contraseña.
+    Solicitud pública de recuperación de contraseña con token criptográfico seguro y envío de email real.
     Respuesta genérica segura para prevenir enumeración de cuentas.
     """
     ip_address = request.headers.get('X-Forwarded-For', request.remote_addr or '127.0.0.1')
     if ',' in ip_address:
         ip_address = ip_address.split(',')[0].strip()
+
+    # Rate limiting: max 8 solicitudes por IP en 10 minutos
+    if not check_rate_limit(f"forgot_{ip_address}", max_attempts=8, window_seconds=600):
+        return jsonify({
+            'message': 'Has superado el límite de solicitudes de recuperación. Por favor espera unos minutos antes de volver a intentarlo.'
+        }), 429
 
     data = request.get_json(silent=True) or {}
     email = (data.get('email') or '').strip().lower()
@@ -595,19 +914,41 @@ def forgot_password():
         return jsonify({'message': 'Por favor ingresa un correo electrónico válido.'}), 400
 
     user = User.query.filter_by(email=email).first()
-    if user and (user.status or '').upper() in ['ACTIVE', 'ACTIVO']:
+    if user and (user.status or '').upper() in ['ACTIVE', 'ACTIVO', 'PENDIENTE', 'PENDING']:
         try:
+            # 1. Generar token criptográfico seguro de un solo uso
+            plain_token = secrets.token_urlsafe(32)
+            token_hash = EmailVerificationToken.hash_token(plain_token)
+            expires_at = datetime.datetime.utcnow() + datetime.timedelta(hours=1)
+
+            # 2. Registrar en la base de datos
+            token_entry = EmailVerificationToken(
+                user_id=user.id,
+                token_hash=token_hash,
+                expires_at=expires_at
+            )
+            db.session.add(token_entry)
+            db.session.commit()
+
+            # 3. Enviar correo electrónico con el enlace seguro
+            frontend_url = os.environ.get('FRONTEND_URL', 'http://localhost:5173').rstrip('/')
+            reset_url = f"{frontend_url}/restablecer-contrasena/{plain_token}"
+
+            user_display_name = f"{user.first_name} {user.last_name}".strip() or "Colaborador"
+            sent_ok, _ = EmailService.send_password_reset_email(user.email, user_display_name, reset_url)
+
             AuditService.log_action(
                 user_id=user.id,
                 action="RECOVERY_REQUESTED",
-                details=f"Solicitud pública de recuperación de contraseña registrada para '{user.email}'.",
+                details=f"Solicitud de recuperación de contraseña procesada y correo enviado para '{user.email}'.",
                 ip_address=ip_address
             )
         except Exception:
+            db.session.rollback()
             pass
 
     return jsonify({
-        'message': 'Si la cuenta puede realizar una recuperación, la solicitud ha sido registrada en el sistema.'
+        'message': 'Si la cuenta existe en EquilibrIA, recibirás un correo electrónico con instrucciones para restablecer tu contraseña en los próximos minutos.'
     }), 200
 
 

@@ -320,10 +320,14 @@ const NotificationCenter = ({ isOpen, onClose }) => {
             color: 'var(--primary)',
             fontSize: '11px',
             fontWeight: '800',
-            cursor: 'pointer'
+            cursor: 'pointer',
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '4px'
           }}
         >
-          Configurar preferencias ➔
+          <span>Configurar preferencias</span>
+          <ArrowRight size={12} />
         </button>
       </div>
     </div>
