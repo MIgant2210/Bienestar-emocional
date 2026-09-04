@@ -70,6 +70,11 @@ def create_app(config_class=Config):
     app.register_blueprint(culture_bp, url_prefix='/api/culture')
     app.register_blueprint(avatar_bp, url_prefix='/api/avatar')
     
+    @app.route('/health')
+    @app.route('/api/health')
+    def health_check():
+        return {'status': 'ok', 'service': 'EquilibrIA Backend', 'version': '1.0.0'}, 200
+    
     import gzip
     from flask import request
 

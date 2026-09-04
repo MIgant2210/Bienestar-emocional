@@ -1,10 +1,4 @@
-/**
- * ============================================================================
- * EQUILIBRIA REPORT EXPORT UTILITIES (PDF, CSV, JSON)
- * ============================================================================
- * Exportación formal, exacta y estructurada para los 10 reportes institucionales.
- * Respeta rigurosamente los filtros activos y no utiliza datos simulados ni firmas falsas.
- */
+import ExcelJS from 'exceljs';
 
 // Helper para formatear valores nulos o indefinidos
 const formatVal = (val, fallback = 'Sin datos suficientes') => {
@@ -545,7 +539,533 @@ export const exportReportToPDF = (allReportsData, selectedReportId) => {
 };
 
 /**
- * 2. EXPORTAR EN CSV (ESTRUCTURADO CON UTF-8 BOM PARA EXCEL)
+ * 2. EXPORTAR EN EXCEL OFICIAL (.XLSX) CON ANALÍTICAS, KPIS Y TABLAS ESTILIZADAS
+ * Genera un libro de cálculo profesional (.xlsx) con branding de EquilibrIA,
+ * tarjetas de indicadores ejecutivos, métricas clave y registros en columnas separadas.
+ */
+export const exportReportToExcel = async (allReportsData, selectedReportId) => {
+  if (!allReportsData) return;
+  const currentReport = allReportsData[selectedReportId] || {};
+  const filters = allReportsData.filtros_aplicados || {};
+  const detailList = Array.isArray(currentReport.detalle)
+    ? currentReport.detalle
+    : (Array.isArray(currentReport.detalle_catalogo) ? currentReport.detalle_catalogo : []);
+
+  if (detailList.length === 0 && !currentReport.estres_promedio && !currentReport.total_alertas && !currentReport.total_tareas && !currentReport.total_citas) {
+    if (typeof window !== 'undefined' && window.showSystemAlert) {
+      window.showSystemAlert('info', 'Reportes', 'No hay registros para exportar en este periodo.');
+    }
+    return;
+  }
+
+  try {
+    const workbook = new ExcelJS.Workbook();
+    workbook.creator = 'EquilibrIA Platform';
+    workbook.created = new Date();
+    workbook.properties.date1904 = false;
+
+    const worksheet = workbook.addWorksheet('Informe Oficial', {
+      views: [{ showGridLines: true }]
+    });
+
+    // Paleta de colores oficial
+    const BRAND_DARK = 'FF312E81';    // Indigo 900
+    const BRAND_PRIMARY = 'FF4F46E5'; // Indigo 600
+    const BRAND_LIGHT = 'FFEEF2FF';   // Indigo 50
+    const BG_ZEBRA = 'FFF8FAFC';      // Slate 50
+    const BORDER_COLOR = 'FFE2E8F0';  // Slate 200
+    const TEXT_MUTED = 'FF64748B';    // Slate 500
+    const TEXT_MAIN = 'FF1E293B';     // Slate 800
+
+    const thinBorder = {
+      top: { style: 'thin', color: { argb: BORDER_COLOR } },
+      left: { style: 'thin', color: { argb: BORDER_COLOR } },
+      bottom: { style: 'thin', color: { argb: BORDER_COLOR } },
+      right: { style: 'thin', color: { argb: BORDER_COLOR } }
+    };
+
+    // Determinar columnas y mapeo de datos según el tipo de reporte
+    let reportColumns = [];
+    let mappedRows = [];
+
+    switch (selectedReportId) {
+      case 'reporte_1_clima':
+        reportColumns = [
+          { header: '#', key: 'idx', width: 6 },
+          { header: 'COLABORADOR', key: 'usuario', width: 26 },
+          { header: 'DEPARTAMENTO', key: 'departamento', width: 22 },
+          { header: 'ESTRÉS', key: 'estres', width: 14 },
+          { header: 'MOTIVACIÓN', key: 'motivacion', width: 16 },
+          { header: 'BURNOUT', key: 'burnout', width: 14 },
+          { header: 'SENTIMIENTO', key: 'sentimiento', width: 18 },
+          { header: 'FECHA Y HORA', key: 'fecha', width: 22 }
+        ];
+        mappedRows = detailList.map((item, idx) => ({
+          idx: idx + 1,
+          usuario: item.usuario || 'Anónimo',
+          departamento: item.departamento || 'General',
+          estres: item.estres !== undefined && item.estres !== null ? `${item.estres}%` : 'N/A',
+          motivacion: item.motivacion !== undefined && item.motivacion !== null ? `${item.motivacion}%` : 'N/A',
+          burnout: item.burnout !== undefined && item.burnout !== null ? `${item.burnout}%` : 'N/A',
+          sentimiento: item.sentimiento || 'Neutro',
+          fecha: item.fecha ? new Date(item.fecha).toLocaleString() : 'N/A'
+        }));
+        break;
+
+      case 'reporte_2_alertas':
+        reportColumns = [
+          { header: '#', key: 'idx', width: 6 },
+          { header: 'COLABORADOR', key: 'usuario', width: 26 },
+          { header: 'DEPARTAMENTO', key: 'departamento', width: 22 },
+          { header: 'NIVEL DE RIESGO', key: 'prioridad', width: 18 },
+          { header: 'ESTADO', key: 'estado', width: 16 },
+          { header: 'ATENDIDO POR', key: 'atendido_por', width: 24 },
+          { header: 'FECHA CREACIÓN', key: 'fecha_creacion', width: 22 }
+        ];
+        mappedRows = detailList.map((item, idx) => ({
+          idx: idx + 1,
+          usuario: item.usuario || 'Anónimo',
+          departamento: item.departamento || 'General',
+          prioridad: item.prioridad || 'Media',
+          estado: (item.estado || 'pendiente').toUpperCase(),
+          atendido_por: item.atendido_por || 'Sin asignar',
+          fecha_creacion: item.fecha_creacion ? new Date(item.fecha_creacion).toLocaleString() : 'N/A'
+        }));
+        break;
+
+      case 'reporte_3_tareas':
+        reportColumns = [
+          { header: '#', key: 'idx', width: 6 },
+          { header: 'TÍTULO DE LA TAREA', key: 'titulo', width: 34 },
+          { header: 'CATEGORÍA', key: 'categoria', width: 18 },
+          { header: 'PRIORIDAD', key: 'prioridad', width: 14 },
+          { header: 'ESTADO', key: 'estado', width: 16 },
+          { header: 'ASIGNADO A', key: 'asignado_a', width: 24 },
+          { header: 'FECHA LÍMITE', key: 'fecha_limite', width: 18 }
+        ];
+        mappedRows = detailList.map((item, idx) => ({
+          idx: idx + 1,
+          titulo: item.titulo || 'Tarea',
+          categoria: item.categoria || 'Bienestar',
+          prioridad: item.prioridad || 'Media',
+          estado: item.estado || 'Pendiente',
+          asignado_a: item.asignado_a || 'Todos',
+          fecha_limite: item.fecha_limite ? new Date(item.fecha_limite).toLocaleDateString() : 'Sin fecha'
+        }));
+        break;
+
+      case 'reporte_4_citas':
+        reportColumns = [
+          { header: '#', key: 'idx', width: 6 },
+          { header: 'PACIENTE / MIEMBRO', key: 'paciente', width: 26 },
+          { header: 'DEPARTAMENTO', key: 'departamento', width: 20 },
+          { header: 'PROFESIONAL DE APOYO', key: 'profesional', width: 26 },
+          { header: 'MOTIVO', key: 'motivo', width: 28 },
+          { header: 'ESTADO', key: 'estado', width: 16 },
+          { header: 'FECHA Y HORA', key: 'fecha_hora', width: 22 }
+        ];
+        mappedRows = detailList.map((item, idx) => ({
+          idx: idx + 1,
+          paciente: item.paciente || 'Sesión Privada',
+          departamento: item.departamento || 'General',
+          profesional: item.profesional || 'Psicología Institucional',
+          motivo: item.motivo || 'Orientación Emocional',
+          estado: (item.estado || 'programada').toUpperCase(),
+          fecha_hora: item.fecha_hora ? new Date(item.fecha_hora).toLocaleString() : 'N/A'
+        }));
+        break;
+
+      case 'reporte_5_kudos':
+        reportColumns = [
+          { header: '#', key: 'idx', width: 6 },
+          { header: 'REMITENTE', key: 'remitente', width: 24 },
+          { header: 'DESTINATARIO', key: 'destinatario', width: 24 },
+          { header: 'DEPARTAMENTO', key: 'departamento', width: 20 },
+          { header: 'INSIGNIA', key: 'tipo_insignia', width: 18 },
+          { header: 'MENSAJE', key: 'mensaje', width: 38 },
+          { header: 'FECHA', key: 'fecha', width: 16 }
+        ];
+        mappedRows = detailList.map((item, idx) => ({
+          idx: idx + 1,
+          remitente: item.remitente || 'Anónimo',
+          destinatario: item.destinatario || 'Compañero',
+          departamento: item.departamento || 'General',
+          tipo_insignia: item.tipo_insignia || 'Gratitud',
+          mensaje: item.mensaje || '',
+          fecha: item.fecha ? new Date(item.fecha).toLocaleDateString() : 'N/A'
+        }));
+        break;
+
+      case 'reporte_7_usuarios':
+        reportColumns = [
+          { header: '#', key: 'idx', width: 6 },
+          { header: 'NOMBRE COMPLETO', key: 'nombre_completo', width: 28 },
+          { header: 'CORREO ELECTRÓNICO', key: 'email', width: 30 },
+          { header: 'ROL INSTITUCIONAL', key: 'rol', width: 20 },
+          { header: 'DEPARTAMENTO', key: 'departamento', width: 22 },
+          { header: 'ESTADO', key: 'estado', width: 14 },
+          { header: 'FECHA REGISTRO', key: 'fecha_registro', width: 18 }
+        ];
+        mappedRows = detailList.map((item, idx) => ({
+          idx: idx + 1,
+          nombre_completo: item.nombre_completo || 'Usuario',
+          email: item.email || 'N/A',
+          rol: item.rol || 'miembro',
+          departamento: item.departamento || 'General',
+          estado: (item.estado || 'ACTIVO').toUpperCase(),
+          fecha_registro: item.fecha_registro ? new Date(item.fecha_registro).toLocaleDateString() : 'N/A'
+        }));
+        break;
+
+      case 'reporte_9_auditoria':
+        reportColumns = [
+          { header: '#', key: 'idx', width: 6 },
+          { header: 'USUARIO', key: 'usuario', width: 26 },
+          { header: 'ACCIÓN AUDITADA', key: 'accion', width: 22 },
+          { header: 'DETALLES DE OPERACIÓN', key: 'detalles', width: 40 },
+          { header: 'DIRECCIÓN IP', key: 'ip', width: 16 },
+          { header: 'FECHA Y HORA', key: 'fecha', width: 22 }
+        ];
+        mappedRows = detailList.map((item, idx) => ({
+          idx: idx + 1,
+          usuario: item.usuario || 'Sistema',
+          accion: item.accion || 'EVENTO',
+          detalles: item.detalles || 'Registro exitoso',
+          ip: item.ip || '127.0.0.1',
+          fecha: item.fecha ? new Date(item.fecha).toLocaleString() : 'N/A'
+        }));
+        break;
+
+      default:
+        reportColumns = [
+          { header: '#', key: 'idx', width: 6 },
+          { header: 'CONCEPTO / TÍTULO', key: 'titulo', width: 36 },
+          { header: 'CATEGORÍA / ÁREA', key: 'categoria', width: 22 },
+          { header: 'ESTADO / CONDICIÓN', key: 'estado', width: 18 },
+          { header: 'FECHA', key: 'fecha', width: 18 }
+        ];
+        mappedRows = detailList.map((item, idx) => ({
+          idx: idx + 1,
+          titulo: item.title || item.nombre || item.recomendacion || item.usuario || `Registro #${idx + 1}`,
+          categoria: item.departamento || item.categoria || item.departamento_origen || 'General',
+          estado: item.estado || item.sentimiento_asociado || item.prioridad || 'Vigente',
+          fecha: item.fecha || item.fecha_creacion ? new Date(item.fecha || item.fecha_creacion).toLocaleDateString() : 'N/A'
+        }));
+        break;
+    }
+
+    const totalCols = Math.max(reportColumns.length, 6);
+    const endColLetter = String.fromCharCode(64 + Math.min(totalCols, 26));
+
+    // ==========================================
+    // 1. BANNER INSTITUCIONAL DE CABECERA
+    // ==========================================
+    worksheet.mergeCells(`A1:${endColLetter}1`);
+    const headerBannerCell = worksheet.getCell('A1');
+    headerBannerCell.value = 'EQUILIBRIA PLATFORM — GESTIÓN DE BIENESTAR & ANALÍTICA INSTITUCIONAL';
+    headerBannerCell.font = { name: 'Segoe UI', size: 14, bold: true, color: { argb: 'FFFFFFFF' } };
+    headerBannerCell.alignment = { vertical: 'middle', horizontal: 'center' };
+    headerBannerCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: BRAND_DARK } };
+    worksheet.getRow(1).height = 36;
+
+    worksheet.mergeCells(`A2:${endColLetter}2`);
+    const subtitleCell = worksheet.getCell('A2');
+    subtitleCell.value = `${currentReport.titulo || 'INFORME OFICIAL'} | DOCUMENTO AUDITABLE`;
+    subtitleCell.font = { name: 'Segoe UI', size: 11, bold: true, color: { argb: 'FFFFFFFF' } };
+    subtitleCell.alignment = { vertical: 'middle', horizontal: 'center' };
+    subtitleCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: BRAND_PRIMARY } };
+    worksheet.getRow(2).height = 24;
+
+    worksheet.addRow([]); // Fila 3 vacía
+
+    // ==========================================
+    // 2. FICHA TÉCNICA Y METADATOS DEL REPORTE
+    // ==========================================
+    const scopeLabel = (allReportsData.alcance && allReportsData.alcance.etiqueta) || filters.alcance || 'Toda la institución';
+    const metaRows = [
+      ['Institución Emisora:', allReportsData.institucion || 'EquilibrIA Central', 'Código Oficial:', currentReport.codigo || 'EQ-REP-OFFICIAL'],
+      ['Alcance Poblacional:', scopeLabel, 'Periodo Evaluado:', `${filters.fecha_inicio || 'Inicio'} al ${filters.fecha_fin || 'Actual'}`],
+      ['Fecha de Emisión:', allReportsData.fecha_generacion || new Date().toLocaleString(), 'Filtro de Estado:', filters.estado || 'Todos los estados']
+    ];
+
+    metaRows.forEach((meta) => {
+      const row = worksheet.addRow(meta);
+      row.height = 20;
+      row.getCell(1).font = { name: 'Segoe UI', bold: true, size: 10, color: { argb: TEXT_MAIN } };
+      row.getCell(1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: BRAND_LIGHT } };
+      row.getCell(2).font = { name: 'Segoe UI', size: 10, color: { argb: TEXT_MAIN } };
+      row.getCell(3).font = { name: 'Segoe UI', bold: true, size: 10, color: { argb: TEXT_MAIN } };
+      row.getCell(3).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: BRAND_LIGHT } };
+      row.getCell(4).font = { name: 'Segoe UI', size: 10, color: { argb: TEXT_MAIN } };
+
+      for (let c = 1; c <= 4; c++) {
+        row.getCell(c).border = thinBorder;
+      }
+    });
+
+    worksheet.addRow([]); // Fila separadora
+
+    // ==========================================
+    // 3. RESUMEN EJECUTIVO / TARJETAS KPI
+    // ==========================================
+    let kpis = [];
+    if (selectedReportId === 'reporte_1_clima') {
+      kpis = [
+        { label: 'ESTRÉS PROMEDIO', val: currentReport.estres_promedio !== null ? `${currentReport.estres_promedio}%` : 'N/A' },
+        { label: 'MOTIVACIÓN PROMEDIO', val: currentReport.motivacion_promedio !== null ? `${currentReport.motivacion_promedio}%` : 'N/A' },
+        { label: 'RIESGO DE BURNOUT', val: currentReport.burnout_promedio !== null ? `${currentReport.burnout_promedio}%` : 'N/A' },
+        { label: 'TOTAL REFLEXIONES', val: currentReport.total_reflexiones || 0 }
+      ];
+    } else if (selectedReportId === 'reporte_2_alertas') {
+      kpis = [
+        { label: 'TOTAL ALERTAS', val: currentReport.total_alertas || 0 },
+        { label: 'ALERTAS ACTIVAS', val: currentReport.activas || 0 },
+        { label: 'ALERTAS ATENDIDAS', val: currentReport.atendidas || 0 },
+        { label: 'TIEMPO PROM. ATENCIÓN', val: currentReport.tiempo_promedio_horas !== null ? `${currentReport.tiempo_promedio_horas} hrs` : 'N/A' }
+      ];
+    } else if (selectedReportId === 'reporte_3_tareas') {
+      kpis = [
+        { label: 'TOTAL TAREAS', val: currentReport.total_tareas || 0 },
+        { label: 'COMPLETADAS', val: currentReport.completadas || 0 },
+        { label: 'PENDIENTES / PROCESO', val: (currentReport.pendientes || 0) + (currentReport.en_proceso || 0) },
+        { label: '% CUMPLIMIENTO', val: currentReport.porcentaje_cumplimiento !== null ? `${currentReport.porcentaje_cumplimiento}%` : 'N/A' }
+      ];
+    } else if (selectedReportId === 'reporte_4_citas') {
+      kpis = [
+        { label: 'TOTAL CITAS', val: currentReport.total_citas || 0 },
+        { label: 'PROGRAMADAS / CONFIRM.', val: (currentReport.programadas || 0) + (currentReport.confirmadas || 0) },
+        { label: 'COMPLETADAS', val: currentReport.completadas || 0 },
+        { label: '% ASISTENCIA', val: currentReport.porcentaje_asistencia !== null ? `${currentReport.porcentaje_asistencia}%` : 'N/A' }
+      ];
+    } else {
+      kpis = [
+        { label: 'REGISTROS TOTALES', val: detailList.length },
+        { label: 'ESTADO AUDITORÍA', val: 'CONFORME' },
+        { label: 'CONTROL DE ACCESO', val: 'RBAC OFICIAL' },
+        { label: 'ESTADO GENERAL', val: 'ACTIVO' }
+      ];
+    }
+
+    if (kpis.length > 0) {
+      const kpiHeaderRow = worksheet.addRow(['RESUMEN EJECUTIVO DE INDICADORES CLAVE (KPIS)']);
+      kpiHeaderRow.height = 24;
+      worksheet.mergeCells(`A${kpiHeaderRow.number}:${endColLetter}${kpiHeaderRow.number}`);
+      kpiHeaderRow.getCell(1).font = { name: 'Segoe UI', size: 11, bold: true, color: { argb: BRAND_DARK } };
+      kpiHeaderRow.getCell(1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF1F5F9' } };
+      kpiHeaderRow.getCell(1).alignment = { vertical: 'middle', horizontal: 'left', indent: 1 };
+      kpiHeaderRow.getCell(1).border = thinBorder;
+
+      // Fila de títulos de KPI
+      const kpiTitleRow = worksheet.addRow(kpis.map(k => k.label));
+      kpiTitleRow.height = 20;
+      kpis.forEach((_, i) => {
+        const cell = kpiTitleRow.getCell(i + 1);
+        cell.font = { name: 'Segoe UI', size: 9, bold: true, color: { argb: TEXT_MUTED } };
+        cell.alignment = { vertical: 'middle', horizontal: 'center' };
+        cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: BG_ZEBRA } };
+        cell.border = thinBorder;
+      });
+
+      // Fila de valores de KPI
+      const kpiValRow = worksheet.addRow(kpis.map(k => k.val));
+      kpiValRow.height = 28;
+      kpis.forEach((_, i) => {
+        const cell = kpiValRow.getCell(i + 1);
+        cell.font = { name: 'Segoe UI', size: 14, bold: true, color: { argb: BRAND_PRIMARY } };
+        cell.alignment = { vertical: 'middle', horizontal: 'center' };
+        cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFFFFF' } };
+        cell.border = thinBorder;
+      });
+
+      worksheet.addRow([]); // Espaciador
+    }
+
+    // ==========================================
+    // 4. TABLAS ANALÍTICAS SECUNDARIAS (REPORTE 1)
+    // ==========================================
+    if (selectedReportId === 'reporte_1_clima') {
+      const evolucion = Array.isArray(currentReport.evolucion_temporal) ? currentReport.evolucion_temporal : [];
+      const depts = Array.isArray(currentReport.distribucion_departamentos) ? currentReport.distribucion_departamentos : [];
+
+      if (evolucion.length > 0) {
+        const evoHeader = worksheet.addRow(['📈 EVOLUCIÓN TEMPORAL DE INDICADORES EMOCIONALES']);
+        evoHeader.height = 22;
+        worksheet.mergeCells(`A${evoHeader.number}:D${evoHeader.number}`);
+        evoHeader.getCell(1).font = { name: 'Segoe UI', size: 10.5, bold: true, color: { argb: BRAND_DARK } };
+        evoHeader.getCell(1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: BRAND_LIGHT } };
+
+        const evoCols = worksheet.addRow(['FECHA / PERIODO', 'ESTRÉS PROMEDIO', 'MOTIVACIÓN PROMEDIO', 'BURNOUT']);
+        evoCols.height = 20;
+        for (let c = 1; c <= 4; c++) {
+          const cell = evoCols.getCell(c);
+          cell.font = { name: 'Segoe UI', size: 9.5, bold: true, color: { argb: 'FFFFFFFF' } };
+          cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: BRAND_PRIMARY } };
+          cell.alignment = { vertical: 'middle', horizontal: c === 1 ? 'left' : 'center' };
+          cell.border = thinBorder;
+        }
+
+        evolucion.forEach((d, i) => {
+          const row = worksheet.addRow([
+            d.fecha || `Periodo ${i + 1}`,
+            `${d.estres !== undefined ? d.estres : 0}%`,
+            `${d.motivacion !== undefined ? d.motivacion : 0}%`,
+            `${d.burnout !== undefined ? d.burnout : 0}%`
+          ]);
+          row.height = 18;
+          for (let c = 1; c <= 4; c++) {
+            const cell = row.getCell(c);
+            cell.font = { name: 'Segoe UI', size: 9.5 };
+            cell.alignment = { vertical: 'middle', horizontal: c === 1 ? 'left' : 'center' };
+            cell.border = thinBorder;
+            if (i % 2 === 1) cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: BG_ZEBRA } };
+          }
+        });
+        worksheet.addRow([]);
+      }
+
+      if (depts.length > 0) {
+        const deptHeader = worksheet.addRow(['📊 COMPARATIVA DE BIENESTAR POR DEPARTAMENTO']);
+        deptHeader.height = 22;
+        worksheet.mergeCells(`A${deptHeader.number}:D${deptHeader.number}`);
+        deptHeader.getCell(1).font = { name: 'Segoe UI', size: 10.5, bold: true, color: { argb: BRAND_DARK } };
+        deptHeader.getCell(1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: BRAND_LIGHT } };
+
+        const deptCols = worksheet.addRow(['DEPARTAMENTO', 'ESTRÉS (%)', 'MOTIVACIÓN (%)', 'BURNOUT (%)']);
+        deptCols.height = 20;
+        for (let c = 1; c <= 4; c++) {
+          const cell = deptCols.getCell(c);
+          cell.font = { name: 'Segoe UI', size: 9.5, bold: true, color: { argb: 'FFFFFFFF' } };
+          cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: BRAND_PRIMARY } };
+          cell.alignment = { vertical: 'middle', horizontal: c === 1 ? 'left' : 'center' };
+          cell.border = thinBorder;
+        }
+
+        depts.forEach((d, i) => {
+          const row = worksheet.addRow([
+            d.departamento || 'General',
+            `${d.estres !== undefined ? d.estres : 0}%`,
+            `${d.motivacion !== undefined ? d.motivacion : 0}%`,
+            `${d.burnout !== undefined ? d.burnout : 0}%`
+          ]);
+          row.height = 18;
+          for (let c = 1; c <= 4; c++) {
+            const cell = row.getCell(c);
+            cell.font = { name: 'Segoe UI', size: 9.5 };
+            cell.alignment = { vertical: 'middle', horizontal: c === 1 ? 'left' : 'center' };
+            cell.border = thinBorder;
+            if (i % 2 === 1) cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: BG_ZEBRA } };
+          }
+        });
+        worksheet.addRow([]);
+      }
+    }
+
+    // ==========================================
+    // 5. TABLA PRINCIPAL DE REGISTROS CONSOLIDADOS
+    // ==========================================
+    const tableTitleRow = worksheet.addRow([`DETALLE CONSOLIDADO DE REGISTROS (${mappedRows.length} elementos)`]);
+    tableTitleRow.height = 24;
+    worksheet.mergeCells(`A${tableTitleRow.number}:${endColLetter}${tableTitleRow.number}`);
+    tableTitleRow.getCell(1).font = { name: 'Segoe UI', size: 11, bold: true, color: { argb: BRAND_DARK } };
+    tableTitleRow.getCell(1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: BRAND_LIGHT } };
+    tableTitleRow.getCell(1).alignment = { vertical: 'middle', horizontal: 'left', indent: 1 };
+    tableTitleRow.getCell(1).border = thinBorder;
+
+    // Fila de encabezados de la tabla principal
+    const mainHeaderRow = worksheet.addRow(reportColumns.map(c => c.header));
+    mainHeaderRow.height = 24;
+    reportColumns.forEach((_, colIdx) => {
+      const cell = mainHeaderRow.getCell(colIdx + 1);
+      cell.font = { name: 'Segoe UI', size: 10, bold: true, color: { argb: 'FFFFFFFF' } };
+      cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: BRAND_PRIMARY } };
+      cell.alignment = { vertical: 'middle', horizontal: colIdx === 0 ? 'center' : 'left' };
+      cell.border = thinBorder;
+    });
+
+    // Filas de datos
+    mappedRows.forEach((item, rowIdx) => {
+      const rowValues = reportColumns.map(col => item[col.key] !== undefined ? item[col.key] : '');
+      const dataRow = worksheet.addRow(rowValues);
+      dataRow.height = 20;
+
+      const isEven = rowIdx % 2 === 1;
+      reportColumns.forEach((col, colIdx) => {
+        const cell = dataRow.getCell(colIdx + 1);
+        cell.font = { name: 'Segoe UI', size: 9.5, color: { argb: TEXT_MAIN } };
+        cell.alignment = {
+          vertical: 'middle',
+          horizontal: colIdx === 0 || col.key.includes('fecha') ? 'center' : (col.key.includes('estres') || col.key.includes('motivacion') || col.key.includes('burnout') ? 'center' : 'left')
+        };
+        cell.border = thinBorder;
+        if (isEven) {
+          cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: BG_ZEBRA } };
+        }
+      });
+    });
+
+    if (mappedRows.length === 0) {
+      const emptyRow = worksheet.addRow(['Sin resultados para los filtros seleccionados en este periodo.']);
+      emptyRow.height = 26;
+      worksheet.mergeCells(`A${emptyRow.number}:${endColLetter}${emptyRow.number}`);
+      emptyRow.getCell(1).font = { name: 'Segoe UI', size: 10, italic: true, color: { argb: TEXT_MUTED } };
+      emptyRow.getCell(1).alignment = { vertical: 'middle', horizontal: 'center' };
+      emptyRow.getCell(1).border = thinBorder;
+    }
+
+    worksheet.addRow([]); // Separador
+
+    // ==========================================
+    // 6. OBSERVACIONES Y NOTA DE GOBERNANZA RBAC
+    // ==========================================
+    const obsHeader = worksheet.addRow(['OBSERVACIONES Y NOTA DE AUDITORÍA']);
+    obsHeader.height = 20;
+    obsHeader.getCell(1).font = { name: 'Segoe UI', size: 10, bold: true, color: { argb: BRAND_DARK } };
+
+    const obsContent = worksheet.addRow([currentReport.observaciones || 'La información fue recopilada conforme a los filtros institucionales activos.']);
+    obsContent.height = 22;
+    worksheet.mergeCells(`A${obsContent.number}:${endColLetter}${obsContent.number}`);
+    obsContent.getCell(1).font = { name: 'Segoe UI', size: 9.5, italic: true, color: { argb: TEXT_MAIN } };
+
+    const rbacNotice = worksheet.addRow(['CONFIDENCIALIDAD: Este libro de cálculo ha sido emitido bajo el protocolo de mínimo privilegio RBAC de EquilibrIA. Se prohíbe la divulgación no autorizada de datos personales.']);
+    rbacNotice.height = 22;
+    worksheet.mergeCells(`A${rbacNotice.number}:${endColLetter}${rbacNotice.number}`);
+    rbacNotice.getCell(1).font = { name: 'Segoe UI', size: 8.5, bold: true, color: { argb: 'FF92400E' } };
+    rbacNotice.getCell(1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFFBEB' } };
+    rbacNotice.getCell(1).border = thinBorder;
+
+    // Configuración de anchos de columnas
+    reportColumns.forEach((col, idx) => {
+      worksheet.getColumn(idx + 1).width = Math.max(col.width || 15, 12);
+    });
+
+    // Generar y descargar archivo binario .xlsx
+    const buffer = await workbook.xlsx.writeBuffer();
+    const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    const dateStr = new Date().toISOString().slice(0, 10);
+    link.download = `EquilibrIA_${currentReport.codigo || selectedReportId}_${dateStr}.xlsx`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+
+    if (typeof window !== 'undefined' && window.showSystemAlert) {
+      window.showSystemAlert('success', 'Excel Generado', 'El informe en formato Excel (.xlsx) se ha descargado exitosamente con analíticas y tablas formateadas.');
+    }
+  } catch (error) {
+    console.error('Error al generar archivo Excel:', error);
+    if (typeof window !== 'undefined' && window.showSystemAlert) {
+      window.showSystemAlert('error', 'Error en Excel', 'No se pudo generar el archivo de Excel. Utilizando respaldo en CSV.');
+    }
+    // Fallback a CSV si ocurriera cualquier excepción
+    exportReportToCSV(allReportsData, selectedReportId);
+  }
+};
+
+/**
+ * 3. EXPORTAR EN CSV (FORMATO DELIMITADO POR PUNTO Y COMA ';' CON 'sep=;' PARA EXCEL)
  */
 export const exportReportToCSV = (allReportsData, selectedReportId) => {
   if (!allReportsData) return;
@@ -555,23 +1075,27 @@ export const exportReportToCSV = (allReportsData, selectedReportId) => {
     : (Array.isArray(currentReport.detalle_catalogo) ? currentReport.detalle_catalogo : []);
 
   if (detailList.length === 0) {
-    if (typeof window !== 'undefined' && window.showSystemAlert) { window.showSystemAlert('info', 'Reportes', 'No hay registros filtrados para exportar en este reporte.'); } else { console.warn('No hay registros filtrados para exportar.'); }
+    if (typeof window !== 'undefined' && window.showSystemAlert) {
+      window.showSystemAlert('info', 'Reportes', 'No hay registros filtrados para exportar en este reporte.');
+    }
     return;
   }
 
-  // Metadatos iniciales del reporte para encabezado de auditoría CSV
   const scopeLabel = (allReportsData.alcance && allReportsData.alcance.etiqueta) || 'Toda la institución';
+  
+  // Encabezado con instrucción sep=; para que Microsoft Excel en cualquier idioma asigne las columnas automáticamente
   const metaHeader = [
-    `"# REPORTE: ${currentReport.titulo || selectedReportId}"`,
-    `"# INSTITUCION: ${allReportsData.institucion || 'EquilibrIA'}"`,
-    `"# ALCANCE: ${scopeLabel}"`,
-    `"# FECHA EMISION: ${allReportsData.fecha_generacion || ''}"`,
-    `""` // Línea en blanco
+    'sep=;',
+    `REPORTE;${currentReport.titulo || selectedReportId}`,
+    `INSTITUCION;${allReportsData.institucion || 'EquilibrIA'}`,
+    `ALCANCE;${scopeLabel}`,
+    `FECHA_EMISION;${allReportsData.fecha_generacion || new Date().toLocaleString()}`,
+    '' // Línea en blanco
   ].join('\r\n');
 
   // Extraer nombres de columnas a partir de las claves del primer elemento
   const keys = Object.keys(detailList[0]);
-  const headerRow = keys.map(k => `"${k.toUpperCase()}"`).join(',');
+  const headerRow = keys.map(k => `"${k.toUpperCase()}"`).join(';');
 
   const rows = detailList.map(item => {
     return keys.map(k => {
@@ -581,7 +1105,7 @@ export const exportReportToCSV = (allReportsData, selectedReportId) => {
         val = val.replace(/"/g, '""'); // Escapar comillas dobles
       }
       return `"${val}"`;
-    }).join(',');
+    }).join(';');
   });
 
   const csvContent = '\uFEFF' + metaHeader + '\r\n' + [headerRow, ...rows].join('\r\n');
@@ -594,10 +1118,11 @@ export const exportReportToCSV = (allReportsData, selectedReportId) => {
   document.body.appendChild(link);
   link.click();
   document.body.removeChild(link);
+  URL.revokeObjectURL(url);
 };
 
 /**
- * 3. EXPORTAR EN JSON ESTRUCTURADO
+ * 4. EXPORTAR EN JSON ESTRUCTURADO
  */
 export const exportReportToJSON = (allReportsData, selectedReportId) => {
   if (!allReportsData) return;
@@ -620,4 +1145,5 @@ export const exportReportToJSON = (allReportsData, selectedReportId) => {
   document.body.appendChild(link);
   link.click();
   document.body.removeChild(link);
+  URL.revokeObjectURL(url);
 };

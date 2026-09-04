@@ -13,7 +13,7 @@ import {
 import CustomDatePicker from '../CustomDatePicker';
 import CustomSelect from '../CustomSelect';
 import SearchableUserSelect from '../SearchableUserSelect';
-import { exportReportToPDF, exportReportToCSV, exportReportToJSON } from '../../utils/reportExportUtils';
+import { exportReportToPDF, exportReportToExcel, exportReportToCSV, exportReportToJSON } from '../../utils/reportExportUtils';
 
 // Paleta Oficial de Colores para Gráficas de EquilibrIA
 const CHART_COLORS = {
@@ -151,6 +151,26 @@ export const InstitutionalReportView = ({
           <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
             <button
               type="button"
+              onClick={() => exportReportToExcel(allReportsData, safeReportId)}
+              className="btn btn-primary"
+              title="Descargar libro oficial en Excel (.xlsx) con analíticas, KPIs y tablas formateadas"
+              style={{
+                padding: '8px 14px',
+                fontSize: '12px',
+                borderRadius: '12px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                fontWeight: '800',
+                background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+                borderColor: '#059669',
+                color: '#ffffff'
+              }}
+            >
+              <FileSpreadsheet size={15} /> Exportar en Excel (.xlsx)
+            </button>
+            <button
+              type="button"
               onClick={() => exportReportToPDF(allReportsData, safeReportId)}
               className="btn btn-primary"
               title="Generar documento oficial para impresión / PDF"
@@ -162,10 +182,10 @@ export const InstitutionalReportView = ({
               type="button"
               onClick={() => exportReportToCSV(allReportsData, safeReportId)}
               className="duo-pill"
-              title="Descargar datos en CSV compatible con Excel"
+              title="Descargar datos en CSV delimitado por punto y coma"
               style={{ padding: '8px 14px', fontSize: '12px', display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer' }}
             >
-              <Download size={14} /> Exportar en CSV (Excel)
+              <Download size={14} /> Exportar en CSV
             </button>
             <button
               type="button"
