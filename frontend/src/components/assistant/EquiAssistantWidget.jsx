@@ -227,7 +227,9 @@ const EquiAssistantWidget = ({ onOpenBreathing }) => {
   };
 
   // Posicionamiento inteligente del contenedor de chat según la altura del botón
-  const isHighOnScreen = position.top !== null && position.top < 520;
+  // Posicionamiento inteligente del contenedor de chat según el cuadrante del botón en pantalla
+  const isLeftHalf = typeof window !== 'undefined' && position.right > (window.innerWidth / 2);
+  const isTopHalf = position.top !== null && position.top < (typeof window !== 'undefined' ? window.innerHeight / 2 : 450);
 
   return (
     <div
@@ -241,18 +243,19 @@ const EquiAssistantWidget = ({ onOpenBreathing }) => {
         touchAction: 'none'
       }}
     >
-      {/* Ventana Desplegable de Chat */}
+      {/* Ventana Desplegable de Chat con detección inteligente de bordes */}
       {isOpen && (
         <div
           style={{
             position: 'absolute',
-            top: isHighOnScreen ? '62px' : 'auto',
-            bottom: isHighOnScreen ? 'auto' : '68px',
-            right: '0',
+            top: isTopHalf ? '56px' : 'auto',
+            bottom: isTopHalf ? 'auto' : '62px',
+            left: isLeftHalf ? '0' : 'auto',
+            right: isLeftHalf ? 'auto' : '0',
             width: '380px',
             maxWidth: 'calc(100vw - 32px)',
             height: '520px',
-            maxHeight: 'calc(100vh - 120px)',
+            maxHeight: 'calc(100vh - 90px)',
             backgroundColor: 'var(--bg-primary)',
             borderRadius: '24px',
             border: '1.5px solid var(--border)',
@@ -505,13 +508,17 @@ const EquiAssistantWidget = ({ onOpenBreathing }) => {
           color: '#ffffff',
           border: `2px solid ${paletteTheme.border}`,
           boxShadow: paletteTheme.shadow,
-          display: 'flex',
+          display: 'inline-flex',
           alignItems: 'center',
           gap: '8px',
           cursor: isDraggingRef.current ? 'grabbing' : 'grab',
           transition: 'transform 0.15s ease',
           transform: isOpen ? 'scale(0.96)' : 'scale(1)',
-          userSelect: 'none'
+          userSelect: 'none',
+          whiteSpace: 'nowrap',
+          minWidth: 'max-content',
+          flexShrink: 0,
+          boxSizing: 'border-box'
         }}
         title="Arrastra para mover • Haz clic para conversar con Equi"
       >

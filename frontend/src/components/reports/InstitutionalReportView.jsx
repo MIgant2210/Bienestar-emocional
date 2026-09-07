@@ -3,7 +3,7 @@ import {
   FileSpreadsheet, Download, Printer, RotateCcw, Calendar, Sliders,
   BarChart3, AlertTriangle, CheckSquare, Heart, Award, Users,
   ClipboardList, ShieldCheck, Sparkles, TrendingUp, Activity,
-  Clock, Shield, Info, CheckCircle2, XCircle, ChevronRight, UserCheck,
+  Clock, Shield, Info, CheckCircle2, XCircle, ChevronRight, ChevronLeft, UserCheck,
   Building, User, AlertCircle, Tv, Maximize2, Minimize2
 } from 'lucide-react';
 import {
@@ -117,13 +117,26 @@ export const InstitutionalReportView = ({
     filters.start_date > filters.end_date
   );
 
-  // Modo Presentación para Juntas Ejecutivas
+  // Modo Presentación para Juntas Ejecutivas (Estilo Diapositivas / PowerPoint)
   const [isPresentationMode, setIsPresentationMode] = useState(false);
+  const [currentSlide, setCurrentSlide] = useState(0);
+
+  // Reiniciar diapositiva al cambiar de reporte
+  React.useEffect(() => {
+    setCurrentSlide(0);
+  }, [safeReportId]);
 
   React.useEffect(() => {
     const handleKeyDown = (e) => {
-      if (e.key === 'Escape' && isPresentationMode) {
+      if (!isPresentationMode) return;
+      if (e.key === 'Escape') {
         setIsPresentationMode(false);
+      } else if (e.key === 'ArrowRight' || e.key === ' ' || e.key === 'PageDown') {
+        e.preventDefault();
+        setCurrentSlide((prev) => Math.min(prev + 1, 4));
+      } else if (e.key === 'ArrowLeft' || e.key === 'PageUp') {
+        e.preventDefault();
+        setCurrentSlide((prev) => Math.max(prev - 1, 0));
       }
     };
     window.addEventListener('keydown', handleKeyDown);
@@ -143,6 +156,716 @@ export const InstitutionalReportView = ({
     { id: 'reporte_9_auditoria', code: 'EQ-REP-09', title: '9. Auditoría de Seguridad', Icon: ShieldCheck, category: 'Seguridad' },
     { id: 'reporte_10_sugerencias', code: 'EQ-REP-10', title: '10. Estrategia de IA Gemini', Icon: Sparkles, category: 'IA & Analítica' }
   ];
+
+  // Títulos oficiales de las 5 diapositivas estilo PowerPoint
+  const SLIDE_TITLES = [
+    'Portada Institucional & Ficha',
+    'Resumen de Indicadores Clave',
+    'Visualización Analítica & Gráfica',
+    'Muestra de Registros Auditados',
+    'Conclusiones & Validación RBAC'
+  ];
+
+  // RENDERIZADO DE LAS DIAPOSITIVAS DEL MODO PROYECTOR
+  const renderPresentationDeck = () => {
+    if (loading) {
+      return (
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '400px', gap: '14px', color: 'var(--primary)' }}>
+          <Activity className="animate-spin" size={38} />
+          <span style={{ fontWeight: '800', fontSize: '16px' }}>Cargando diapositivas ejecutivas...</span>
+        </div>
+      );
+    }
+
+    if (!allReportsData) {
+      return (
+        <div style={{ textAlign: 'center', padding: '60px 20px', color: 'var(--text-muted)' }}>
+          <Info size={40} style={{ margin: '0 auto 12px auto' }} />
+          <h4 style={{ fontSize: '17px', fontWeight: '800' }}>Sin datos disponibles para proyectar</h4>
+        </div>
+      );
+    }
+
+    const currentTypeInfo = REPORT_TYPES.find((r) => r.id === safeReportId) || REPORT_TYPES[0];
+
+    // Conteo para gráfico dinámico de distribución si no es Clima ni Alertas
+    const countMap = {};
+    detailList.forEach((item) => {
+      const key = item.departamento || item.categoria || item.rol || item.tipo || item.prioridad || 'General';
+      countMap[key] = (countMap[key] || 0) + 1;
+    });
+    const summaryChartData = Object.entries(countMap)
+      .map(([name, total]) => ({
+        name: name.length > 18 ? name.substring(0, 16) + '...' : name,
+        total
+      }))
+      .slice(0, 8);
+
+    return (
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', position: 'relative', width: '100%', minHeight: 'calc(100vh - 180px)', justifyContent: 'space-between' }}>
+        {/* Flecha Flotante Izquierda */}
+        <button
+          type="button"
+          onClick={() => setCurrentSlide((prev) => Math.max(prev - 1, 0))}
+          disabled={currentSlide === 0}
+          aria-label="Diapositiva anterior"
+          style={{
+            position: 'fixed',
+            left: '20px',
+            top: '50%',
+            transform: 'translateY(-50%)',
+            zIndex: 1000,
+            width: '48px',
+            height: '48px',
+            borderRadius: '50%',
+            backgroundColor: 'var(--bg-secondary)',
+            border: '1.5px solid var(--border)',
+            color: currentSlide > 0 ? 'var(--primary)' : 'var(--text-muted)',
+            opacity: currentSlide > 0 ? 1 : 0.25,
+            cursor: currentSlide > 0 ? 'pointer' : 'not-allowed',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            boxShadow: '0 8px 24px rgba(0,0,0,0.25)',
+            transition: 'all 0.2s ease'
+          }}
+        >
+          <ChevronLeft size={28} />
+        </button>
+
+        {/* Flecha Flotante Derecha */}
+        <button
+          type="button"
+          onClick={() => setCurrentSlide((prev) => Math.min(prev + 1, 4))}
+          disabled={currentSlide === 4}
+          aria-label="Diapositiva siguiente"
+          style={{
+            position: 'fixed',
+            right: '20px',
+            top: '50%',
+            transform: 'translateY(-50%)',
+            zIndex: 1000,
+            width: '48px',
+            height: '48px',
+            borderRadius: '50%',
+            backgroundColor: 'var(--bg-secondary)',
+            border: '1.5px solid var(--border)',
+            color: currentSlide < 4 ? 'var(--primary)' : 'var(--text-muted)',
+            opacity: currentSlide < 4 ? 1 : 0.25,
+            cursor: currentSlide < 4 ? 'pointer' : 'not-allowed',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            boxShadow: '0 8px 24px rgba(0,0,0,0.25)',
+            transition: 'all 0.2s ease'
+          }}
+        >
+          <ChevronRight size={28} />
+        </button>
+
+        {/* CONTENEDOR DE LA DIAPOSITIVA ACTIVA (CANVAS ESTILO SLIDE) */}
+        <div style={{
+          flex: 1,
+          maxWidth: '1240px',
+          width: '100%',
+          margin: '0 auto',
+          backgroundColor: 'var(--bg-secondary)',
+          borderRadius: '24px',
+          border: '1.5px solid var(--border)',
+          padding: '36px 42px',
+          boxShadow: '0 16px 40px rgba(0, 0, 0, 0.15)',
+          display: 'flex',
+          flexDirection: 'column',
+          justifyContent: 'space-between',
+          minHeight: '520px',
+          boxSizing: 'border-box'
+        }}>
+          {/* SLIDE 0: PORTADA INSTITUCIONAL & FICHA TÉCNICA */}
+          {currentSlide === 0 && (
+            <div className="animate-fade" style={{ display: 'flex', flexDirection: 'column', height: '100%', justifyContent: 'space-between', gap: '24px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '2px solid var(--primary)', paddingBottom: '18px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+                  <img src="/logo.png" alt="EquilibrIA" style={{ height: '52px', objectFit: 'contain' }} />
+                  <div>
+                    <span style={{ fontSize: '11px', fontWeight: '900', color: 'var(--primary)', letterSpacing: '1px', textTransform: 'uppercase' }}>
+                      INFORME OFICIAL INSTITUCIONAL • PRESENTACIÓN EJECUTIVA
+                    </span>
+                    <h1 style={{ fontSize: '24px', fontWeight: '900', color: 'var(--text-primary)', margin: '4px 0 0 0' }}>
+                      {currentReport.titulo || 'Informe Consolidado'}
+                    </h1>
+                  </div>
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '4px' }}>
+                  <span style={{ fontSize: '12px', fontWeight: '900', color: 'var(--primary)', backgroundColor: 'var(--primary-light)', padding: '6px 14px', borderRadius: '12px' }}>
+                    {currentTypeInfo.code} • {currentTypeInfo.category}
+                  </span>
+                  <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
+                    Emisión: {allReportsData.fecha_generacion}
+                  </span>
+                </div>
+              </div>
+
+              {/* Ficha Técnica de 4 Tarjetas */}
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '16px' }}>
+                <div style={{ backgroundColor: 'var(--bg-primary)', padding: '18px', borderRadius: '16px', border: '1px solid var(--border)' }}>
+                  <span style={{ fontSize: '11px', fontWeight: '800', color: 'var(--text-muted)', display: 'block', textTransform: 'uppercase' }}>
+                    Alcance del Análisis
+                  </span>
+                  <h3 style={{ fontSize: '18px', fontWeight: '900', color: 'var(--primary)', marginTop: '6px' }}>
+                    {scopeData.etiqueta || 'Toda la institución'}
+                  </h3>
+                  <span style={{ fontSize: '11.5px', color: 'var(--text-secondary)', marginTop: '2px', display: 'block' }}>
+                    Población auditada en la muestra
+                  </span>
+                </div>
+
+                <div style={{ backgroundColor: 'var(--bg-primary)', padding: '18px', borderRadius: '16px', border: '1px solid var(--border)' }}>
+                  <span style={{ fontSize: '11px', fontWeight: '800', color: 'var(--text-muted)', display: 'block', textTransform: 'uppercase' }}>
+                    Periodo Evaluado
+                  </span>
+                  <h3 style={{ fontSize: '16px', fontWeight: '900', color: 'var(--text-primary)', marginTop: '6px' }}>
+                    {appliedFilters.fecha_inicio || 'Inicio'} al {appliedFilters.fecha_fin || 'Actual'}
+                  </h3>
+                  <span style={{ fontSize: '11.5px', color: 'var(--text-secondary)', marginTop: '2px', display: 'block' }}>
+                    {appliedFilters.periodo_rapido ? `Preset: ${appliedFilters.periodo_rapido}` : 'Rango personalizado'}
+                  </span>
+                </div>
+
+                <div style={{ backgroundColor: 'var(--bg-primary)', padding: '18px', borderRadius: '16px', border: '1px solid var(--border)' }}>
+                  <span style={{ fontSize: '11px', fontWeight: '800', color: 'var(--text-muted)', display: 'block', textTransform: 'uppercase' }}>
+                    Total de Registros
+                  </span>
+                  <h3 style={{ fontSize: '24px', fontWeight: '900', color: '#10b981', marginTop: '2px' }}>
+                    {detailList.length}
+                  </h3>
+                  <span style={{ fontSize: '11.5px', color: 'var(--text-secondary)', display: 'block' }}>
+                    Registros procesados y consolidados
+                  </span>
+                </div>
+
+                <div style={{ backgroundColor: 'var(--bg-primary)', padding: '18px', borderRadius: '16px', border: '1px solid var(--border)' }}>
+                  <span style={{ fontSize: '11px', fontWeight: '800', color: 'var(--text-muted)', display: 'block', textTransform: 'uppercase' }}>
+                    Protocolo de Privacidad
+                  </span>
+                  <h3 style={{ fontSize: '16px', fontWeight: '900', color: '#f59e0b', marginTop: '6px' }}>
+                    CONFIDENCIAL (RBAC)
+                  </h3>
+                  <span style={{ fontSize: '11.5px', color: 'var(--text-secondary)', marginTop: '2px', display: 'block' }}>
+                    Acceso protegido según rol activo
+                  </span>
+                </div>
+              </div>
+
+              {/* Mensaje Informativo & Guía de Navegación */}
+              <div style={{ backgroundColor: 'var(--primary-light)', borderRadius: '16px', padding: '18px 22px', border: '1.5px solid var(--primary)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '14px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                  <Sparkles size={24} style={{ color: 'var(--primary)', flexShrink: 0 }} />
+                  <div>
+                    <h4 style={{ margin: 0, fontSize: '14px', fontWeight: '900', color: 'var(--primary)' }}>
+                      Presentación Interactiva para Comités y Juntas
+                    </h4>
+                    <p style={{ margin: '2px 0 0 0', fontSize: '12.5px', color: 'var(--text-secondary)' }}>
+                      Navega con las flechas laterales, los botones inferiores o usando las teclas ← y → de tu teclado.
+                    </p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setCurrentSlide(1)}
+                  className="btn btn-primary"
+                  style={{ padding: '8px 18px', fontSize: '13px', fontWeight: '800', display: 'flex', alignItems: 'center', gap: '6px' }}
+                >
+                  Ver Resumen de KPIs <ChevronRight size={16} />
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* SLIDE 1: RESUMEN EJECUTIVO DE INDICADORES (KPIS) */}
+          {currentSlide === 1 && (
+            <div className="animate-fade" style={{ display: 'flex', flexDirection: 'column', height: '100%', justifyContent: 'space-between', gap: '20px' }}>
+              <div>
+                <span style={{ fontSize: '11px', fontWeight: '900', color: 'var(--primary)', letterSpacing: '1px', textTransform: 'uppercase' }}>
+                  DIAPOSITIVA 2 • INDICADORES CLAVE
+                </span>
+                <h2 style={{ fontSize: '22px', fontWeight: '900', color: 'var(--text-primary)', margin: '4px 0 0 0' }}>
+                  Resumen Ejecutivo de Indicadores ({scopeData.etiqueta || 'Toda la institución'})
+                </h2>
+                <p style={{ fontSize: '13px', color: 'var(--text-secondary)', marginTop: '4px' }}>
+                  Métricas de alto impacto calculadas en tiempo real para el periodo seleccionado.
+                </p>
+              </div>
+
+              {/* Tarjetas Gigantes de KPIs */}
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(230px, 1fr))', gap: '18px' }}>
+                {safeReportId === 'reporte_1_clima' && (
+                  <>
+                    <div style={{ backgroundColor: 'var(--bg-primary)', padding: '24px', borderRadius: '20px', border: '1.5px solid #ef4444', textAlign: 'center' }}>
+                      <span style={{ fontSize: '12px', color: 'var(--text-muted)', fontWeight: '800', textTransform: 'uppercase' }}>ESTRÉS PROMEDIO</span>
+                      <h2 style={{ fontSize: '44px', fontWeight: '900', color: '#ef4444', margin: '10px 0' }}>
+                        {currentReport.estres_promedio !== null ? `${currentReport.estres_promedio}%` : 'S/D'}
+                      </h2>
+                      <span style={{ fontSize: '11.5px', color: 'var(--text-secondary)', fontWeight: '600' }}>Nivel de tensión percibida</span>
+                    </div>
+
+                    <div style={{ backgroundColor: 'var(--bg-primary)', padding: '24px', borderRadius: '20px', border: '1.5px solid #10b981', textAlign: 'center' }}>
+                      <span style={{ fontSize: '12px', color: 'var(--text-muted)', fontWeight: '800', textTransform: 'uppercase' }}>MOTIVACIÓN PROMEDIO</span>
+                      <h2 style={{ fontSize: '44px', fontWeight: '900', color: '#10b981', margin: '10px 0' }}>
+                        {currentReport.motivacion_promedio !== null ? `${currentReport.motivacion_promedio}%` : 'S/D'}
+                      </h2>
+                      <span style={{ fontSize: '11.5px', color: 'var(--text-secondary)', fontWeight: '600' }}>Compromiso y energía</span>
+                    </div>
+
+                    <div style={{ backgroundColor: 'var(--bg-primary)', padding: '24px', borderRadius: '20px', border: '1.5px solid #f59e0b', textAlign: 'center' }}>
+                      <span style={{ fontSize: '12px', color: 'var(--text-muted)', fontWeight: '800', textTransform: 'uppercase' }}>RIESGO DE BURNOUT</span>
+                      <h2 style={{ fontSize: '44px', fontWeight: '900', color: '#f59e0b', margin: '10px 0' }}>
+                        {currentReport.burnout_promedio !== null ? `${currentReport.burnout_promedio}%` : 'S/D'}
+                      </h2>
+                      <span style={{ fontSize: '11.5px', color: 'var(--text-secondary)', fontWeight: '600' }}>Probabilidad de agotamiento</span>
+                    </div>
+
+                    <div style={{ backgroundColor: 'var(--bg-primary)', padding: '24px', borderRadius: '20px', border: '1.5px solid var(--primary)', textAlign: 'center' }}>
+                      <span style={{ fontSize: '12px', color: 'var(--text-muted)', fontWeight: '800', textTransform: 'uppercase' }}>TOTAL EVALUACIONES</span>
+                      <h2 style={{ fontSize: '44px', fontWeight: '900', color: 'var(--primary)', margin: '10px 0' }}>
+                        {currentReport.total_reflexiones || 0}
+                      </h2>
+                      <span style={{ fontSize: '11.5px', color: 'var(--text-secondary)', fontWeight: '600' }}>Reflexiones emocionales emitidas</span>
+                    </div>
+                  </>
+                )}
+
+                {safeReportId === 'reporte_2_alertas' && (
+                  <>
+                    <div style={{ backgroundColor: 'var(--bg-primary)', padding: '24px', borderRadius: '20px', border: '1.5px solid var(--primary)', textAlign: 'center' }}>
+                      <span style={{ fontSize: '12px', color: 'var(--text-muted)', fontWeight: '800', textTransform: 'uppercase' }}>TOTAL ALERTAS</span>
+                      <h2 style={{ fontSize: '44px', fontWeight: '900', color: 'var(--primary)', margin: '10px 0' }}>{currentReport.total_alertas || 0}</h2>
+                      <span style={{ fontSize: '11.5px', color: 'var(--text-secondary)', fontWeight: '600' }}>Registradas en el periodo</span>
+                    </div>
+                    <div style={{ backgroundColor: 'var(--bg-primary)', padding: '24px', borderRadius: '20px', border: '1.5px solid #ef4444', textAlign: 'center' }}>
+                      <span style={{ fontSize: '12px', color: 'var(--text-muted)', fontWeight: '800', textTransform: 'uppercase' }}>ALERTAS ACTIVAS</span>
+                      <h2 style={{ fontSize: '44px', fontWeight: '900', color: '#ef4444', margin: '10px 0' }}>{currentReport.activas || 0}</h2>
+                      <span style={{ fontSize: '11.5px', color: 'var(--text-secondary)', fontWeight: '600' }}>Requieren intervención</span>
+                    </div>
+                    <div style={{ backgroundColor: 'var(--bg-primary)', padding: '24px', borderRadius: '20px', border: '1.5px solid #10b981', textAlign: 'center' }}>
+                      <span style={{ fontSize: '12px', color: 'var(--text-muted)', fontWeight: '800', textTransform: 'uppercase' }}>ALERTAS ATENDIDAS</span>
+                      <h2 style={{ fontSize: '44px', fontWeight: '900', color: '#10b981', margin: '10px 0' }}>{currentReport.atendidas || 0}</h2>
+                      <span style={{ fontSize: '11.5px', color: 'var(--text-secondary)', fontWeight: '600' }}>Gestionadas exitosamente</span>
+                    </div>
+                    <div style={{ backgroundColor: 'var(--bg-primary)', padding: '24px', borderRadius: '20px', border: '1.5px solid #3b82f6', textAlign: 'center' }}>
+                      <span style={{ fontSize: '12px', color: 'var(--text-muted)', fontWeight: '800', textTransform: 'uppercase' }}>TIEMPO ATENCIÓN</span>
+                      <h2 style={{ fontSize: '38px', fontWeight: '900', color: '#3b82f6', margin: '12px 0' }}>
+                        {currentReport.tiempo_promedio_horas !== null ? `${currentReport.tiempo_promedio_horas}h` : 'S/D'}
+                      </h2>
+                      <span style={{ fontSize: '11.5px', color: 'var(--text-secondary)', fontWeight: '600' }}>Promedio de respuesta</span>
+                    </div>
+                  </>
+                )}
+
+                {safeReportId === 'reporte_3_tareas' && (
+                  <>
+                    <div style={{ backgroundColor: 'var(--bg-primary)', padding: '24px', borderRadius: '20px', border: '1.5px solid var(--primary)', textAlign: 'center' }}>
+                      <span style={{ fontSize: '12px', color: 'var(--text-muted)', fontWeight: '800', textTransform: 'uppercase' }}>TOTAL TAREAS</span>
+                      <h2 style={{ fontSize: '44px', fontWeight: '900', color: 'var(--primary)', margin: '10px 0' }}>{currentReport.total_tareas || 0}</h2>
+                      <span style={{ fontSize: '11.5px', color: 'var(--text-secondary)', fontWeight: '600' }}>Tareas asignadas</span>
+                    </div>
+                    <div style={{ backgroundColor: 'var(--bg-primary)', padding: '24px', borderRadius: '20px', border: '1.5px solid #10b981', textAlign: 'center' }}>
+                      <span style={{ fontSize: '12px', color: 'var(--text-muted)', fontWeight: '800', textTransform: 'uppercase' }}>COMPLETADAS</span>
+                      <h2 style={{ fontSize: '44px', fontWeight: '900', color: '#10b981', margin: '10px 0' }}>{currentReport.completadas || 0}</h2>
+                      <span style={{ fontSize: '11.5px', color: 'var(--text-secondary)', fontWeight: '600' }}>Entregadas a tiempo</span>
+                    </div>
+                    <div style={{ backgroundColor: 'var(--bg-primary)', padding: '24px', borderRadius: '20px', border: '1.5px solid #f59e0b', textAlign: 'center' }}>
+                      <span style={{ fontSize: '12px', color: 'var(--text-muted)', fontWeight: '800', textTransform: 'uppercase' }}>PENDIENTES</span>
+                      <h2 style={{ fontSize: '44px', fontWeight: '900', color: '#f59e0b', margin: '10px 0' }}>{currentReport.pendientes || 0}</h2>
+                      <span style={{ fontSize: '11.5px', color: 'var(--text-secondary)', fontWeight: '600' }}>En progreso o retraso</span>
+                    </div>
+                    <div style={{ backgroundColor: 'var(--bg-primary)', padding: '24px', borderRadius: '20px', border: '1.5px solid #10b981', textAlign: 'center' }}>
+                      <span style={{ fontSize: '12px', color: 'var(--text-muted)', fontWeight: '800', textTransform: 'uppercase' }}>% CUMPLIMIENTO</span>
+                      <h2 style={{ fontSize: '44px', fontWeight: '900', color: '#10b981', margin: '10px 0' }}>
+                        {currentReport.porcentaje_cumplimiento !== null ? `${currentReport.porcentaje_cumplimiento}%` : '0%'}
+                      </h2>
+                      <span style={{ fontSize: '11.5px', color: 'var(--text-secondary)', fontWeight: '600' }}>Tasa de efectividad</span>
+                    </div>
+                  </>
+                )}
+
+                {safeReportId === 'reporte_4_citas' && (
+                  <>
+                    <div style={{ backgroundColor: 'var(--bg-primary)', padding: '24px', borderRadius: '20px', border: '1.5px solid var(--primary)', textAlign: 'center' }}>
+                      <span style={{ fontSize: '12px', color: 'var(--text-muted)', fontWeight: '800', textTransform: 'uppercase' }}>TOTAL CITAS</span>
+                      <h2 style={{ fontSize: '44px', fontWeight: '900', color: 'var(--primary)', margin: '10px 0' }}>{currentReport.total_citas || 0}</h2>
+                      <span style={{ fontSize: '11.5px', color: 'var(--text-secondary)', fontWeight: '600' }}>Sesiones agendadas</span>
+                    </div>
+                    <div style={{ backgroundColor: 'var(--bg-primary)', padding: '24px', borderRadius: '20px', border: '1.5px solid #3b82f6', textAlign: 'center' }}>
+                      <span style={{ fontSize: '12px', color: 'var(--text-muted)', fontWeight: '800', textTransform: 'uppercase' }}>PROGRAMADAS</span>
+                      <h2 style={{ fontSize: '44px', fontWeight: '900', color: '#3b82f6', margin: '10px 0' }}>{currentReport.programadas || 0}</h2>
+                      <span style={{ fontSize: '11.5px', color: 'var(--text-secondary)', fontWeight: '600' }}>Próximas sesiones</span>
+                    </div>
+                    <div style={{ backgroundColor: 'var(--bg-primary)', padding: '24px', borderRadius: '20px', border: '1.5px solid #10b981', textAlign: 'center' }}>
+                      <span style={{ fontSize: '12px', color: 'var(--text-muted)', fontWeight: '800', textTransform: 'uppercase' }}>COMPLETADAS</span>
+                      <h2 style={{ fontSize: '44px', fontWeight: '900', color: '#10b981', margin: '10px 0' }}>{currentReport.completadas || 0}</h2>
+                      <span style={{ fontSize: '11.5px', color: 'var(--text-secondary)', fontWeight: '600' }}>Sesiones concluidas</span>
+                    </div>
+                    <div style={{ backgroundColor: 'var(--bg-primary)', padding: '24px', borderRadius: '20px', border: '1.5px solid #10b981', textAlign: 'center' }}>
+                      <span style={{ fontSize: '12px', color: 'var(--text-muted)', fontWeight: '800', textTransform: 'uppercase' }}>% ASISTENCIA</span>
+                      <h2 style={{ fontSize: '44px', fontWeight: '900', color: '#10b981', margin: '10px 0' }}>
+                        {currentReport.porcentaje_asistencia !== null ? `${currentReport.porcentaje_asistencia}%` : '0%'}
+                      </h2>
+                      <span style={{ fontSize: '11.5px', color: 'var(--text-secondary)', fontWeight: '600' }}>Adherencia a programas</span>
+                    </div>
+                  </>
+                )}
+
+                {safeReportId !== 'reporte_1_clima' && safeReportId !== 'reporte_2_alertas' && safeReportId !== 'reporte_3_tareas' && safeReportId !== 'reporte_4_citas' && (
+                  <>
+                    <div style={{ backgroundColor: 'var(--bg-primary)', padding: '24px', borderRadius: '20px', border: '1.5px solid var(--primary)', textAlign: 'center' }}>
+                      <span style={{ fontSize: '12px', color: 'var(--text-muted)', fontWeight: '800', textTransform: 'uppercase' }}>REGISTROS TOTALES</span>
+                      <h2 style={{ fontSize: '44px', fontWeight: '900', color: 'var(--primary)', margin: '10px 0' }}>{detailList.length}</h2>
+                      <span style={{ fontSize: '11.5px', color: 'var(--text-secondary)', fontWeight: '600' }}>Filtrados para el alcance</span>
+                    </div>
+                    <div style={{ backgroundColor: 'var(--bg-primary)', padding: '24px', borderRadius: '20px', border: '1.5px solid #10b981', textAlign: 'center' }}>
+                      <span style={{ fontSize: '12px', color: 'var(--text-muted)', fontWeight: '800', textTransform: 'uppercase' }}>ESTADO AUDITORÍA</span>
+                      <h2 style={{ fontSize: '26px', fontWeight: '900', color: '#10b981', margin: '20px 0' }}>AUDITADO OK</h2>
+                      <span style={{ fontSize: '11.5px', color: 'var(--text-secondary)', fontWeight: '600' }}>Trazabilidad validada</span>
+                    </div>
+                    <div style={{ backgroundColor: 'var(--bg-primary)', padding: '24px', borderRadius: '20px', border: '1.5px solid var(--primary)', textAlign: 'center' }}>
+                      <span style={{ fontSize: '12px', color: 'var(--text-muted)', fontWeight: '800', textTransform: 'uppercase' }}>VALIDEZ</span>
+                      <h2 style={{ fontSize: '26px', fontWeight: '900', color: 'var(--primary)', margin: '20px 0' }}>VIGENTE</h2>
+                      <span style={{ fontSize: '11.5px', color: 'var(--text-secondary)', fontWeight: '600' }}>Parámetros actualizados</span>
+                    </div>
+                    <div style={{ backgroundColor: 'var(--bg-primary)', padding: '24px', borderRadius: '20px', border: '1.5px solid #f59e0b', textAlign: 'center' }}>
+                      <span style={{ fontSize: '12px', color: 'var(--text-muted)', fontWeight: '800', textTransform: 'uppercase' }}>PRIVACIDAD</span>
+                      <h2 style={{ fontSize: '26px', fontWeight: '900', color: '#f59e0b', margin: '20px 0' }}>RBAC SEGURO</h2>
+                      <span style={{ fontSize: '11.5px', color: 'var(--text-secondary)', fontWeight: '600' }}>Control de acceso estricto</span>
+                    </div>
+                  </>
+                )}
+              </div>
+
+              {/* Banner de Diagnóstico */}
+              <div style={{ backgroundColor: 'var(--bg-primary)', padding: '14px 20px', borderRadius: '16px', border: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <CheckCircle2 size={20} style={{ color: '#10b981', flexShrink: 0 }} />
+                <span style={{ fontSize: '13px', color: 'var(--text-secondary)', fontWeight: '600' }}>
+                  <strong style={{ color: 'var(--text-primary)' }}>Diagnóstico Ejecutivo:</strong> Los indicadores analizados se encuentran debidamente auditados en PostgreSQL y reflejan el comportamiento poblacional del alcance seleccionado.
+                </span>
+              </div>
+            </div>
+          )}
+
+          {/* SLIDE 2: VISUALIZACIÓN ANALÍTICA & GRÁFICA INTERACTIVA */}
+          {currentSlide === 2 && (
+            <div className="animate-fade" style={{ display: 'flex', flexDirection: 'column', height: '100%', justifyContent: 'space-between', gap: '16px' }}>
+              <div>
+                <span style={{ fontSize: '11px', fontWeight: '900', color: 'var(--primary)', letterSpacing: '1px', textTransform: 'uppercase' }}>
+                  DIAPOSITIVA 3 • VISUALIZACIÓN ANALÍTICA
+                </span>
+                <h2 style={{ fontSize: '22px', fontWeight: '900', color: 'var(--text-primary)', margin: '4px 0 0 0' }}>
+                  Comportamiento y Distribución de Datos ({scopeData.etiqueta || 'Institucional'})
+                </h2>
+                <p style={{ fontSize: '13px', color: 'var(--text-secondary)', marginTop: '4px' }}>
+                  Gráficas interactivas con granularidad visual optimizada para salas de juntas y proyector.
+                </p>
+              </div>
+
+              {/* Gráfica Recharts Principal */}
+              <div style={{ backgroundColor: 'var(--bg-primary)', padding: '20px 16px', borderRadius: '20px', border: '1px solid var(--border)', flex: 1, minHeight: '340px' }}>
+                {safeReportId === 'reporte_1_clima' && currentReport.evolucion_temporal?.length > 0 ? (
+                  <AutoResponsiveContainer height={330}>
+                    <LineChart data={currentReport.evolucion_temporal} margin={{ top: 10, right: 20, left: -10, bottom: 10 }}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" opacity={0.5} />
+                      <XAxis dataKey="fecha" stroke="var(--text-muted)" fontSize={12} />
+                      <YAxis stroke="var(--text-muted)" fontSize={12} domain={[0, 100]} />
+                      <Tooltip contentStyle={{ backgroundColor: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: '12px', fontSize: '13px', fontWeight: '700' }} />
+                      <Legend verticalAlign="top" height={38} iconType="circle" wrapperStyle={{ fontSize: '13px', fontWeight: '700' }} />
+                      <Line type="monotone" dataKey="estres" name="Estrés Promedio (%)" stroke="#ef4444" strokeWidth={3} dot={{ r: 4 }} activeDot={{ r: 7 }} />
+                      <Line type="monotone" dataKey="motivacion" name="Motivación (%)" stroke="#10b981" strokeWidth={3} dot={{ r: 4 }} activeDot={{ r: 7 }} />
+                      <Line type="monotone" dataKey="burnout" name="Burnout (%)" stroke="#f59e0b" strokeWidth={2.5} strokeDasharray="5 5" dot={{ r: 4 }} />
+                    </LineChart>
+                  </AutoResponsiveContainer>
+                ) : safeReportId === 'reporte_1_clima' && currentReport.distribucion_departamentos?.length > 0 ? (
+                  <AutoResponsiveContainer height={330}>
+                    <BarChart data={currentReport.distribucion_departamentos} margin={{ top: 10, right: 20, left: -10, bottom: 25 }}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" opacity={0.5} />
+                      <XAxis dataKey="departamento" stroke="var(--text-muted)" fontSize={11} interval={0} angle={-15} textAnchor="end" />
+                      <YAxis stroke="var(--text-muted)" fontSize={12} domain={[0, 100]} />
+                      <Tooltip contentStyle={{ backgroundColor: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: '12px', fontSize: '13px', fontWeight: '700' }} />
+                      <Legend verticalAlign="top" height={38} iconType="circle" wrapperStyle={{ fontSize: '13px', fontWeight: '700' }} />
+                      <Bar dataKey="estres" name="Estrés (%)" fill="#ef4444" radius={[6, 6, 0, 0]} />
+                      <Bar dataKey="motivacion" name="Motivación (%)" fill="#10b981" radius={[6, 6, 0, 0]} />
+                      <Bar dataKey="burnout" name="Burnout (%)" fill="#f59e0b" radius={[6, 6, 0, 0]} />
+                    </BarChart>
+                  </AutoResponsiveContainer>
+                ) : summaryChartData.length > 0 ? (
+                  <AutoResponsiveContainer height={330}>
+                    <BarChart data={summaryChartData} margin={{ top: 10, right: 20, left: -10, bottom: 25 }}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" opacity={0.5} />
+                      <XAxis dataKey="name" stroke="var(--text-muted)" fontSize={11} interval={0} angle={-15} textAnchor="end" />
+                      <YAxis stroke="var(--text-muted)" fontSize={12} allowDecimals={false} />
+                      <Tooltip contentStyle={{ backgroundColor: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: '12px', fontSize: '13px', fontWeight: '700' }} />
+                      <Legend verticalAlign="top" height={38} iconType="circle" wrapperStyle={{ fontSize: '13px', fontWeight: '700' }} />
+                      <Bar dataKey="total" name="Registros Consolidados" fill="var(--primary)" radius={[6, 6, 0, 0]} />
+                    </BarChart>
+                  </AutoResponsiveContainer>
+                ) : (
+                  <div style={{ textAlign: 'center', padding: '60px 20px', color: 'var(--text-muted)' }}>
+                    <BarChart3 size={40} style={{ margin: '0 auto 10px auto', opacity: 0.6 }} />
+                    <p style={{ fontSize: '14px', fontWeight: '700' }}>Sin datos gráficos disponibles para este reporte en el periodo.</p>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* SLIDE 3: DETALLE DE REGISTROS Y MUESTRA AUDITADA */}
+          {currentSlide === 3 && (
+            <div className="animate-fade" style={{ display: 'flex', flexDirection: 'column', height: '100%', justifyContent: 'space-between', gap: '16px' }}>
+              <div>
+                <span style={{ fontSize: '11px', fontWeight: '900', color: 'var(--primary)', letterSpacing: '1px', textTransform: 'uppercase' }}>
+                  DIAPOSITIVA 4 • MUESTRA DE REGISTROS
+                </span>
+                <h2 style={{ fontSize: '22px', fontWeight: '900', color: 'var(--text-primary)', margin: '4px 0 0 0' }}>
+                  Muestra Auditada de Registros Recientes ({detailList.length} registros totales)
+                </h2>
+                <p style={{ fontSize: '13px', color: 'var(--text-secondary)', marginTop: '4px' }}>
+                  Detalle consolidado con trazabilidad en PostgreSQL para revisión del comité directivo.
+                </p>
+              </div>
+
+              {/* Tabla Ejecutiva de Diapositiva */}
+              <div style={{ backgroundColor: 'var(--bg-primary)', borderRadius: '18px', border: '1px solid var(--border)', padding: '14px', overflowX: 'auto', flex: 1 }}>
+                {detailList.length === 0 ? (
+                  <div style={{ textAlign: 'center', padding: '50px 20px', color: 'var(--text-muted)' }}>
+                    <Info size={32} style={{ margin: '0 auto 10px auto', opacity: 0.6 }} />
+                    <p style={{ fontSize: '14px', fontWeight: '700' }}>No se encontraron registros para los filtros seleccionados.</p>
+                  </div>
+                ) : (
+                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12.5px', textAlign: 'left' }}>
+                    <thead>
+                      <tr style={{ borderBottom: '2px solid var(--border)', color: 'var(--text-muted)' }}>
+                        <th style={{ padding: '8px 12px' }}>#</th>
+                        <th style={{ padding: '8px 12px' }}>CONCEPTO / REGISTRO</th>
+                        <th style={{ padding: '8px 12px' }}>DEPARTAMENTO / CATEGORÍA</th>
+                        <th style={{ padding: '8px 12px' }}>ESTADO / CONDICIÓN</th>
+                        <th style={{ padding: '8px 12px' }}>FECHA</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {detailList.slice(0, 6).map((item, idx) => {
+                        const label = item.usuario_nombre || item.titulo || item.nombre || item.tipo_test || item.accion || item.motivo || `Registro #${idx + 1}`;
+                        const dept = item.departamento || item.categoria || item.rol || 'General';
+                        const status = item.estado || item.nivel_riesgo || item.resultado_interpretacion || 'Completado';
+                        const fecha = item.fecha || item.fecha_hora || item.fecha_creacion || 'Reciente';
+
+                        return (
+                          <tr key={idx} style={{ borderBottom: '1px solid var(--border)', transition: 'background 0.15s ease' }}>
+                            <td style={{ padding: '10px 12px', fontWeight: '800', color: 'var(--text-muted)' }}>{idx + 1}</td>
+                            <td style={{ padding: '10px 12px', fontWeight: '800', color: 'var(--text-primary)' }}>{label}</td>
+                            <td style={{ padding: '10px 12px', color: 'var(--text-secondary)' }}>{dept}</td>
+                            <td style={{ padding: '10px 12px' }}>
+                              <span style={{
+                                padding: '3px 10px',
+                                borderRadius: '12px',
+                                fontSize: '11px',
+                                fontWeight: '800',
+                                backgroundColor: String(status).toLowerCase().includes('alto') || String(status).toLowerCase().includes('activa') ? 'rgba(239, 68, 68, 0.15)' : 'rgba(16, 185, 129, 0.15)',
+                                color: String(status).toLowerCase().includes('alto') || String(status).toLowerCase().includes('activa') ? '#ef4444' : '#10b981'
+                              }}>
+                                {status}
+                              </span>
+                            </td>
+                            <td style={{ padding: '10px 12px', color: 'var(--text-muted)', fontSize: '11.5px' }}>{fecha}</td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                )}
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '12px', color: 'var(--text-muted)' }}>
+                <span>Mostrando muestra representativa (hasta 6 registros) de {detailList.length} en total.</span>
+                <span style={{ fontWeight: '700', color: 'var(--primary)' }}>Exporta el libro Excel para la nómina y auditoría completa.</span>
+              </div>
+            </div>
+          )}
+
+          {/* SLIDE 4: CONCLUSIONES, OBSERVACIONES & FIRMA DIGITAL */}
+          {currentSlide === 4 && (
+            <div className="animate-fade" style={{ display: 'flex', flexDirection: 'column', height: '100%', justifyContent: 'space-between', gap: '20px' }}>
+              <div>
+                <span style={{ fontSize: '11px', fontWeight: '900', color: 'var(--primary)', letterSpacing: '1px', textTransform: 'uppercase' }}>
+                  DIAPOSITIVA 5 • CONCLUSIONES & GOBERNANZA
+                </span>
+                <h2 style={{ fontSize: '22px', fontWeight: '900', color: 'var(--text-primary)', margin: '4px 0 0 0' }}>
+                  Observaciones Estratégicas y Validación Digital
+                </h2>
+                <p style={{ fontSize: '13px', color: 'var(--text-secondary)', marginTop: '4px' }}>
+                  Dictamen institucional emitido para la toma de decisiones organizacionales y comités de bienestar.
+                </p>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '20px', flex: 1, alignItems: 'stretch' }}>
+                {/* Caja de Observaciones */}
+                <div style={{ backgroundColor: 'var(--bg-primary)', padding: '24px', borderRadius: '20px', border: '1px solid var(--border)', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+                  <div>
+                    <h4 style={{ fontSize: '14px', fontWeight: '900', color: 'var(--primary)', display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px', textTransform: 'uppercase' }}>
+                      <ClipboardList size={18} /> Observaciones del Periodo
+                    </h4>
+                    <p style={{ fontSize: '13.5px', color: 'var(--text-secondary)', lineHeight: '1.6', margin: 0 }}>
+                      {currentReport.observaciones || 'Se recopilaron y validaron los datos del periodo seleccionado conforme a los protocolos institucionales de auditoría y análisis de bienestar.'}
+                    </p>
+                    {currentReport.nota_aclaratoria && (
+                      <div style={{ marginTop: '14px', padding: '10px 14px', borderRadius: '12px', backgroundColor: 'var(--bg-secondary)', border: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12px', color: 'var(--text-muted)' }}>
+                        <Info size={16} style={{ color: 'var(--primary)', flexShrink: 0 }} />
+                        <span>{currentReport.nota_aclaratoria}</span>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Descarga Rápida en Presentación */}
+                  <div style={{ marginTop: '20px', paddingTop: '16px', borderTop: '1px solid var(--border)', display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+                    <button
+                      type="button"
+                      onClick={() => exportReportToExcel(allReportsData, safeReportId)}
+                      className="btn btn-primary"
+                      style={{ padding: '8px 14px', fontSize: '12px', background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)', borderColor: '#059669', display: 'flex', alignItems: 'center', gap: '6px' }}
+                    >
+                      <FileSpreadsheet size={14} /> Descargar Excel (.xlsx)
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => exportReportToPDF(allReportsData, safeReportId)}
+                      className="btn btn-primary"
+                      style={{ padding: '8px 14px', fontSize: '12px', display: 'flex', alignItems: 'center', gap: '6px' }}
+                    >
+                      <Download size={14} /> Descargar PDF
+                    </button>
+                  </div>
+                </div>
+
+                {/* Sello y Certificación RBAC */}
+                <div style={{ backgroundColor: 'var(--primary-light)', padding: '24px', borderRadius: '20px', border: '1.5px dashed var(--primary)', display: 'flex', flexDirection: 'column', justifyContent: 'center', textAlign: 'center', gap: '14px' }}>
+                  <ShieldCheck size={44} style={{ color: 'var(--primary)', margin: '0 auto' }} />
+                  <div>
+                    <h3 style={{ fontSize: '16px', fontWeight: '900', color: 'var(--primary)', margin: 0, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                      VALIDACIÓN ELECTRÓNICA & CONFIDENCIALIDAD
+                    </h3>
+                    <p style={{ fontSize: '12.5px', color: 'var(--text-secondary)', marginTop: '8px', lineHeight: '1.5' }}>
+                      La información expuesta en esta sesión ha sido generada automáticamente por el motor analítico de EquilibrIA con base en consultas parametrizadas en PostgreSQL, aplicando estrictas directrices de control de acceso RBAC ({scopeData.etiqueta}).
+                    </p>
+                  </div>
+                  <div style={{ fontSize: '11px', color: 'var(--text-muted)', borderTop: '1px solid rgba(126, 34, 206, 0.2)', paddingTop: '10px' }}>
+                    Fecha y hora oficial de emisión: <strong>{allReportsData.fecha_generacion}</strong>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* BARRA INFERIOR DE NAVEGACIÓN DOCK (BOTTOM DOCK CON DOTS) */}
+        <div style={{
+          position: 'sticky',
+          bottom: '16px',
+          zIndex: 1000,
+          display: 'flex',
+          justifyContent: 'center',
+          marginTop: '16px'
+        }}>
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '14px',
+            backgroundColor: 'var(--bg-secondary)',
+            border: '1.5px solid var(--border)',
+            padding: '8px 22px',
+            borderRadius: '40px',
+            boxShadow: '0 10px 30px rgba(0,0,0,0.3)',
+            backdropFilter: 'blur(10px)'
+          }}>
+            <button
+              type="button"
+              onClick={() => setCurrentSlide((prev) => Math.max(prev - 1, 0))}
+              disabled={currentSlide === 0}
+              style={{
+                padding: '6px 14px',
+                borderRadius: '20px',
+                border: '1px solid var(--border)',
+                backgroundColor: currentSlide > 0 ? 'var(--bg-primary)' : 'transparent',
+                color: currentSlide > 0 ? 'var(--text-primary)' : 'var(--text-muted)',
+                fontSize: '12px',
+                fontWeight: '700',
+                cursor: currentSlide > 0 ? 'pointer' : 'not-allowed',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '4px'
+              }}
+            >
+              <ChevronLeft size={16} /> Anterior
+            </button>
+
+            {/* Dots */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              {SLIDE_TITLES.map((title, idx) => {
+                const isActive = currentSlide === idx;
+                return (
+                  <button
+                    key={idx}
+                    type="button"
+                    onClick={() => setCurrentSlide(idx)}
+                    title={`${idx + 1}. ${title}`}
+                    style={{
+                      width: isActive ? '28px' : '10px',
+                      height: '10px',
+                      borderRadius: '5px',
+                      backgroundColor: isActive ? 'var(--primary)' : 'var(--border)',
+                      border: 'none',
+                      cursor: 'pointer',
+                      transition: 'all 0.25s ease'
+                    }}
+                  />
+                );
+              })}
+            </div>
+
+            <span style={{ fontSize: '12px', fontWeight: '800', color: 'var(--text-secondary)' }}>
+              {currentSlide + 1} / 5 • {SLIDE_TITLES[currentSlide]}
+            </span>
+
+            <button
+              type="button"
+              onClick={() => {
+                if (currentSlide < 4) {
+                  setCurrentSlide((prev) => prev + 1);
+                } else {
+                  setIsPresentationMode(false);
+                }
+              }}
+              style={{
+                padding: '6px 14px',
+                borderRadius: '20px',
+                border: 'none',
+                backgroundColor: 'var(--primary)',
+                color: '#ffffff',
+                fontSize: '12px',
+                fontWeight: '800',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '4px',
+                boxShadow: '0 2px 8px var(--primary-light)'
+              }}
+            >
+              {currentSlide < 4 ? (
+                <>Siguiente <ChevronRight size={16} /></>
+              ) : (
+                <>Finalizar <Minimize2 size={14} /></>
+              )}
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  };
 
   return (
     <div
@@ -663,8 +1386,11 @@ export const InstitutionalReportView = ({
       </div>
       )}
 
-      {/* 4. VISTA DEL INFORME INSTITUCIONAL PROFESIONAL */}
-      <div className="glass-card" style={{ padding: '24px', position: 'relative', zIndex: 10 }}>
+      {/* 4. VISTA DEL INFORME: MODO DIAPOSITIVAS (PROYECTOR) O DOCUMENTO COMPLETO */}
+      {isPresentationMode ? (
+        renderPresentationDeck()
+      ) : (
+        <div className="glass-card" style={{ padding: '24px', position: 'relative', zIndex: 10 }}>
         {loading ? (
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '60px 20px', gap: '12px', color: 'var(--primary)' }}>
             <Activity className="animate-spin" size={32} />
@@ -1179,6 +1905,7 @@ export const InstitutionalReportView = ({
           </div>
         )}
       </div>
+      )}
 
     </div>
   );
