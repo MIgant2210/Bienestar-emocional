@@ -37,8 +37,7 @@ const TAB_TO_URL = {
   clinical_appointments: '/agenda',
   appointments: '/agenda',
   progress: '/mi-progreso',
-  kudos: '/kudos',
-  chat_ia: '/chatbot-ia'
+  kudos: '/kudos'
 };
 
 const MemberDashboard = ({ initialTab }) => {
@@ -1301,23 +1300,12 @@ const MemberDashboard = ({ initialTab }) => {
           <button
             type="button"
             onClick={() => setShowBreathingModal(true)}
-            className="duo-pill"
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '6px',
-              fontWeight: '800',
-              padding: '6px 14px',
-              borderRadius: '20px',
-              backgroundColor: 'rgba(99, 102, 241, 0.12)',
-              color: 'var(--primary)',
-              border: '1.5px solid var(--primary-light)',
-              cursor: 'pointer'
-            }}
+            className="btn-pausa-header"
             title="Iniciar sesión interactiva de respiración guiada 4-7-8"
           >
             <Wind size={14} style={{ color: 'var(--primary)' }} />
-            <span>Pausa Consciente</span>
+            <span className="pausa-text-full">Pausa Consciente</span>
+            <span className="pausa-text-compact">Pausa</span>
           </button>
 
           {/* Desktop Navigation Items (Oculto en móvil/tablet < 1024px) */}
@@ -1536,8 +1524,7 @@ const MemberDashboard = ({ initialTab }) => {
                 { id: 'evaluations', label: 'Tests', icon: Calendar, badge: evaluations.length, badgeColor: 'var(--primary)' },
                 { id: 'progress', label: 'Mi Progreso', icon: Trophy },
                 { id: 'clinical_appointments', label: 'Citas 1 a 1', icon: Calendar },
-                { id: 'kudos', label: 'Chat & Grupos', icon: MessageSquare },
-                { id: 'chat_ia', label: 'Asistente IA', icon: Sparkles }
+                { id: 'kudos', label: 'Chat & Grupos', icon: MessageSquare }
               ].map(item => {
                 const Icon = item.icon;
                 const isActive = activeTab === item.id || (item.id === 'tasks' && activeTab === 'tareas') || (item.id === 'clinical_appointments' && activeTab === 'appointments');
@@ -1590,7 +1577,6 @@ const MemberDashboard = ({ initialTab }) => {
           <button className={`tab-btn ${activeTab === 'progress' ? 'active' : ''}`} onClick={() => handleTabChange('progress')}><Trophy size={15} /><span>Mi Progreso</span></button>
           <button className={`tab-btn ${activeTab === 'appointments' || activeTab === 'clinical_appointments' ? 'active' : ''}`} onClick={() => handleTabChange('clinical_appointments')}><Calendar size={15} /><span>Citas 1 a 1</span></button>
           <button className={`tab-btn ${activeTab === 'kudos' ? 'active' : ''}`} onClick={() => handleTabChange('kudos')}><MessageSquare size={15} /><span>Chat & Grupos</span></button>
-          <button className={`tab-btn ${activeTab === 'chat_ia' ? 'active' : ''}`} onClick={() => handleTabChange('chat_ia')}><Sparkles size={15} /><span>Asistente IA</span></button>
         </div>
 
         {/* TAB 1: MI BIENESTAR INTEGRAL */}
@@ -2502,54 +2488,7 @@ const MemberDashboard = ({ initialTab }) => {
           </div>
         )}
 
-        {/* TAB 4: CHAT CON IA (ESTÁTICO SIN ANIMACIONES MOLESTAS) */}
-        {activeTab === 'chat_ia' && (
-          <div className="animate-fade" style={{ maxWidth: '800px', margin: '0 auto' }}>
-            <div className="glass-card" style={{ marginBottom: '20px', padding: '18px', border: '1px solid var(--border)' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                <div style={{ width: '40px', height: '40px', borderRadius: '12px', backgroundColor: 'var(--primary-light)', color: 'var(--primary)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <Bot size={22} />
-                </div>
-                <div>
-                  <h3 style={{ fontSize: '15px', fontWeight: '900', margin: 0 }}>Orientador de Bienestar IA</h3>
-                  <p style={{ fontSize: '11.5px', color: 'var(--text-secondary)', margin: '2px 0 0 0' }}>Soporte conversacional de Gemini basado en tu historial.</p>
-                </div>
-              </div>
-            </div>
 
-            <div className="chat-container" style={{ height: '420px' }}>
-              <div className="chat-messages">
-                {chatMessages.map((msg, index) => (
-                  <div 
-                    key={index} 
-                    className={`chat-bubble ${msg.sender}`}
-                    style={msg.is_emergency ? { border: '2px solid var(--danger)', backgroundColor: 'var(--danger-light)', color: 'var(--text-primary)' } : {}}
-                  >
-                    <p style={{ whiteSpace: 'pre-line' }}>{msg.text}</p>
-                    {msg.citations && msg.citations.length > 0 && (
-                      <div style={{ marginTop: '10px', paddingTop: '8px', borderTop: '1px solid rgba(0,0,0,0.1)', fontSize: '11px', opacity: 0.85 }}>
-                        <strong style={{ display: 'flex', alignItems: 'center', gap: '4px' }}><BookOpen size={12} /> Fuentes de referencia:</strong>
-                        <ul style={{ margin: '4px 0 0 16px', padding: 0 }}>
-                          {msg.citations.map((c, cIdx) => (
-                            <li key={cIdx}>
-                              {c.title} {c.source && `• ${c.source}`}
-                            </li>
-                          ))}
-                        </ul>
-                      </div>
-                    )}
-                  </div>
-                ))}
-                {chatLoading && <div className="chat-bubble ai"><Loader className="animate-spin" size={14} /> Gemini está respondiendo...</div>}
-                <div ref={messagesEndRef} />
-              </div>
-              <form onSubmit={handleSendChatMessage} className="chat-input-area">
-                <input type="text" placeholder="Conversa con la IA sobre tus sensaciones de hoy..." value={userInput} onChange={(e) => setUserInput(e.target.value)} disabled={chatLoading} />
-                <button type="submit" className="btn btn-primary" disabled={chatLoading || !userInput.trim()} style={{ padding: '0 16px' }}><SendHorizontal size={16} /></button>
-              </form>
-            </div>
-          </div>
-        )}
 
         {/* MODAL CREAR GRUPO DE TRABAJO */}
         {showCreateGroupModal && (

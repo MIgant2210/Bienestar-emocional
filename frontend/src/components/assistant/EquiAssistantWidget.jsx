@@ -1,27 +1,91 @@
-﻿import React, { useState, useRef, useEffect } from 'react';
-import { Bot, X, Send, Sparkles, Wind, MessageSquare, AlertCircle, RefreshCw, ChevronDown, Heart } from 'lucide-react';
+import React, { useState, useRef, useEffect, useContext } from 'react';
+import { Bot, X, Send, Sparkles, Wind, MessageSquare, AlertCircle, RefreshCw, ChevronDown, Heart, GripVertical } from 'lucide-react';
 import api from '../../services/api';
+import { ThemeContext } from '../../contexts/ThemeContext';
+
+const EQUI_PALETTES = {
+  indigo: {
+    btnGradient: 'linear-gradient(135deg, #4338ca 0%, #6366f1 50%, #818cf8 100%)',
+    headerGradient: 'linear-gradient(135deg, #312e81 0%, #4f46e5 100%)',
+    shadow: '0 8px 24px rgba(99, 102, 241, 0.45)',
+    border: '#818cf8',
+    glow: 'rgba(99, 102, 241, 0.3)'
+  },
+  ocean: {
+    btnGradient: 'linear-gradient(135deg, #0369a1 0%, #0284c7 50%, #38bdf8 100%)',
+    headerGradient: 'linear-gradient(135deg, #0c4a6e 0%, #0284c7 100%)',
+    shadow: '0 8px 24px rgba(2, 132, 199, 0.45)',
+    border: '#38bdf8',
+    glow: 'rgba(2, 132, 199, 0.3)'
+  },
+  emerald: {
+    btnGradient: 'linear-gradient(135deg, #047857 0%, #10b981 50%, #34d399 100%)',
+    headerGradient: 'linear-gradient(135deg, #064e3b 0%, #059669 100%)',
+    shadow: '0 8px 24px rgba(16, 185, 129, 0.45)',
+    border: '#34d399',
+    glow: 'rgba(16, 185, 129, 0.3)'
+  },
+  sunset: {
+    btnGradient: 'linear-gradient(135deg, #c2410c 0%, #ea580c 50%, #f59e0b 100%)',
+    headerGradient: 'linear-gradient(135deg, #7c2d12 0%, #ea580c 100%)',
+    shadow: '0 8px 24px rgba(234, 88, 12, 0.45)',
+    border: '#f59e0b',
+    glow: 'rgba(245, 158, 11, 0.3)'
+  },
+  cyberpunk: {
+    btnGradient: 'linear-gradient(135deg, #be185d 0%, #ec4899 50%, #f472b6 100%)',
+    headerGradient: 'linear-gradient(135deg, #831843 0%, #db2777 100%)',
+    shadow: '0 8px 24px rgba(236, 72, 153, 0.45)',
+    border: '#f472b6',
+    glow: 'rgba(236, 72, 153, 0.3)'
+  }
+};
 
 const QUICK_SUGGESTIONS = [
   { label: '🧘 Pausa para calmarme', action: 'breathe' },
-  { label: '⚡ Siento sobrecarga hoy', text: 'Siento mucha sobrecarga mental con mis tareas hoy, ¿qué me sugieres hacer?' },
+  { label: '🇬🇹 ¿Qué onda con el estrés?', text: '¿Qué hábitos o pausas me sugieres hoy para aliviar la sobrecarga laboral y recargar pilas?' },
+  { label: '⚡ Siento sobrecarga hoy', text: 'Siento mucha sobrecarga mental con mis tareas de hoy, ¿qué me sugieres hacer?' },
   { label: '✨ ¿Cómo cuidar mi energía?', text: '¿Qué hábitos rápidos puedo aplicar hoy para cuidar mi energía y enfoque?' },
-  { label: '💡 Consejo de motivación', text: 'Dame un consejo constructivo para mantener la motivación en mi jornada laboral.' }
+  { label: '💡 Consejo de motivación', text: 'Dame un consejo constructivo para mantener el ánimo y motivación en mi jornada laboral.' }
 ];
 
 const EquiAssistantWidget = ({ onOpenBreathing }) => {
+  const themeContext = useContext(ThemeContext);
+  const colorPalette = themeContext?.colorPalette || 'indigo';
+  const paletteTheme = EQUI_PALETTES[colorPalette] || EQUI_PALETTES.indigo;
+
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState([
     {
       id: 'welcome-1',
       sender: 'ai',
-      text: '¡Hola! Soy Equi, tu asistente inteligente de bienestar en EquilibrIA. 💜\n\n¿Cómo te encuentras hoy o en qué puedo acompañarte?',
+      text: '¡Hola! Soy Equi, tu asistente inteligente de bienestar en EquilibrIA. 💜🇬🇹\n\n¿Cómo te encuentras hoy o en qué puedo acompañarte?',
       timestamp: new Date()
     }
   ]);
   const [inputText, setInputText] = useState('');
   const [loading, setLoading] = useState(false);
   const messagesEndRef = useRef(null);
+
+  // Posición movible del botón flotante (draggable)
+  const [position, setPosition] = useState(() => {
+    try {
+      const saved = localStorage.getItem('equi_widget_position');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (typeof parsed.top === 'number' && typeof parsed.right === 'number') {
+          return parsed;
+        }
+      }
+    } catch (e) {
+      // Ignorar error de parsing
+    }
+    return { top: null, right: 24 }; // null top significa bottom: 24px por defecto
+  });
+
+  const isDraggingRef = useRef(false);
+  const hasMovedRef = useRef(false);
+  const dragStartRef = useRef({ startX: 0, startY: 0, initialTop: 0, initialRight: 0 });
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -32,6 +96,74 @@ const EquiAssistantWidget = ({ onOpenBreathing }) => {
       scrollToBottom();
     }
   }, [messages, isOpen]);
+
+  // Manejo de Arrastre (Pointer Events)
+  const handlePointerDown = (e) => {
+    // Solo clic izquierdo
+    if (e.button !== 0) return;
+
+    const currentTop = position.top !== null ? position.top : (window.innerHeight - 80);
+    const currentRight = position.right !== null ? position.right : 24;
+
+    dragStartRef.current = {
+      startX: e.clientX,
+      startY: e.clientY,
+      initialTop: currentTop,
+      initialRight: currentRight
+    };
+    hasMovedRef.current = false;
+    isDraggingRef.current = true;
+
+    window.addEventListener('pointermove', handlePointerMove);
+    window.addEventListener('pointerup', handlePointerUp);
+  };
+
+  const handlePointerMove = (e) => {
+    if (!isDraggingRef.current) return;
+
+    const dx = e.clientX - dragStartRef.current.startX;
+    const dy = e.clientY - dragStartRef.current.startY;
+
+    if (Math.hypot(dx, dy) > 4) {
+      hasMovedRef.current = true;
+    }
+
+    // Calcular nueva posición con límites seguros
+    // LÍMITE SUPERIOR: No pasar de la barra superior (top >= 75px)
+    const minTop = 75;
+    const maxTop = window.innerHeight - 68;
+    let newTop = dragStartRef.current.initialTop + dy;
+    newTop = Math.max(minTop, Math.min(newTop, maxTop));
+
+    // LÍMITE HORIZONTAL: Mantener dentro de la ventana
+    const minRight = 16;
+    const maxRight = window.innerWidth - 180;
+    let newRight = dragStartRef.current.initialRight - dx;
+    newRight = Math.max(minRight, Math.min(newRight, maxRight));
+
+    setPosition({ top: newTop, right: newRight });
+  };
+
+  const handlePointerUp = () => {
+    isDraggingRef.current = false;
+    window.removeEventListener('pointermove', handlePointerMove);
+    window.removeEventListener('pointerup', handlePointerUp);
+
+    if (hasMovedRef.current) {
+      // Guardar posición persistente si se arrastró
+      try {
+        setPosition((curr) => {
+          localStorage.setItem('equi_widget_position', JSON.stringify(curr));
+          return curr;
+        });
+      } catch (e) {
+        // storage unavailable
+      }
+    } else {
+      // Fue un simple clic: alternar estado abierto/cerrado
+      setIsOpen((prev) => !prev);
+    }
+  };
 
   const handleSendMessage = async (textToSend) => {
     const query = textToSend || inputText;
@@ -94,19 +226,32 @@ const EquiAssistantWidget = ({ onOpenBreathing }) => {
     }
   };
 
+  // Posicionamiento inteligente del contenedor de chat según la altura del botón
+  const isHighOnScreen = position.top !== null && position.top < 520;
+
   return (
-    <div style={{ position: 'fixed', bottom: '24px', right: '24px', zIndex: 9998 }}>
-      
+    <div
+      style={{
+        position: 'fixed',
+        top: position.top !== null ? `${position.top}px` : 'auto',
+        bottom: position.top === null ? '24px' : 'auto',
+        right: `${position.right}px`,
+        zIndex: 9998,
+        userSelect: 'none',
+        touchAction: 'none'
+      }}
+    >
       {/* Ventana Desplegable de Chat */}
       {isOpen && (
         <div
           style={{
             position: 'absolute',
-            bottom: '72px',
+            top: isHighOnScreen ? '62px' : 'auto',
+            bottom: isHighOnScreen ? 'auto' : '68px',
             right: '0',
             width: '380px',
             maxWidth: 'calc(100vw - 32px)',
-            height: '540px',
+            height: '520px',
             maxHeight: 'calc(100vh - 120px)',
             backgroundColor: 'var(--bg-primary)',
             borderRadius: '24px',
@@ -115,20 +260,21 @@ const EquiAssistantWidget = ({ onOpenBreathing }) => {
             display: 'flex',
             flexDirection: 'column',
             overflow: 'hidden',
-            animation: 'fadeIn 0.25s ease-out'
+            animation: 'fadeIn 0.22s ease-out',
+            zIndex: 9999
           }}
         >
-          {/* Cabecera de Equi */}
+          {/* Cabecera de Equi adaptada a la paleta del sistema */}
           <div
             style={{
-              padding: '16px 20px',
-              backgroundColor: 'var(--bg-secondary)',
+              padding: '14px 18px',
               borderBottom: '1px solid var(--border)',
               display: 'flex',
               justifyContent: 'space-between',
               alignItems: 'center',
-              background: 'linear-gradient(135deg, #312e81 0%, #4f46e5 100%)',
-              color: '#ffffff'
+              background: paletteTheme.headerGradient,
+              color: '#ffffff',
+              boxShadow: '0 2px 8px rgba(0,0,0,0.15)'
             }}
           >
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
@@ -150,10 +296,10 @@ const EquiAssistantWidget = ({ onOpenBreathing }) => {
                 <h4 style={{ margin: 0, fontSize: '14.5px', fontWeight: '900', display: 'flex', alignItems: 'center', gap: '6px' }}>
                   Equi • Asistente IA
                   <span style={{ fontSize: '9px', padding: '2px 6px', borderRadius: '8px', backgroundColor: 'rgba(255, 255, 255, 0.25)', fontWeight: '800' }}>
-                    Gemini Flash
+                    🇬🇹 Chapín & Gemini
                   </span>
                 </h4>
-                <span style={{ fontSize: '11px', opacity: 0.85, fontWeight: '600' }}>
+                <span style={{ fontSize: '11px', opacity: 0.9, fontWeight: '600' }}>
                   ● En línea • Orientación & Escucha Activa
                 </span>
               </div>
@@ -349,30 +495,29 @@ const EquiAssistantWidget = ({ onOpenBreathing }) => {
         </div>
       )}
 
-      {/* Botón Flotante Principal */}
-      <button
-        type="button"
-        onClick={() => setIsOpen(!isOpen)}
+      {/* Botón Flotante Principal Arrastrable y Adaptado al Color Activo */}
+      <div
+        onPointerDown={handlePointerDown}
         style={{
-          padding: '10px 18px',
+          padding: '10px 16px',
           borderRadius: '28px',
-          background: 'linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%)',
+          background: paletteTheme.btnGradient,
           color: '#ffffff',
-          border: '2px solid rgba(255, 255, 255, 0.3)',
-          boxShadow: '0 8px 24px rgba(79, 70, 229, 0.45)',
+          border: `2px solid ${paletteTheme.border}`,
+          boxShadow: paletteTheme.shadow,
           display: 'flex',
           alignItems: 'center',
-          gap: '10px',
-          cursor: 'pointer',
-          transition: 'transform 0.2s ease, box-shadow 0.2s ease',
-          transform: isOpen ? 'scale(0.96)' : 'scale(1)'
+          gap: '8px',
+          cursor: isDraggingRef.current ? 'grabbing' : 'grab',
+          transition: 'transform 0.15s ease',
+          transform: isOpen ? 'scale(0.96)' : 'scale(1)',
+          userSelect: 'none'
         }}
-        onMouseEnter={(e) => (e.currentTarget.style.transform = 'scale(1.05)')}
-        onMouseLeave={(e) => (e.currentTarget.style.transform = isOpen ? 'scale(0.96)' : 'scale(1)')}
-        title="Conversar con Equi, tu asistente de bienestar"
+        title="Arrastra para mover • Haz clic para conversar con Equi"
       >
-        <div style={{ position: 'relative', width: '28px', height: '28px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <img src="/logo.png" alt="Equi Colibrí" style={{ width: '24px', height: '24px', objectFit: 'contain' }} />
+        <GripVertical size={13} style={{ opacity: 0.7, cursor: 'grab' }} />
+        <div style={{ position: 'relative', width: '26px', height: '26px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <img src="/logo.png" alt="Equi Colibrí" style={{ width: '22px', height: '22px', objectFit: 'contain', pointerEvents: 'none' }} />
           <span
             style={{
               position: 'absolute',
@@ -386,18 +531,19 @@ const EquiAssistantWidget = ({ onOpenBreathing }) => {
             }}
           />
         </div>
-        <div style={{ textAlign: 'left' }}>
+        <div style={{ textAlign: 'left', pointerEvents: 'none' }}>
           <span style={{ fontSize: '13px', fontWeight: '900', display: 'block', lineHeight: 1.1 }}>
             {isOpen ? 'Cerrar Equi' : 'Equi AI'}
           </span>
-          <span style={{ fontSize: '10px', opacity: 0.85, fontWeight: '700' }}>
+          <span style={{ fontSize: '10px', opacity: 0.88, fontWeight: '700' }}>
             {isOpen ? 'Minimizar' : 'Asistente de Bienestar'}
           </span>
         </div>
-      </button>
+      </div>
 
     </div>
   );
 };
 
 export default EquiAssistantWidget;
+

@@ -164,42 +164,84 @@ export const InstitutionalReportView = ({
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center',
-          padding: '14px 20px',
+          flexWrap: 'wrap',
+          gap: '14px',
+          padding: '14px 22px',
           borderRadius: '16px',
           backgroundColor: 'var(--primary)',
           color: '#ffffff',
-          boxShadow: 'var(--shadow-md)'
+          boxShadow: '0 8px 24px rgba(0, 0, 0, 0.25)',
+          position: 'sticky',
+          top: 0,
+          zIndex: 1000
         }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <Tv size={20} />
-            <div>
-              <h4 style={{ margin: 0, fontSize: '15px', fontWeight: '900' }}>MODO PROYECTOR EJECUTIVO • EQUILIBRIA</h4>
-              <span style={{ fontSize: '11px', opacity: 0.85 }}>Vista ampliada y anonimizada para juntas directivas y comités de bienestar</span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '14px', flexWrap: 'wrap' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <Tv size={22} />
+              <div>
+                <h4 style={{ margin: 0, fontSize: '15px', fontWeight: '900' }}>MODO PROYECTOR EJECUTIVO • EQUILIBRIA</h4>
+                <span style={{ fontSize: '11px', opacity: 0.9 }}>Vista ampliada de alta fidelidad para juntas directivas y comités</span>
+              </div>
+            </div>
+
+            {/* Selector directo de reporte en modo proyector */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <span style={{ fontSize: '12px', fontWeight: '800', opacity: 0.9 }}>Reporte:</span>
+              <select
+                value={safeReportId}
+                onChange={(e) => onSelectReport(e.target.value)}
+                style={{
+                  padding: '6px 12px',
+                  borderRadius: '10px',
+                  backgroundColor: 'rgba(255, 255, 255, 0.2)',
+                  color: '#ffffff',
+                  border: '1px solid rgba(255, 255, 255, 0.4)',
+                  fontSize: '12px',
+                  fontWeight: '800',
+                  outline: 'none',
+                  cursor: 'pointer'
+                }}
+              >
+                {REPORT_TYPES.map((r) => (
+                  <option key={r.id} value={r.id} style={{ backgroundColor: 'var(--bg-secondary)', color: 'var(--text-primary)' }}>
+                    {r.code}: {r.title}
+                  </option>
+                ))}
+              </select>
             </div>
           </div>
-          <button
-            type="button"
-            onClick={() => setIsPresentationMode(false)}
-            style={{
-              padding: '6px 14px',
-              borderRadius: '10px',
-              backgroundColor: 'rgba(255,255,255,0.2)',
-              color: '#ffffff',
-              border: '1px solid rgba(255,255,255,0.4)',
-              fontWeight: '800',
-              fontSize: '12px',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '6px',
-              cursor: 'pointer'
-            }}
-          >
-            <Minimize2 size={14} /> Salir (Esc)
-          </button>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <span style={{ fontSize: '11.5px', padding: '4px 10px', borderRadius: '12px', backgroundColor: 'rgba(255, 255, 255, 0.2)', fontWeight: '800' }}>
+              {scopeData.etiqueta || 'Toda la institución'}
+            </span>
+            <button
+              type="button"
+              onClick={() => setIsPresentationMode(false)}
+              style={{
+                padding: '7px 16px',
+                borderRadius: '10px',
+                backgroundColor: 'rgba(255, 255, 255, 0.25)',
+                color: '#ffffff',
+                border: '1px solid rgba(255, 255, 255, 0.5)',
+                fontWeight: '800',
+                fontSize: '12.5px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                cursor: 'pointer',
+                transition: 'all 0.2s ease'
+              }}
+              title="Salir de la pantalla completa del proyector (Esc)"
+            >
+              <Minimize2 size={15} /> Salir del Modo Proyector (Esc)
+            </button>
+          </div>
         </div>
       )}
       
-      {/* 1. HEADER Y BARRA DE HERRAMIENTAS PRINCIPAL */}
+      {/* 1. HEADER Y BARRA DE HERRAMIENTAS PRINCIPAL (SOLO MODO NORMAL) */}
+      {!isPresentationMode && (
       <div className="glass-card" style={{ overflow: 'visible', position: 'relative', zIndex: 100 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '14px', marginBottom: '18px' }}>
           <div>
@@ -229,7 +271,9 @@ export const InstitutionalReportView = ({
                 fontWeight: '800',
                 background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
                 borderColor: '#059669',
-                color: '#ffffff'
+                color: '#ffffff',
+                boxShadow: '0 2px 8px rgba(16, 185, 129, 0.25)',
+                cursor: 'pointer'
               }}
             >
               <FileSpreadsheet size={15} /> Exportar en Excel (.xlsx)
@@ -239,33 +283,72 @@ export const InstitutionalReportView = ({
               onClick={() => exportReportToPDF(allReportsData, safeReportId)}
               className="btn btn-primary"
               title="Generar documento oficial para impresión / PDF"
-              style={{ padding: '8px 14px', fontSize: '12px', borderRadius: '12px', display: 'flex', alignItems: 'center', gap: '6px', fontWeight: '800' }}
+              style={{
+                padding: '8px 14px',
+                fontSize: '12px',
+                borderRadius: '12px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                fontWeight: '800',
+                background: 'linear-gradient(135deg, var(--primary) 0%, var(--primary-hover) 100%)',
+                borderColor: 'var(--primary-hover)',
+                color: '#ffffff',
+                boxShadow: '0 2px 8px var(--primary-light)',
+                cursor: 'pointer'
+              }}
             >
               <Printer size={15} /> Exportar en PDF
             </button>
             <button
               type="button"
               onClick={() => exportReportToCSV(allReportsData, safeReportId)}
-              className="duo-pill"
+              className="btn btn-primary"
               title="Descargar datos en CSV delimitado por punto y coma"
-              style={{ padding: '8px 14px', fontSize: '12px', display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer' }}
+              style={{
+                padding: '8px 14px',
+                fontSize: '12px',
+                borderRadius: '12px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                fontWeight: '800',
+                background: 'linear-gradient(135deg, #1e3a8a 0%, #2563eb 100%)',
+                borderColor: '#1e40af',
+                color: '#ffffff',
+                boxShadow: '0 2px 8px rgba(30, 58, 138, 0.25)',
+                cursor: 'pointer'
+              }}
             >
               <Download size={14} /> Exportar en CSV
             </button>
             <button
               type="button"
               onClick={() => exportReportToJSON(allReportsData, safeReportId)}
-              className="duo-pill"
+              className="btn btn-primary"
               title="Descargar estructura en JSON"
-              style={{ padding: '8px 14px', fontSize: '12px', display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer' }}
+              style={{
+                padding: '8px 14px',
+                fontSize: '12px',
+                borderRadius: '12px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                fontWeight: '800',
+                background: 'linear-gradient(135deg, #0284c7 0%, #06b6d4 100%)',
+                borderColor: '#0284c7',
+                color: '#ffffff',
+                boxShadow: '0 2px 8px rgba(2, 132, 199, 0.25)',
+                cursor: 'pointer'
+              }}
             >
               <FileSpreadsheet size={14} /> Exportar en JSON
             </button>
             <button
               type="button"
-              onClick={() => setIsPresentationMode(!isPresentationMode)}
+              onClick={() => setIsPresentationMode(true)}
               className="duo-pill"
-              title="Proyectar reporte en pantalla completa para juntas ejecutivas (Esc para salir)"
+              title="Proyectar reporte en pantalla completa para juntas ejecutivas"
               style={{
                 padding: '8px 14px',
                 fontSize: '12px',
@@ -274,13 +357,13 @@ export const InstitutionalReportView = ({
                 gap: '6px',
                 cursor: 'pointer',
                 fontWeight: '800',
-                backgroundColor: isPresentationMode ? 'var(--primary)' : 'var(--bg-secondary)',
-                color: isPresentationMode ? '#ffffff' : 'var(--text-primary)',
+                backgroundColor: 'var(--bg-secondary)',
+                color: 'var(--text-primary)',
                 border: '1px solid var(--border)'
               }}
             >
-              {isPresentationMode ? <Minimize2 size={14} /> : <Tv size={14} />}
-              <span>{isPresentationMode ? 'Salir' : 'Modo Proyector'}</span>
+              <Tv size={14} />
+              <span>Modo Proyector</span>
             </button>
           </div>
         </div>
@@ -578,6 +661,7 @@ export const InstitutionalReportView = ({
           })}
         </div>
       </div>
+      )}
 
       {/* 4. VISTA DEL INFORME INSTITUCIONAL PROFESIONAL */}
       <div className="glass-card" style={{ padding: '24px', position: 'relative', zIndex: 10 }}>
@@ -840,6 +924,126 @@ export const InstitutionalReportView = ({
                 </AutoResponsiveContainer>
               </div>
             )}
+
+            {/* GRÁFICO REPORTE 2: ALERTAS INSTITUCIONALES */}
+            {safeReportId === 'reporte_2_alertas' && (
+              <div className="glass-card" style={{ backgroundColor: 'var(--bg-secondary)', borderRadius: '16px', border: '1px solid var(--border)', padding: '20px 14px', width: '100%', minWidth: 0, boxSizing: 'border-box' }}>
+                <h4 style={{ fontSize: '13.5px', fontWeight: '800', color: 'var(--text-primary)', marginBottom: '14px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <AlertTriangle size={16} style={{ color: '#ef4444' }} /> Distribución y Estado de Alertas Institucionales
+                </h4>
+                <AutoResponsiveContainer height={260}>
+                  <BarChart
+                    data={[
+                      { estado: 'Activas / Pendientes', cantidad: currentReport.activas || 0, fill: '#ef4444' },
+                      { estado: 'En Atención / Proceso', cantidad: currentReport.atendidas || 0, fill: '#f59e0b' },
+                      { estado: 'Resueltas / Cerradas', cantidad: currentReport.resueltas || 0, fill: '#10b981' }
+                    ]}
+                    margin={{ top: 10, right: 15, left: -20, bottom: 15 }}
+                  >
+                    <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" opacity={0.5} />
+                    <XAxis dataKey="estado" stroke="var(--text-muted)" fontSize={11} />
+                    <YAxis stroke="var(--text-muted)" fontSize={11} allowDecimals={false} />
+                    <Tooltip contentStyle={{ backgroundColor: 'var(--bg-primary)', border: '1px solid var(--border)', borderRadius: '10px', fontSize: '12px' }} />
+                    <Bar dataKey="cantidad" name="Total Alertas" radius={[6, 6, 0, 0]}>
+                      <Cell fill="#ef4444" />
+                      <Cell fill="#f59e0b" />
+                      <Cell fill="#10b981" />
+                    </Bar>
+                  </BarChart>
+                </AutoResponsiveContainer>
+              </div>
+            )}
+
+            {/* GRÁFICO REPORTE 3: CUMPLIMIENTO DE TAREAS */}
+            {safeReportId === 'reporte_3_tareas' && (
+              <div className="glass-card" style={{ backgroundColor: 'var(--bg-secondary)', borderRadius: '16px', border: '1px solid var(--border)', padding: '20px 14px', width: '100%', minWidth: 0, boxSizing: 'border-box' }}>
+                <h4 style={{ fontSize: '13.5px', fontWeight: '800', color: 'var(--text-primary)', marginBottom: '14px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <CheckSquare size={16} style={{ color: '#10b981' }} /> Cumplimiento de Tareas Asignadas
+                </h4>
+                <AutoResponsiveContainer height={260}>
+                  <BarChart
+                    data={[
+                      { estado: 'Completadas', cantidad: currentReport.completadas || 0, fill: '#10b981' },
+                      { estado: 'Pendientes', cantidad: currentReport.pendientes || 0, fill: '#f59e0b' }
+                    ]}
+                    margin={{ top: 10, right: 15, left: -20, bottom: 15 }}
+                  >
+                    <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" opacity={0.5} />
+                    <XAxis dataKey="estado" stroke="var(--text-muted)" fontSize={11} />
+                    <YAxis stroke="var(--text-muted)" fontSize={11} allowDecimals={false} />
+                    <Tooltip contentStyle={{ backgroundColor: 'var(--bg-primary)', border: '1px solid var(--border)', borderRadius: '10px', fontSize: '12px' }} />
+                    <Bar dataKey="cantidad" name="Total Tareas" radius={[6, 6, 0, 0]}>
+                      <Cell fill="#10b981" />
+                      <Cell fill="#f59e0b" />
+                    </Bar>
+                  </BarChart>
+                </AutoResponsiveContainer>
+              </div>
+            )}
+
+            {/* GRÁFICO REPORTE 4: CITAS CLÍNICAS DE APOYO */}
+            {safeReportId === 'reporte_4_citas' && (
+              <div className="glass-card" style={{ backgroundColor: 'var(--bg-secondary)', borderRadius: '16px', border: '1px solid var(--border)', padding: '20px 14px', width: '100%', minWidth: 0, boxSizing: 'border-box' }}>
+                <h4 style={{ fontSize: '13.5px', fontWeight: '800', color: 'var(--text-primary)', marginBottom: '14px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <Calendar size={16} style={{ color: '#3b82f6' }} /> Estado de Citas y Sesiones de Apoyo
+                </h4>
+                <AutoResponsiveContainer height={260}>
+                  <BarChart
+                    data={[
+                      { estado: 'Programadas', cantidad: currentReport.programadas || 0, fill: '#3b82f6' },
+                      { estado: 'Completadas', cantidad: currentReport.completadas || 0, fill: '#10b981' },
+                      { estado: 'Canceladas / No Asistió', cantidad: currentReport.canceladas || 0, fill: '#ef4444' }
+                    ]}
+                    margin={{ top: 10, right: 15, left: -20, bottom: 15 }}
+                  >
+                    <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" opacity={0.5} />
+                    <XAxis dataKey="estado" stroke="var(--text-muted)" fontSize={11} />
+                    <YAxis stroke="var(--text-muted)" fontSize={11} allowDecimals={false} />
+                    <Tooltip contentStyle={{ backgroundColor: 'var(--bg-primary)', border: '1px solid var(--border)', borderRadius: '10px', fontSize: '12px' }} />
+                    <Bar dataKey="cantidad" name="Total Citas" radius={[6, 6, 0, 0]}>
+                      <Cell fill="#3b82f6" />
+                      <Cell fill="#10b981" />
+                      <Cell fill="#ef4444" />
+                    </Bar>
+                  </BarChart>
+                </AutoResponsiveContainer>
+              </div>
+            )}
+
+            {/* GRÁFICO PARA REPORTES 5 AL 10: DISTRIBUCIÓN POR CATEGORÍA / DEPARTAMENTO */}
+            {safeReportId !== 'reporte_1_clima' && safeReportId !== 'reporte_2_alertas' && safeReportId !== 'reporte_3_tareas' && safeReportId !== 'reporte_4_citas' && detailList.length > 0 && (() => {
+              const countMap = {};
+              detailList.forEach((item) => {
+                const key = item.departamento || item.categoria || item.rol || item.accion || item.modulo || item.tipo_insignia || item.estado || 'General';
+                countMap[key] = (countMap[key] || 0) + 1;
+              });
+              const summaryChartData = Object.entries(countMap)
+                .map(([name, total]) => ({
+                  name: name.length > 18 ? name.substring(0, 16) + '...' : name,
+                  total
+                }))
+                .slice(0, 8);
+
+              return (
+                <div className="glass-card" style={{ backgroundColor: 'var(--bg-secondary)', borderRadius: '16px', border: '1px solid var(--border)', padding: '20px 14px', width: '100%', minWidth: 0, boxSizing: 'border-box' }}>
+                  <h4 style={{ fontSize: '13.5px', fontWeight: '800', color: 'var(--text-primary)', marginBottom: '14px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <BarChart3 size={16} style={{ color: 'var(--primary)' }} /> Distribución Analítica por Segmento ({scopeData.etiqueta})
+                  </h4>
+                  <AutoResponsiveContainer height={260}>
+                    <BarChart
+                      data={summaryChartData}
+                      margin={{ top: 10, right: 15, left: -20, bottom: 25 }}
+                    >
+                      <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" opacity={0.5} />
+                      <XAxis dataKey="name" stroke="var(--text-muted)" fontSize={10} interval={0} angle={-15} textAnchor="end" />
+                      <YAxis stroke="var(--text-muted)" fontSize={11} allowDecimals={false} />
+                      <Tooltip contentStyle={{ backgroundColor: 'var(--bg-primary)', border: '1px solid var(--border)', borderRadius: '10px', fontSize: '12px' }} />
+                      <Bar dataKey="total" name="Registros" fill="var(--primary)" radius={[4, 4, 0, 0]} />
+                    </BarChart>
+                  </AutoResponsiveContainer>
+                </div>
+              );
+            })()}
 
             {/* TABLA CON EL DETALLE CONSOLIDADO */}
             <div style={{ backgroundColor: 'var(--bg-secondary)', borderRadius: '16px', border: '1px solid var(--border)', padding: '18px', overflowX: 'auto' }}>

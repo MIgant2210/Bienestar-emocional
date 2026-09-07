@@ -160,11 +160,7 @@ const NavigationHandler = () => {
             <MainDashboardRouter defaultTab="ai_plans" />
           </ProtectedRoute>
         } />
-        <Route path="/chatbot-ia" element={
-          <ProtectedRoute module="chat_ia">
-            <MainDashboardRouter defaultTab="chat_ia" />
-          </ProtectedRoute>
-        } />
+        <Route path="/chatbot-ia" element={<Navigate to="/" replace />} />
         <Route path="/cultura" element={
           <ProtectedRoute module="culture">
             <MainDashboardRouter defaultTab="culture" />

@@ -45,7 +45,6 @@ const TAB_TO_URL = {
   reports: '/reportes',
   audit: '/auditoria',
   ai_plans: '/sugerencias-ia',
-  chat_ia: '/chatbot-ia',
   culture: '/cultura'
 };
 
@@ -2193,23 +2192,12 @@ const AdminDashboard = ({ initialTab = 'analytics' }) => {
           <button
             type="button"
             onClick={() => setShowBreathingModal(true)}
-            className="duo-pill"
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '6px',
-              fontWeight: '800',
-              padding: '6px 14px',
-              borderRadius: '20px',
-              backgroundColor: 'rgba(99, 102, 241, 0.12)',
-              color: 'var(--primary)',
-              border: '1.5px solid var(--primary-light)',
-              cursor: 'pointer'
-            }}
+            className="btn-pausa-header"
             title="Iniciar sesión interactiva de respiración guiada 4-7-8"
           >
             <Wind size={14} style={{ color: 'var(--primary)' }} />
-            <span>Pausa Consciente</span>
+            <span className="pausa-text-full">Pausa Consciente</span>
+            <span className="pausa-text-compact">Pausa</span>
           </button>
 
           {/* Desktop Navigation Items (Oculto en móvil/tablet < 1024px) */}
@@ -2440,7 +2428,6 @@ const AdminDashboard = ({ initialTab = 'analytics' }) => {
                 { id: 'reports', moduleKey: 'reports', label: 'Reportes', icon: FileSpreadsheet },
                 { id: 'audit', moduleKey: 'audit', label: 'Auditoría', icon: ShieldCheck },
                 { id: 'ai_plans', moduleKey: 'ai_plans', label: 'Sugerencias IA', icon: Sparkles },
-                { id: 'chat_ia', moduleKey: 'chat_ia', label: 'Chatbot IA', icon: Bot },
                 { id: 'culture', moduleKey: 'culture', label: 'Diccionario Cultural', icon: BookOpen }
               ]
                 .filter(item => hasModuleAccess(user?.role, item.moduleKey))
@@ -2582,9 +2569,7 @@ const AdminDashboard = ({ initialTab = 'analytics' }) => {
             <button className={`tab-btn ${activeTab === 'ai_plans' ? 'active' : ''}`} onClick={() => handleTabChange('ai_plans')}><Sparkles size={15} /><span>Sugerencias IA</span></button>
           )}
 
-          {hasModuleAccess(user?.role, 'chat_ia') && (
-            <button className={`tab-btn ${activeTab === 'chat_ia' ? 'active' : ''}`} onClick={() => handleTabChange('chat_ia')}><Bot size={15} /><span>Chatbot IA</span></button>
-          )}
+
 
           {hasModuleAccess(user?.role, 'culture') && (
             <button className={`tab-btn ${activeTab === 'culture' ? 'active' : ''}`} onClick={() => handleTabChange('culture')}>
@@ -5033,46 +5018,7 @@ const AdminDashboard = ({ initialTab = 'analytics' }) => {
           </div>
         )}
 
-        {/* TAB 11: ASISTENTE E INSPIRADOR DE BIENESTAR CON IA (GEMINI) UNIFICADO */}
-        {activeTab === 'chat_ia' && (
-          <div className="animate-fade" style={{ maxWidth: '800px', margin: '0 auto' }}>
-            <div className="glass-card" style={{ marginBottom: '20px', padding: '18px', border: '1px solid var(--border)' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                <div style={{ width: '40px', height: '40px', borderRadius: '12px', backgroundColor: 'var(--primary-light)', color: 'var(--primary)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <Bot size={22} />
-                </div>
-                <div>
-                  <h3 style={{ fontSize: '15px', fontWeight: '900', margin: 0 }}>Orientador de Bienestar IA</h3>
-                  <p style={{ fontSize: '11.5px', color: 'var(--text-secondary)', margin: '2px 0 0 0' }}>Soporte conversacional de Gemini basado en tu historial e indicadores institucionales.</p>
-                </div>
-              </div>
-            </div>
 
-            <div className="chat-container" style={{ height: '440px' }}>
-              <div className="chat-messages">
-                {chatMessages.map((msg, index) => (
-                  <div key={index} className={`chat-bubble ${msg.sender}`}>
-                    <p style={{ whiteSpace: 'pre-line' }}>{msg.text}</p>
-                  </div>
-                ))}
-                {chatLoading && <div className="chat-bubble ai"><Loader className="animate-spin" size={14} /> Gemini está respondiendo...</div>}
-                <div ref={messagesEndRef} />
-              </div>
-              <form onSubmit={handleSendChatMessage} className="chat-input-area">
-                <input 
-                  type="text" 
-                  placeholder="Conversa con la IA sobre tus sensaciones, clima o estrategias..." 
-                  value={userInput} 
-                  onChange={(e) => setUserInput(e.target.value)} 
-                  disabled={chatLoading} 
-                />
-                <button type="submit" className="btn btn-primary" disabled={chatLoading || !userInput.trim()} style={{ padding: '0 16px' }}>
-                  <SendHorizontal size={16} />
-                </button>
-              </form>
-            </div>
-          </div>
-        )}
 
         {/* TAB 12: MÓDULO DE GESTIÓN DE INSTITUCIONES Y DEPARTAMENTOS (SUPERADMIN / ADMIN) */}
         {activeTab === 'institutions' && (
