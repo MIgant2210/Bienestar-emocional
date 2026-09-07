@@ -120,11 +120,19 @@ export const InstitutionalReportView = ({
   // Modo Presentación para Juntas Ejecutivas (Estilo Diapositivas / PowerPoint)
   const [isPresentationMode, setIsPresentationMode] = useState(false);
   const [currentSlide, setCurrentSlide] = useState(0);
+  const [slideTablePage, setSlideTablePage] = useState(0);
+  const [showAllInSlide, setShowAllInSlide] = useState(false);
 
-  // Reiniciar diapositiva al cambiar de reporte
+  // Reiniciar diapositiva y paginador al cambiar de reporte o diapositiva
   React.useEffect(() => {
     setCurrentSlide(0);
+    setSlideTablePage(0);
+    setShowAllInSlide(false);
   }, [safeReportId]);
+
+  React.useEffect(() => {
+    setSlideTablePage(0);
+  }, [currentSlide]);
 
   React.useEffect(() => {
     const handleKeyDown = (e) => {
@@ -616,77 +624,220 @@ export const InstitutionalReportView = ({
           )}
 
           {/* SLIDE 3: DETALLE DE REGISTROS Y MUESTRA AUDITADA */}
-          {currentSlide === 3 && (
-            <div className="animate-fade" style={{ display: 'flex', flexDirection: 'column', height: '100%', justifyContent: 'space-between', gap: '16px' }}>
-              <div>
-                <span style={{ fontSize: '11px', fontWeight: '900', color: 'var(--primary)', letterSpacing: '1px', textTransform: 'uppercase' }}>
-                  DIAPOSITIVA 4 • MUESTRA DE REGISTROS
-                </span>
-                <h2 style={{ fontSize: '22px', fontWeight: '900', color: 'var(--text-primary)', margin: '4px 0 0 0' }}>
-                  Muestra Auditada de Registros Recientes ({detailList.length} registros totales)
-                </h2>
-                <p style={{ fontSize: '13px', color: 'var(--text-secondary)', marginTop: '4px' }}>
-                  Detalle consolidado con trazabilidad en PostgreSQL para revisión del comité directivo.
-                </p>
-              </div>
+          {currentSlide === 3 && (() => {
+            const PAGE_SIZE = 6;
+            const totalTablePages = Math.ceil(detailList.length / PAGE_SIZE) || 1;
+            const currentTablePage = Math.min(slideTablePage, totalTablePages - 1);
+            const displayedItems = showAllInSlide
+              ? detailList
+              : detailList.slice(currentTablePage * PAGE_SIZE, (currentTablePage + 1) * PAGE_SIZE);
 
-              {/* Tabla Ejecutiva de Diapositiva */}
-              <div style={{ backgroundColor: 'var(--bg-primary)', borderRadius: '18px', border: '1px solid var(--border)', padding: '14px', overflowX: 'auto', flex: 1 }}>
-                {detailList.length === 0 ? (
-                  <div style={{ textAlign: 'center', padding: '50px 20px', color: 'var(--text-muted)' }}>
-                    <Info size={32} style={{ margin: '0 auto 10px auto', opacity: 0.6 }} />
-                    <p style={{ fontSize: '14px', fontWeight: '700' }}>No se encontraron registros para los filtros seleccionados.</p>
+            return (
+              <div className="animate-fade" style={{ display: 'flex', flexDirection: 'column', height: '100%', justifyContent: 'space-between', gap: '14px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '10px' }}>
+                  <div>
+                    <span style={{ fontSize: '11px', fontWeight: '900', color: 'var(--primary)', letterSpacing: '1px', textTransform: 'uppercase' }}>
+                      DIAPOSITIVA 4 • MUESTRA DE REGISTROS
+                    </span>
+                    <h2 style={{ fontSize: '22px', fontWeight: '900', color: 'var(--text-primary)', margin: '4px 0 0 0' }}>
+                      Muestra Auditada de Registros Recientes ({detailList.length} registros totales)
+                    </h2>
+                    <p style={{ fontSize: '12.5px', color: 'var(--text-secondary)', marginTop: '2px' }}>
+                      Detalle consolidado con trazabilidad en PostgreSQL para revisión del comité directivo.
+                    </p>
                   </div>
-                ) : (
-                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12.5px', textAlign: 'left' }}>
-                    <thead>
-                      <tr style={{ borderBottom: '2px solid var(--border)', color: 'var(--text-muted)' }}>
-                        <th style={{ padding: '8px 12px' }}>#</th>
-                        <th style={{ padding: '8px 12px' }}>CONCEPTO / REGISTRO</th>
-                        <th style={{ padding: '8px 12px' }}>DEPARTAMENTO / CATEGORÍA</th>
-                        <th style={{ padding: '8px 12px' }}>ESTADO / CONDICIÓN</th>
-                        <th style={{ padding: '8px 12px' }}>FECHA</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {detailList.slice(0, 6).map((item, idx) => {
-                        const label = item.usuario_nombre || item.titulo || item.nombre || item.tipo_test || item.accion || item.motivo || `Registro #${idx + 1}`;
-                        const dept = item.departamento || item.categoria || item.rol || 'General';
-                        const status = item.estado || item.nivel_riesgo || item.resultado_interpretacion || 'Completado';
-                        const fecha = item.fecha || item.fecha_hora || item.fecha_creacion || 'Reciente';
 
-                        return (
-                          <tr key={idx} style={{ borderBottom: '1px solid var(--border)', transition: 'background 0.15s ease' }}>
-                            <td style={{ padding: '10px 12px', fontWeight: '800', color: 'var(--text-muted)' }}>{idx + 1}</td>
-                            <td style={{ padding: '10px 12px', fontWeight: '800', color: 'var(--text-primary)' }}>{label}</td>
-                            <td style={{ padding: '10px 12px', color: 'var(--text-secondary)' }}>{dept}</td>
-                            <td style={{ padding: '10px 12px' }}>
-                              <span style={{
-                                padding: '3px 10px',
-                                borderRadius: '12px',
-                                fontSize: '11px',
-                                fontWeight: '800',
-                                backgroundColor: String(status).toLowerCase().includes('alto') || String(status).toLowerCase().includes('activa') ? 'rgba(239, 68, 68, 0.15)' : 'rgba(16, 185, 129, 0.15)',
-                                color: String(status).toLowerCase().includes('alto') || String(status).toLowerCase().includes('activa') ? '#ef4444' : '#10b981'
-                              }}>
-                                {status}
-                              </span>
-                            </td>
-                            <td style={{ padding: '10px 12px', color: 'var(--text-muted)', fontSize: '11.5px' }}>{fecha}</td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                )}
-              </div>
+                  {/* Controles de Navegación de Tabla */}
+                  {detailList.length > 0 && (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                      <button
+                        type="button"
+                        onClick={() => setShowAllInSlide(!showAllInSlide)}
+                        style={{
+                          padding: '5px 12px',
+                          borderRadius: '10px',
+                          border: '1px solid var(--border)',
+                          backgroundColor: showAllInSlide ? 'var(--primary)' : 'var(--bg-primary)',
+                          color: showAllInSlide ? '#ffffff' : 'var(--text-secondary)',
+                          fontSize: '11.5px',
+                          fontWeight: '800',
+                          cursor: 'pointer',
+                          transition: 'all 0.15s ease'
+                        }}
+                        title="Alternar entre ver todos los registros o paginados de 6 en 6"
+                      >
+                        {showAllInSlide ? 'Ver Paginado (6 por página)' : `Ver todos (${detailList.length})`}
+                      </button>
 
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '12px', color: 'var(--text-muted)' }}>
-                <span>Mostrando muestra representativa (hasta 6 registros) de {detailList.length} en total.</span>
-                <span style={{ fontWeight: '700', color: 'var(--primary)' }}>Exporta el libro Excel para la nómina y auditoría completa.</span>
+                      {!showAllInSlide && totalTablePages > 1 && (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '4px', backgroundColor: 'var(--bg-primary)', padding: '2px 6px', borderRadius: '10px', border: '1px solid var(--border)' }}>
+                          <button
+                            type="button"
+                            onClick={() => setSlideTablePage((p) => Math.max(p - 1, 0))}
+                            disabled={currentTablePage === 0}
+                            style={{
+                              padding: '4px 8px',
+                              borderRadius: '6px',
+                              border: 'none',
+                              backgroundColor: currentTablePage > 0 ? 'var(--primary-light)' : 'transparent',
+                              color: currentTablePage > 0 ? 'var(--primary)' : 'var(--text-muted)',
+                              cursor: currentTablePage > 0 ? 'pointer' : 'not-allowed',
+                              fontSize: '11px',
+                              fontWeight: '800'
+                            }}
+                            title="Página anterior de registros"
+                          >
+                            ◀
+                          </button>
+                          <span style={{ fontSize: '11.5px', fontWeight: '800', color: 'var(--text-primary)', padding: '0 4px' }}>
+                            Pág. {currentTablePage + 1} de {totalTablePages}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => setSlideTablePage((p) => Math.min(p + 1, totalTablePages - 1))}
+                            disabled={currentTablePage >= totalTablePages - 1}
+                            style={{
+                              padding: '4px 8px',
+                              borderRadius: '6px',
+                              border: 'none',
+                              backgroundColor: currentTablePage < totalTablePages - 1 ? 'var(--primary-light)' : 'transparent',
+                              color: currentTablePage < totalTablePages - 1 ? 'var(--primary)' : 'var(--text-muted)',
+                              cursor: currentTablePage < totalTablePages - 1 ? 'pointer' : 'not-allowed',
+                              fontSize: '11px',
+                              fontWeight: '800'
+                            }}
+                            title="Página siguiente de registros"
+                          >
+                            ▶
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+
+                {/* Tabla Ejecutiva de Diapositiva */}
+                <div style={{
+                  backgroundColor: 'var(--bg-primary)',
+                  borderRadius: '18px',
+                  border: '1px solid var(--border)',
+                  padding: '14px',
+                  overflowX: 'auto',
+                  overflowY: showAllInSlide ? 'auto' : 'visible',
+                  maxHeight: showAllInSlide ? '330px' : 'none',
+                  flex: 1
+                }}>
+                  {detailList.length === 0 ? (
+                    <div style={{ textAlign: 'center', padding: '50px 20px', color: 'var(--text-muted)' }}>
+                      <Info size={32} style={{ margin: '0 auto 10px auto', opacity: 0.6 }} />
+                      <p style={{ fontSize: '14px', fontWeight: '700' }}>No se encontraron registros para los filtros seleccionados.</p>
+                    </div>
+                  ) : (
+                    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px', textAlign: 'left' }}>
+                      <thead>
+                        <tr style={{ borderBottom: '2px solid var(--border)', color: 'var(--text-muted)' }}>
+                          <th style={{ padding: '8px 12px' }}>#</th>
+                          <th style={{ padding: '8px 12px' }}>CONCEPTO / REGISTRO</th>
+                          <th style={{ padding: '8px 12px' }}>DEPARTAMENTO / CATEGORÍA</th>
+                          <th style={{ padding: '8px 12px' }}>ESTADO / CONDICIÓN</th>
+                          <th style={{ padding: '8px 12px' }}>FECHA</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {displayedItems.map((item, idx) => {
+                          const globalIdx = showAllInSlide ? (idx + 1) : (currentTablePage * PAGE_SIZE + idx + 1);
+                          const label = item.usuario || item.title || item.titulo || item.usuario_nombre || item.paciente || item.destinatario || item.nombre_completo || item.accion || item.recomendacion || item.nombre || `Registro #${globalIdx}`;
+                          const dept = item.departamento || item.categoria || item.departamento_origen || item.rol || 'General';
+                          
+                          let status = item.estado;
+                          if (!status) {
+                            if (item.sentimiento) {
+                              status = item.sentimiento;
+                            } else if (item.estres !== undefined) {
+                              status = `Estrés: ${item.estres}%`;
+                            } else if (item.prioridad) {
+                              status = item.prioridad;
+                            } else if (item.tipo_insignia) {
+                              status = item.tipo_insignia;
+                            } else if (item.nivel_riesgo) {
+                              status = item.nivel_riesgo;
+                            } else {
+                              status = 'Completado';
+                            }
+                          }
+
+                          const rawDate = item.fecha || item.fecha_hora || item.fecha_creacion || item.fecha_registro;
+                          let formattedDate = 'Reciente';
+                          if (rawDate) {
+                            try {
+                              const d = new Date(rawDate);
+                              if (!isNaN(d.getTime())) {
+                                formattedDate = d.toLocaleString('es-GT', {
+                                  year: 'numeric',
+                                  month: '2-digit',
+                                  day: '2-digit',
+                                  hour: '2-digit',
+                                  minute: '2-digit'
+                                });
+                              } else {
+                                formattedDate = String(rawDate);
+                              }
+                            } catch (e) {
+                              formattedDate = String(rawDate);
+                            }
+                          }
+
+                          const sLower = String(status).toLowerCase();
+                          const isHighRisk = sLower.includes('alto') || sLower.includes('activa') || sLower.includes('estrés alto') || sLower.includes('urgente') || sLower.includes('burnout');
+                          const isSuccess = sLower.includes('completad') || sLower.includes('positiv') || sLower.includes('calma') || sLower.includes('bajo') || sLower.includes('resuelta') || sLower.includes('asistio');
+                          const isWarning = sLower.includes('medio') || sLower.includes('moderado') || sLower.includes('pendiente');
+
+                          const badgeBg = isHighRisk ? 'rgba(239, 68, 68, 0.15)' : (isSuccess ? 'rgba(16, 185, 129, 0.15)' : (isWarning ? 'rgba(245, 158, 11, 0.15)' : 'rgba(59, 130, 246, 0.15)'));
+                          const badgeColor = isHighRisk ? '#ef4444' : (isSuccess ? '#10b981' : (isWarning ? '#f59e0b' : '#3b82f6'));
+
+                          return (
+                            <tr key={idx} style={{ borderBottom: '1px solid var(--border)', transition: 'background 0.15s ease' }}>
+                              <td style={{ padding: '8px 12px', fontWeight: '800', color: 'var(--text-muted)' }}>{globalIdx}</td>
+                              <td style={{ padding: '8px 12px', fontWeight: '800', color: 'var(--text-primary)' }}>{label}</td>
+                              <td style={{ padding: '8px 12px', color: 'var(--text-secondary)' }}>{dept}</td>
+                              <td style={{ padding: '8px 12px' }}>
+                                <span style={{
+                                  padding: '3px 10px',
+                                  borderRadius: '12px',
+                                  fontSize: '11px',
+                                  fontWeight: '800',
+                                  backgroundColor: badgeBg,
+                                  color: badgeColor
+                                }}>
+                                  {status}
+                                </span>
+                              </td>
+                              <td style={{ padding: '8px 12px', color: 'var(--text-muted)', fontSize: '11.5px' }}>{formattedDate}</td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  )}
+                </div>
+
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '12px', color: 'var(--text-muted)' }}>
+                  <span>
+                    {showAllInSlide 
+                      ? `Mostrando los ${detailList.length} registros totales consolidados en PostgreSQL.` 
+                      : `Mostrando registros ${currentTablePage * PAGE_SIZE + 1} a ${Math.min((currentTablePage + 1) * PAGE_SIZE, detailList.length)} de ${detailList.length} registros totales.`
+                    }
+                  </span>
+                  <span style={{ fontWeight: '700', color: 'var(--primary)' }}>
+                    {totalTablePages > 1 && !showAllInSlide 
+                      ? `Página ${currentTablePage + 1} de ${totalTablePages} (usa ◀ y ▶ para paginar)` 
+                      : 'Exporta el libro Excel para la nómina y auditoría completa.'
+                    }
+                  </span>
+                </div>
               </div>
-            </div>
-          )}
+            );
+          })()}
 
           {/* SLIDE 4: CONCLUSIONES, OBSERVACIONES & FIRMA DIGITAL */}
           {currentSlide === 4 && (
