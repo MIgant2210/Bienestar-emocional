@@ -8,7 +8,7 @@ import {
   UserCheck, Lock, FileSpreadsheet, RefreshCw, RotateCcw, Zap, Layers, HelpCircle, Eye, Sliders,
   Target, ChevronRight, Check, ArrowLeft, Volume2, Mic, Bell, UserX, Key, Palette, Edit3, KeyRound, Heart, Bot, SendHorizontal, Building, MessageSquare, Smile, UserPlus, Plus, X, Printer, Trophy, Brain,
   Search, Filter, Copy, CheckCircle, ExternalLink, Shield, ToggleLeft, ToggleRight, ChevronLeft,
-  ThumbsUp, ThumbsDown, BookOpen, Globe, Tag, Hash, Menu
+  ThumbsUp, ThumbsDown, BookOpen, Globe, Tag, Hash, Menu, Wind
 } from 'lucide-react';
 import api from '../services/api';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
@@ -25,6 +25,9 @@ import StarryBackground from '../components/StarryBackground';
 import MyProgress from './MyProgress';
 import MyWellbeing from './MyWellbeing';
 import InstitutionalReportView from '../components/reports/InstitutionalReportView';
+import BreathingExerciseModal from '../components/wellness/BreathingExerciseModal';
+import EquiAssistantWidget from '../components/assistant/EquiAssistantWidget';
+import { generateAndDownloadKudoCard } from '../utils/kudoCardGenerator';
 import { useNavigate } from 'react-router-dom';
 import { hasModuleAccess } from '../components/ProtectedRoute';
 
@@ -116,6 +119,7 @@ const AdminDashboard = ({ initialTab = 'analytics' }) => {
   const [showCreateGroupModal, setShowCreateGroupModal] = useState(false);
   const [newGroupName, setNewGroupName] = useState('');
   const [newGroupMembers, setNewGroupMembers] = useState([]);
+  const [showBreathingModal, setShowBreathingModal] = useState(false);
 
   const handleCreateGroup = (e) => {
     e.preventDefault();
@@ -2185,6 +2189,29 @@ const AdminDashboard = ({ initialTab = 'analytics' }) => {
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
           
+          {/* Botón de Pausa Consciente Interactiva */}
+          <button
+            type="button"
+            onClick={() => setShowBreathingModal(true)}
+            className="duo-pill"
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '6px',
+              fontWeight: '800',
+              padding: '6px 14px',
+              borderRadius: '20px',
+              backgroundColor: 'rgba(99, 102, 241, 0.12)',
+              color: 'var(--primary)',
+              border: '1.5px solid var(--primary-light)',
+              cursor: 'pointer'
+            }}
+            title="Iniciar sesión interactiva de respiración guiada 4-7-8"
+          >
+            <Wind size={14} style={{ color: 'var(--primary)' }} />
+            <span>Pausa Consciente</span>
+          </button>
+
           {/* Desktop Navigation Items (Oculto en móvil/tablet < 1024px) */}
           <div className="desktop-nav-items">
             {/* Centro de Notificaciones */}
@@ -6168,6 +6195,18 @@ const AdminDashboard = ({ initialTab = 'analytics' }) => {
 
         {/* ALERTA DE SISTEMA FLOTANTE GLASSMORPHIC */}
         <SystemAlert alert={systemAlert} onClose={() => setSystemAlert({ ...systemAlert, show: false })} />
+
+        {/* Modal Interactivo de Pausa Consciente */}
+        <BreathingExerciseModal
+          isOpen={showBreathingModal}
+          onClose={() => setShowBreathingModal(false)}
+          onRewardXp={(xp) => showAlert('success', '¡Pausa Consciente!', `Has completado tu ciclo de respiración (+${xp} XP).`)}
+        />
+
+        {/* Asistente Conversacional Inteligente Equi (Gemini Flash) */}
+        <EquiAssistantWidget
+          onOpenBreathing={() => setShowBreathingModal(true)}
+        />
 
       </main>
     </div>

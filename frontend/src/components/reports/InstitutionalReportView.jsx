@@ -4,7 +4,7 @@ import {
   BarChart3, AlertTriangle, CheckSquare, Heart, Award, Users,
   ClipboardList, ShieldCheck, Sparkles, TrendingUp, Activity,
   Clock, Shield, Info, CheckCircle2, XCircle, ChevronRight, UserCheck,
-  Building, User, AlertCircle
+  Building, User, AlertCircle, Tv, Maximize2, Minimize2
 } from 'lucide-react';
 import {
   ResponsiveContainer, LineChart, Line, BarChart, Bar,
@@ -117,6 +117,19 @@ export const InstitutionalReportView = ({
     filters.start_date > filters.end_date
   );
 
+  // Modo Presentación para Juntas Ejecutivas
+  const [isPresentationMode, setIsPresentationMode] = useState(false);
+
+  React.useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape' && isPresentationMode) {
+        setIsPresentationMode(false);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isPresentationMode]);
+
   // Lista de los 10 Reportes Oficiales
   const REPORT_TYPES = [
     { id: 'reporte_1_clima', code: 'EQ-REP-01', title: '1. Clima & Indicadores', Icon: BarChart3, category: 'Emocional' },
@@ -132,7 +145,59 @@ export const InstitutionalReportView = ({
   ];
 
   return (
-    <div className="institutional-reports-module animate-fade" style={{ display: 'flex', flexDirection: 'column', gap: '20px', width: '100%', minWidth: 0, overflow: 'visible' }}>
+    <div
+      className={`institutional-reports-module animate-fade ${isPresentationMode ? 'presentation-mode-active' : ''}`}
+      style={isPresentationMode ? {
+        position: 'fixed',
+        inset: 0,
+        zIndex: 99999,
+        backgroundColor: 'var(--bg-primary)',
+        padding: '24px 32px',
+        overflowY: 'auto',
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '20px'
+      } : { display: 'flex', flexDirection: 'column', gap: '20px', width: '100%', minWidth: 0, overflow: 'visible' }}
+    >
+      {isPresentationMode && (
+        <div style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          padding: '14px 20px',
+          borderRadius: '16px',
+          backgroundColor: 'var(--primary)',
+          color: '#ffffff',
+          boxShadow: 'var(--shadow-md)'
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <Tv size={20} />
+            <div>
+              <h4 style={{ margin: 0, fontSize: '15px', fontWeight: '900' }}>MODO PROYECTOR EJECUTIVO • EQUILIBRIA</h4>
+              <span style={{ fontSize: '11px', opacity: 0.85 }}>Vista ampliada y anonimizada para juntas directivas y comités de bienestar</span>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={() => setIsPresentationMode(false)}
+            style={{
+              padding: '6px 14px',
+              borderRadius: '10px',
+              backgroundColor: 'rgba(255,255,255,0.2)',
+              color: '#ffffff',
+              border: '1px solid rgba(255,255,255,0.4)',
+              fontWeight: '800',
+              fontSize: '12px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              cursor: 'pointer'
+            }}
+          >
+            <Minimize2 size={14} /> Salir (Esc)
+          </button>
+        </div>
+      )}
       
       {/* 1. HEADER Y BARRA DE HERRAMIENTAS PRINCIPAL */}
       <div className="glass-card" style={{ overflow: 'visible', position: 'relative', zIndex: 100 }}>
@@ -147,7 +212,7 @@ export const InstitutionalReportView = ({
             </p>
           </div>
 
-          {/* Botones de Exportación Multiformato */}
+          {/* Botones de Exportación Multiformato y Proyector */}
           <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
             <button
               type="button"
@@ -195,6 +260,27 @@ export const InstitutionalReportView = ({
               style={{ padding: '8px 14px', fontSize: '12px', display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer' }}
             >
               <FileSpreadsheet size={14} /> Exportar en JSON
+            </button>
+            <button
+              type="button"
+              onClick={() => setIsPresentationMode(!isPresentationMode)}
+              className="duo-pill"
+              title="Proyectar reporte en pantalla completa para juntas ejecutivas (Esc para salir)"
+              style={{
+                padding: '8px 14px',
+                fontSize: '12px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                cursor: 'pointer',
+                fontWeight: '800',
+                backgroundColor: isPresentationMode ? 'var(--primary)' : 'var(--bg-secondary)',
+                color: isPresentationMode ? '#ffffff' : 'var(--text-primary)',
+                border: '1px solid var(--border)'
+              }}
+            >
+              {isPresentationMode ? <Minimize2 size={14} /> : <Tv size={14} />}
+              <span>{isPresentationMode ? 'Salir' : 'Modo Proyector'}</span>
             </button>
           </div>
         </div>

@@ -8,7 +8,8 @@ import {
   HelpCircle, Mic, MicOff, ArrowLeft, FileAudio, Volume2, Play, Square, CheckCircle,
   Flame, Zap, Award, ThumbsUp, ThumbsDown, Palette, Trophy, Bell, Settings as SettingsIcon,
   UserPlus, X, ChevronLeft, ChevronRight, List, LayoutGrid, Clock, ArrowRight, 
-  BookOpen, Coffee, SunMedium, Meh, Frown, Users, AlertTriangle, Menu
+  BookOpen, Coffee, SunMedium, Meh, Frown, Users, AlertTriangle, Menu,
+  Wind, Download
 } from 'lucide-react';
 import api from '../services/api';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
@@ -21,6 +22,9 @@ import NotificationCenter from '../components/NotificationCenter';
 import TestResponseViewer from '../components/TestResponseViewer';
 import ColibriMascot from '../components/ColibriMascot';
 import StarryBackground from '../components/StarryBackground';
+import BreathingExerciseModal from '../components/wellness/BreathingExerciseModal';
+import EquiAssistantWidget from '../components/assistant/EquiAssistantWidget';
+import { generateAndDownloadKudoCard } from '../utils/kudoCardGenerator';
 import MyProgress from './MyProgress';
 import MyWellbeing from './MyWellbeing';
 import { useNavigate } from 'react-router-dom';
@@ -114,6 +118,14 @@ const MemberDashboard = ({ initialTab }) => {
   const [streakDays, setStreakDays] = useState(1);
   const [xpPoints, setXpPoints] = useState(100);
   const [showXpReward, setShowXpReward] = useState(false);
+
+  // Pausa Consciente Modal State
+  const [showBreathingModal, setShowBreathingModal] = useState(false);
+  const handleBreathingReward = (xpToAdd = 25) => {
+    setXpPoints(prev => prev + xpToAdd);
+    setShowXpReward(true);
+    showAlert('success', '¡Pausa Consciente!', `Has completado tu ciclo de respiración guiada. Recibiste +${xpToAdd} XP.`);
+  };
 
   useEffect(() => {
     const calculatedXp = ((history || []).length * 50) + ((tasks || []).filter(t => t.status === 'completada').length * 30);
@@ -1285,6 +1297,29 @@ const MemberDashboard = ({ initialTab }) => {
             <span>{xpPoints} XP</span>
           </span>
 
+          {/* Botón de Pausa Consciente Interactiva */}
+          <button
+            type="button"
+            onClick={() => setShowBreathingModal(true)}
+            className="duo-pill"
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '6px',
+              fontWeight: '800',
+              padding: '6px 14px',
+              borderRadius: '20px',
+              backgroundColor: 'rgba(99, 102, 241, 0.12)',
+              color: 'var(--primary)',
+              border: '1.5px solid var(--primary-light)',
+              cursor: 'pointer'
+            }}
+            title="Iniciar sesión interactiva de respiración guiada 4-7-8"
+          >
+            <Wind size={14} style={{ color: 'var(--primary)' }} />
+            <span>Pausa Consciente</span>
+          </button>
+
           {/* Desktop Navigation Items (Oculto en móvil/tablet < 1024px) */}
           <div className="desktop-nav-items">
             {/* Centro de Notificaciones */}
@@ -2174,10 +2209,32 @@ const MemberDashboard = ({ initialTab }) => {
                               {k.badge_type}
                             </span>
                           </div>
-                          <p style={{ fontSize: '13px', lineHeight: '1.45', margin: '4px 0', whiteSpace: 'pre-wrap' }}>{k.message}</p>
-                          <span style={{ fontSize: '9.5px', opacity: 0.7, display: 'block', textAlign: 'right', marginTop: '4px' }}>
-                            {new Date(k.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                          </span>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '6px' }}>
+                            <button
+                              type="button"
+                              onClick={(e) => { e.stopPropagation(); generateAndDownloadKudoCard(k); }}
+                              style={{
+                                background: 'none',
+                                border: 'none',
+                                color: 'currentColor',
+                                opacity: 0.85,
+                                fontSize: '10px',
+                                fontWeight: '800',
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '4px',
+                                cursor: 'pointer',
+                                padding: '2px 4px'
+                              }}
+                              title="Descargar postal visual de reconocimiento en imagen HD"
+                            >
+                              <Download size={12} />
+                              <span>Descargar Tarjeta</span>
+                            </button>
+                            <span style={{ fontSize: '9.5px', opacity: 0.7 }}>
+                              {new Date(k.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                            </span>
+                          </div>
                         </div>
                       </div>
                     );
@@ -2569,6 +2626,18 @@ const MemberDashboard = ({ initialTab }) => {
 
         {/* ALERTA DE SISTEMA FLOTANTE GLASSMORPHIC */}
         <SystemAlert alert={systemAlert} onClose={() => setSystemAlert({ ...systemAlert, show: false })} />
+
+        {/* Modal Interactivo de Pausa Consciente */}
+        <BreathingExerciseModal
+          isOpen={showBreathingModal}
+          onClose={() => setShowBreathingModal(false)}
+          onRewardXp={handleBreathingReward}
+        />
+
+        {/* Asistente Conversacional Inteligente Equi (Gemini Flash) */}
+        <EquiAssistantWidget
+          onOpenBreathing={() => setShowBreathingModal(true)}
+        />
 
       </main>
     </div>
