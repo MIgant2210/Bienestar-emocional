@@ -5,6 +5,7 @@ import {
   X, Check, Bot, Zap, ArrowRight, BarChart3, Users, Building, ShieldCheck
 } from 'lucide-react';
 import ColibriMascot from './ColibriMascot';
+import ColibriEquiAvatar from './ColibriEquiAvatar';
 
 /**
  * ============================================================================
@@ -446,15 +447,18 @@ export const EquiTourModal = ({
           />
         </div>
 
-        {/* Cuerpo del Modal: Colibrí Animado + Explicación */}
-        <div style={{
-          padding: '24px',
-          overflowY: 'auto',
-          display: 'grid',
-          gridTemplateColumns: 'minmax(180px, 210px) 1fr',
-          gap: '24px',
-          alignItems: 'center'
-        }}>
+        {/* Cuerpo del Modal: Colibrí Animado + Explicación (Adaptable a móviles) */}
+        <div 
+          className="equi-tour-content-body"
+          style={{
+            padding: '24px',
+            overflowY: 'auto',
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(210px, 1fr))',
+            gap: '20px',
+            alignItems: 'center'
+          }}
+        >
           {/* Mascota Equi con Globito Contextual */}
           <div style={{
             display: 'flex',
@@ -467,11 +471,11 @@ export const EquiTourModal = ({
             border: '1px solid var(--border)',
             minHeight: '260px'
           }}>
-            <div style={{ width: '150px', height: '180px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <ColibriMascot 
-                mood={currentStepData.mascotMood} 
+            <div style={{ width: '170px', height: '180px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <ColibriEquiAvatar 
+                pose={currentStepData.mascotMood === 'celebrate' ? 'celebrate' : (currentStepData.mascotMood === 'happy' ? 'inhale' : 'neutral')}
                 compact={true}
-                customMessage=""
+                animated={true}
               />
             </div>
             

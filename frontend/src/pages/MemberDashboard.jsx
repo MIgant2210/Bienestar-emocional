@@ -1388,25 +1388,25 @@ const MemberDashboard = ({ initialTab }) => {
               )}
             </div>
 
-            {/* Botón Tour Guiado con Equi el Colibrí */}
+            {/* Botón Tour Guiado con Equi el Colibrí (Solo Icono Circular) */}
             <button
               onClick={() => setShowTourModal(true)}
               className="theme-toggle"
               style={{
                 border: '2px solid var(--primary)',
                 backgroundColor: 'var(--primary-light)',
-                padding: '0 10px',
+                width: '36px',
                 height: '36px',
-                borderRadius: '20px',
+                borderRadius: '50%',
                 display: 'inline-flex',
                 alignItems: 'center',
-                gap: '6px',
-                cursor: 'pointer'
+                justifyContent: 'center',
+                cursor: 'pointer',
+                padding: 0
               }}
-              title="Ver recorrido guiado con Equi el Colibrí"
+              title="Recorrido guiado con Equi el Colibrí"
             >
-              <img src="/logo.png" alt="Equi" style={{ width: '18px', height: '18px', objectFit: 'contain' }} />
-              <span style={{ fontSize: '11.5px', fontWeight: '800', color: 'var(--primary)' }}>Tour Equi</span>
+              <img src="/logo.png" alt="Equi" style={{ width: '20px', height: '20px', objectFit: 'contain' }} />
             </button>
 
             <button onClick={toggleTheme} className="theme-toggle" style={{ border: '1px solid var(--border)', width: '36px', height: '36px', borderRadius: '50%' }} title="Cambiar Modo Claro/Oscuro">
@@ -1472,7 +1472,16 @@ const MemberDashboard = ({ initialTab }) => {
             </div>
 
             {/* Acciones Rápidas Táctiles */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '8px', marginBottom: '20px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '6px', marginBottom: '20px' }}>
+              <button 
+                onClick={() => { setShowTourModal(true); setMobileMenuOpen(false); }} 
+                className="theme-toggle" 
+                style={{ width: '100%', height: '40px', borderRadius: '10px', border: '1.5px solid var(--primary)', backgroundColor: 'var(--primary-light)', display: 'flex', alignItems: 'center', justifyContent: 'center' }} 
+                title="Tour Guiado con Equi"
+              >
+                <img src="/logo.png" alt="Tour" style={{ width: '18px', height: '18px', objectFit: 'contain' }} />
+              </button>
+
               <button 
                 onClick={toggleTheme} 
                 className="theme-toggle" 
@@ -1551,6 +1560,28 @@ const MemberDashboard = ({ initialTab }) => {
               Módulos del Sistema
             </span>
             <div style={{ display: 'grid', gap: '6px' }}>
+              <button
+                type="button"
+                onClick={() => { setShowTourModal(true); setMobileMenuOpen(false); }}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '10px',
+                  padding: '12px 14px',
+                  borderRadius: '12px',
+                  border: '1.5px solid var(--primary)',
+                  backgroundColor: 'var(--primary-light)',
+                  color: 'var(--primary)',
+                  fontWeight: '800',
+                  fontSize: '13px',
+                  textAlign: 'left',
+                  cursor: 'pointer',
+                  marginBottom: '4px'
+                }}
+              >
+                <img src="/logo.png" alt="Equi" style={{ width: '18px', height: '18px', objectFit: 'contain' }} />
+                <span>Recorrido con Equi el Colibrí</span>
+              </button>
               {[
                 { id: 'bienestar', label: 'Mi Bienestar', icon: Brain },
                 { id: 'tasks', label: 'Mis Tareas', icon: ClipboardList, badge: tasks.filter(t => t.status === 'pendiente').length, badgeColor: 'var(--danger)' },
