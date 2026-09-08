@@ -79,6 +79,7 @@ const renderFormattedText = (rawText) => {
 const MyWellbeing = ({ onNavigateToTab, initialResourceId, onResourceCompleted }) => {
   const navigate = useNavigate();
   const { user: authUser } = useContext(AuthContext) || {};
+  const user = authUser;
   const isAdminOrSupport = authUser && ['superadmin', 'admin_institucion', 'profesional_apoyo'].includes(authUser.role);
 
   // Estados de Pestañas Internas de Mi Bienestar
@@ -370,9 +371,51 @@ const MyWellbeing = ({ onNavigateToTab, initialResourceId, onResourceCompleted }
       recognition.onresult = (event) => {
         let sessionTranscript = '';
         for (let i = 0; i < event.results.length; i++) {
-          sessionTranscript += event.results[i][0].transcript;
+          const item = (event.results[i][0]?.transcript || '').trim();
+          if (!item) continue;
+
+          if (!sessionTranscript) {
+            sessionTranscript = item;
+            continue;
+          }
+
+          const lowerSession = sessionTranscript.toLowerCase();
+          const lowerItem = item.toLowerCase();
+
+          // En Chrome Android, los elementos posteriores de event.results a menudo repiten la frase completa acumulada
+          if (lowerItem.startsWith(lowerSession)) {
+            sessionTranscript = item;
+          } 
+          // Si lo acumulado ya contiene o termina con este fragmento (duplicado/eco)
+          else if (lowerSession.endsWith(lowerItem) || lowerSession.includes(lowerItem)) {
+            continue;
+          } 
+          // En Chrome Desktop o frases sucesivas: unir de forma limpia evitando duplicar palabras intermedias
+          else {
+            const sessionWords = sessionTranscript.split(/\s+/);
+            const itemWords = item.split(/\s+/);
+            let overlap = 0;
+            for (let j = Math.min(sessionWords.length, itemWords.length); j > 0; j--) {
+              const endSession = sessionWords.slice(-j).join(' ').toLowerCase();
+              const startItem = itemWords.slice(0, j).join(' ').toLowerCase();
+              if (endSession === startItem) {
+                overlap = j;
+                break;
+              }
+            }
+            if (overlap > 0) {
+              const remainingWords = itemWords.slice(overlap).join(' ');
+              if (remainingWords) {
+                sessionTranscript += ' ' + remainingWords;
+              }
+            } else {
+              sessionTranscript += ' ' + item;
+            }
+          }
         }
-        setReflectionText((baseReflectionTextRef.current + sessionTranscript).trim());
+
+        const base = baseReflectionTextRef.current || '';
+        setReflectionText((base + sessionTranscript).trim());
       };
 
       recognition.onerror = (e) => {

@@ -531,8 +531,43 @@ const MemberDashboard = ({ initialTab }) => {
 
         recognition.onresult = (event) => {
           let liveText = '';
-          for (let i = event.resultIndex; i < event.results.length; i++) {
-            liveText += event.results[i][0].transcript;
+          for (let i = 0; i < event.results.length; i++) {
+            const item = (event.results[i][0]?.transcript || '').trim();
+            if (!item) continue;
+
+            if (!liveText) {
+              liveText = item;
+              continue;
+            }
+
+            const lowerLive = liveText.toLowerCase();
+            const lowerItem = item.toLowerCase();
+
+            if (lowerItem.startsWith(lowerLive)) {
+              liveText = item;
+            } else if (lowerLive.endsWith(lowerItem) || lowerLive.includes(lowerItem)) {
+              continue;
+            } else {
+              const liveWords = liveText.split(/\s+/);
+              const itemWords = item.split(/\s+/);
+              let overlap = 0;
+              for (let j = Math.min(liveWords.length, itemWords.length); j > 0; j--) {
+                const endLive = liveWords.slice(-j).join(' ').toLowerCase();
+                const startItem = itemWords.slice(0, j).join(' ').toLowerCase();
+                if (endLive === startItem) {
+                  overlap = j;
+                  break;
+                }
+              }
+              if (overlap > 0) {
+                const remainingWords = itemWords.slice(overlap).join(' ');
+                if (remainingWords) {
+                  liveText += ' ' + remainingWords;
+                }
+              } else {
+                liveText += ' ' + item;
+              }
+            }
           }
           if (liveText.trim()) {
             handleAnswerChange(qId, liveText);
