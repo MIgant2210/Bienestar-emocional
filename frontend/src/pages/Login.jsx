@@ -7,8 +7,34 @@ import StarryBackground from '../components/StarryBackground';
 
 const Login = ({ onNavigate }) => {
   const navigate = useNavigate();
-  const { login, loginWithGoogle, completeGoogleRegistration } = useContext(AuthContext);
+  const { user, login, loginWithGoogle, completeGoogleRegistration } = useContext(AuthContext);
   const { theme, toggleTheme } = useContext(ThemeContext);
+
+  // Limpiar cualquier prompt o elemento flotante de Google al desmontar
+  useEffect(() => {
+    return () => {
+      try {
+        if (window.google?.accounts?.id) {
+          window.google.accounts.id.cancel();
+        }
+      } catch (err) {}
+    };
+  }, []);
+
+  const handleSuccessRedirect = (userRole) => {
+    if (typeof onNavigate === 'function') {
+      onNavigate();
+    } else {
+      navigate(userRole === 'miembro' ? '/mi-bienestar' : '/analiticas');
+    }
+  };
+
+  // Si ya hay usuario autenticado, redirigir limpiamente
+  useEffect(() => {
+    if (user) {
+      handleSuccessRedirect(user.role);
+    }
+  }, [user]);
 
   // Estados del login tradicional
   const [email, setEmail] = useState('');
@@ -52,14 +78,6 @@ const Login = ({ onNavigate }) => {
     setTilt({ x: 0, y: 0 });
   };
 
-  const handleSuccessRedirect = (userRole) => {
-    if (typeof onNavigate === 'function') {
-      onNavigate();
-    } else {
-      navigate(userRole === 'miembro' ? '/mi-bienestar' : '/analiticas');
-    }
-  };
-
   // ── INICIO DE SESIÓN TRADICIONAL ──
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -86,17 +104,7 @@ const Login = ({ onNavigate }) => {
   // ── AUTENTICACIÓN CON GOOGLE OAUTH 2.0 ──
   const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID || '666650859587-sr19m1li97t8p87jc2nsdsla6eidddrm.apps.googleusercontent.com';
 
-  // Cargar Google Identity Services SDK de forma reactiva
-  useEffect(() => {
-    if (!document.getElementById('google-gsi-client')) {
-      const script = document.createElement('script');
-      script.id = 'google-gsi-client';
-      script.src = 'https://accounts.google.com/gsi/client';
-      script.async = true;
-      script.defer = true;
-      document.body.appendChild(script);
-    }
-  }, []);
+  // Google Identity Services SDK se carga de forma estática en index.html
 
   const handleGoogleClick = () => {
     setErrorMsg('');

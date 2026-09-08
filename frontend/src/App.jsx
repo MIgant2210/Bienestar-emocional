@@ -7,7 +7,7 @@ import Login from './pages/Login';
 import Register from './pages/Register';
 import Unauthorized403 from './pages/Unauthorized403';
 import ProtectedRoute from './components/ProtectedRoute';
-import StarryBackground from './components/StarryBackground';
+import ErrorBoundary from './components/ErrorBoundary';
 import './styles/global.css';
 
 // Lazy loading para división de código y arranque instantáneo
@@ -181,9 +181,10 @@ function App() {
       <AuthProvider>
         <DialogProvider>
           <BrowserRouter>
-          <StarryBackground />
-          <NavigationHandler />
-        </BrowserRouter>
+            <ErrorBoundary>
+              <NavigationHandler />
+            </ErrorBoundary>
+          </BrowserRouter>
         </DialogProvider>
       </AuthProvider>
     </ThemeProvider>

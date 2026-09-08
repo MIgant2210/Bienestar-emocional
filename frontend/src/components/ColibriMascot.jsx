@@ -489,62 +489,6 @@ const ColibriMascot = ({
             </p>
           </div>
         )}
-
-        {/* ESTILOS CSS PARA POSTURAS Y MOVIMIENTOS */}
-        <style>{`
-          @keyframes colibriFloatAdvanced {
-            0% { transform: translateY(0px) rotate(0deg); }
-            25% { transform: translateY(-7px) rotate(2deg); }
-            50% { transform: translateY(-12px) rotate(-1deg); }
-            75% { transform: translateY(-5px) rotate(1.5deg); }
-            100% { transform: translateY(0px) rotate(0deg); }
-          }
-          @keyframes colibriFlyJoy {
-            0% { transform: translateY(0px) rotate(-4deg) scale(1); }
-            30% { transform: translateY(-16px) rotate(5deg) scale(1.08); }
-            60% { transform: translateY(-6px) rotate(-2deg) scale(1.04); }
-            100% { transform: translateY(0px) rotate(-4deg) scale(1); }
-          }
-          @keyframes colibriFlapFront {
-            0% { transform: rotate(0deg) scaleY(1); }
-            50% { transform: rotate(-38deg) scaleY(0.65) skewX(-10deg); }
-            100% { transform: rotate(0deg) scaleY(1); }
-          }
-          @keyframes colibriFlapBack {
-            0% { transform: rotate(0deg) scaleY(1); }
-            50% { transform: rotate(34deg) scaleY(0.65) skewX(10deg); }
-            100% { transform: rotate(0deg) scaleY(1); }
-          }
-          @keyframes colibriShoulderRoll {
-            0% { transform: rotate(0deg) translateY(0px); }
-            25% { transform: rotate(-25deg) translateY(-8px); }
-            50% { transform: rotate(15deg) translateY(4px); }
-            75% { transform: rotate(-10deg) translateY(-4px); }
-            100% { transform: rotate(0deg) translateY(0px); }
-          }
-          @keyframes colibriWristRoll {
-            0% { transform: rotate(0deg) skewX(0deg); }
-            50% { transform: rotate(20deg) skewX(15deg); }
-            100% { transform: rotate(0deg) skewX(0deg); }
-          }
-          @keyframes colibriTailAnim {
-            0% { transform: rotate(0deg); }
-            50% { transform: rotate(-6deg); }
-            100% { transform: rotate(0deg); }
-          }
-          @keyframes sparkleFloat1 {
-            0%, 100% { transform: translateY(0) scale(1); opacity: 0.8; }
-            50% { transform: translateY(-10px) translateX(4px) scale(1.2); opacity: 1; }
-          }
-          @keyframes sparkleFloat2 {
-            0%, 100% { transform: translateY(0) scale(1); opacity: 0.7; }
-            50% { transform: translateY(8px) translateX(-5px) scale(1.3); opacity: 1; }
-          }
-          .sparkle-1 { animation: sparkleFloat1 2.2s infinite ease-in-out; }
-          .sparkle-2 { animation: sparkleFloat2 2.8s infinite ease-in-out; }
-          .sparkle-3 { animation: sparkleFloat1 3.2s infinite ease-in-out 0.5s; }
-          .sparkle-4 { animation: sparkleFloat2 2.5s infinite ease-in-out 1s; }
-        `}</style>
       </div>
     );
   }
@@ -656,48 +600,6 @@ const ColibriMascot = ({
           </div>
         )}
       </div>
-
-      <style>{`
-        @keyframes colibriFloatAdvanced {
-          0% { transform: translateY(0px) rotate(0deg); }
-          25% { transform: translateY(-7px) rotate(2deg); }
-          50% { transform: translateY(-12px) rotate(-1deg); }
-          75% { transform: translateY(-5px) rotate(1.5deg); }
-          100% { transform: translateY(0px) rotate(0deg); }
-        }
-        @keyframes colibriFlyJoy {
-          0% { transform: translateY(0px) rotate(-4deg) scale(1); }
-          30% { transform: translateY(-16px) rotate(5deg) scale(1.08); }
-          60% { transform: translateY(-6px) rotate(-2deg) scale(1.04); }
-          100% { transform: translateY(0px) rotate(-4deg) scale(1); }
-        }
-        @keyframes colibriFlapFront {
-          0% { transform: rotate(0deg) scaleY(1); }
-          50% { transform: rotate(-38deg) scaleY(0.65) skewX(-10deg); }
-          100% { transform: rotate(0deg) scaleY(1); }
-        }
-        @keyframes colibriFlapBack {
-          0% { transform: rotate(0deg) scaleY(1); }
-          50% { transform: rotate(34deg) scaleY(0.65) skewX(10deg); }
-          100% { transform: rotate(0deg) scaleY(1); }
-        }
-        @keyframes colibriTailAnim {
-          0% { transform: rotate(0deg); }
-          50% { transform: rotate(-6deg); }
-          100% { transform: rotate(0deg); }
-        }
-        @keyframes colibriPulseGlow {
-          0% { transform: scale(0.9); opacity: 0.7; }
-          100% { transform: scale(1.2); opacity: 1; }
-        }
-        .colibri-wing-front { animation: colibriFlapFront 0.18s infinite ease-in-out; }
-        .colibri-wing-back { animation: colibriFlapBack 0.18s infinite ease-in-out; }
-        .colibri-tail { animation: colibriTailAnim 1.8s infinite ease-in-out; }
-        .sparkle-1 { animation: sparkleFloat1 2.2s infinite ease-in-out; }
-        .sparkle-2 { animation: sparkleFloat2 2.8s infinite ease-in-out; }
-        .sparkle-3 { animation: sparkleFloat1 3.2s infinite ease-in-out 0.5s; }
-        .sparkle-4 { animation: sparkleFloat2 2.5s infinite ease-in-out 1s; }
-      `}</style>
     </div>
   );
 };

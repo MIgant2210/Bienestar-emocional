@@ -109,21 +109,6 @@ export const ColibriEquiAvatar = ({
           </radialGradient>
         </defs>
 
-        <style>{`
-          .equi-wing-anim {
-            transform-origin: 130px 140px;
-            animation: ${isCelebrate ? 'equiFlutterFast 0.6s infinite alternate' : 'equiFlutter 1.6s ease-in-out infinite alternate'};
-          }
-          @keyframes equiFlutter {
-            0% { transform: rotate(0deg) scale(1); }
-            100% { transform: rotate(-10deg) scale(1.04); }
-          }
-          @keyframes equiFlutterFast {
-            0% { transform: rotate(-14deg) scale(0.96); }
-            100% { transform: rotate(14deg) scale(1.08); }
-          }
-        `}</style>
-
         {/* Grupo del Colibrí Centrado */}
         <g id="colibri-equi-character" transform="translate(20, 20)">
           {/* Cola Estilizada Multicapa */}
@@ -145,7 +130,7 @@ export const ColibriEquiAvatar = ({
           </g>
 
           {/* Ala Trasera */}
-          <g id="equi-wing-back" className="equi-wing-anim">
+          <g id="equi-wing-back" className={isCelebrate ? 'equi-wing-anim-fast' : 'equi-wing-anim'}>
             <path
               d="M 125 135 C 100 80, 50 50, 20 40 C 35 75, 75 115, 115 145 Z"
               fill="url(#equi-wing-secondary)"
@@ -174,7 +159,7 @@ export const ColibriEquiAvatar = ({
           </g>
 
           {/* Ala Frontal Dinámica */}
-          <g id="equi-wing-front" className="equi-wing-anim">
+          <g id="equi-wing-front" className={isCelebrate ? 'equi-wing-anim-fast' : 'equi-wing-anim'}>
             <path
               d="M 135 140 C 120 70, 75 30, 35 15 C 45 60, 85 110, 130 155 Z"
               fill="url(#equi-wing-main)"
