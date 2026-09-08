@@ -1,7 +1,10 @@
 from flask import Blueprint, request, jsonify, send_file
 import io
 import asyncio
-import edge_tts
+try:
+    import edge_tts
+except ImportError:
+    edge_tts = None
 from app import db
 from app.models.reflection import Reflection
 from app.models.evaluation import Evaluation
@@ -1314,6 +1317,9 @@ def generate_ai_voice():
 
     if not text:
         return jsonify({'message': 'El texto es obligatorio para la síntesis de voz.'}), 400
+
+    if edge_tts is None:
+        return jsonify({'message': 'La síntesis de voz no está habilitada en este entorno.'}), 503
 
     profile = AI_VOICE_PROFILES.get(persona_id, AI_VOICE_PROFILES['sofia'])
 
