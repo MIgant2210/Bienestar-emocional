@@ -532,7 +532,7 @@ def google_auth():
     # CASO B: Usuario Nuevo -> Si no se envió código de institución, requerir finalización
     if not invitation_code:
         return jsonify({
-            'is_new_user': true,
+            'is_new_user': True,
             'google_profile': {
                 'email': email,
                 'first_name': first_name,
