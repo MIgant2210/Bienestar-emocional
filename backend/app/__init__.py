@@ -11,8 +11,10 @@ def create_app(config_class=Config):
     app = Flask(__name__)
     app.config.from_object(config_class)
     
-    # Habilitar CORS para las peticiones desde el frontend
-    CORS(app, resources={r"/api/*": {"origins": "*"}})
+    # Habilitar CORS para todas las rutas y orígenes
+    CORS(app, resources={r"/*": {"origins": "*"}}, supports_credentials=True, 
+         allow_headers=["Content-Type", "Authorization", "Access-Control-Allow-Credentials"],
+         methods=["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"])
     
     db.init_app(app)
     migrate.init_app(app, db)

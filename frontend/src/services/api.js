@@ -1,7 +1,13 @@
 import axios from 'axios';
 
+// Obtener la URL base y asegurarse de que termine en /api
+let apiBaseUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+if (!apiBaseUrl.endsWith('/api') && !apiBaseUrl.endsWith('/api/')) {
+  apiBaseUrl = apiBaseUrl.replace(/\/+$/, '') + '/api';
+}
+
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || 'http://localhost:5000/api',
+  baseURL: apiBaseUrl,
   timeout: 30000,
 });
 
