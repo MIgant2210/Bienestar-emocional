@@ -42,6 +42,7 @@ const EQUI_PALETTES = {
 };
 
 const QUICK_SUGGESTIONS = [
+  { label: '🌟 Recorrido con Equi', action: 'tour' },
   { label: '🧘 Pausa para calmarme', action: 'breathe' },
   { label: '🇬🇹 ¿Qué onda con el estrés?', text: '¿Qué hábitos o pausas me sugieres hoy para aliviar la sobrecarga laboral y recargar pilas?' },
   { label: '⚡ Siento sobrecarga hoy', text: 'Siento mucha sobrecarga mental con mis tareas de hoy, ¿qué me sugieres hacer?' },
@@ -49,7 +50,7 @@ const QUICK_SUGGESTIONS = [
   { label: '💡 Consejo de motivación', text: 'Dame un consejo constructivo para mantener el ánimo y motivación en mi jornada laboral.' }
 ];
 
-const EquiAssistantWidget = ({ onOpenBreathing }) => {
+const EquiAssistantWidget = ({ onOpenBreathing, onStartTour }) => {
   const themeContext = useContext(ThemeContext);
   const colorPalette = themeContext?.colorPalette || 'indigo';
   const paletteTheme = EQUI_PALETTES[colorPalette] || EQUI_PALETTES.indigo;
@@ -208,7 +209,12 @@ const EquiAssistantWidget = ({ onOpenBreathing }) => {
   };
 
   const handleSuggestionClick = (item) => {
-    if (item.action === 'breathe') {
+    if (item.action === 'tour') {
+      if (onStartTour) {
+        onStartTour();
+      }
+      setIsOpen(false);
+    } else if (item.action === 'breathe') {
       if (onOpenBreathing) {
         onOpenBreathing();
       }

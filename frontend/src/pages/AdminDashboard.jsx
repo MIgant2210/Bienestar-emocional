@@ -27,6 +27,7 @@ import MyWellbeing from './MyWellbeing';
 import InstitutionalReportView from '../components/reports/InstitutionalReportView';
 import BreathingExerciseModal from '../components/wellness/BreathingExerciseModal';
 import EquiAssistantWidget from '../components/assistant/EquiAssistantWidget';
+import EquiTourModal from '../components/EquiTourModal';
 import { generateAndDownloadKudoCard } from '../utils/kudoCardGenerator';
 import { useNavigate } from 'react-router-dom';
 import { hasModuleAccess } from '../components/ProtectedRoute';
@@ -60,6 +61,17 @@ const AdminDashboard = ({ initialTab = 'analytics' }) => {
     setSystemAlert({ show: true, type, title, message });
     if (showGlobalAlert) showGlobalAlert(type, title, message);
   };
+
+  // Tour Guiado Interactivo con Equi el Colibrí
+  const [showTourModal, setShowTourModal] = useState(() => {
+    try {
+      if (user?.id) {
+        const completed = localStorage.getItem(`equi_tour_completed_${user.id}`);
+        return !completed; // Si es primer ingreso del admin, se abre
+      }
+    } catch (e) {}
+    return false;
+  });
 
   const cleanEvalTitle = (title) => {
     if (!title) return '';
@@ -2267,6 +2279,27 @@ const AdminDashboard = ({ initialTab = 'analytics' }) => {
                 </div>
               )}
             </div>
+
+            {/* Botón Tour Guiado con Equi el Colibrí */}
+            <button
+              onClick={() => setShowTourModal(true)}
+              className="theme-toggle"
+              style={{
+                border: '2px solid var(--primary)',
+                backgroundColor: 'var(--primary-light)',
+                padding: '0 10px',
+                height: '36px',
+                borderRadius: '20px',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '6px',
+                cursor: 'pointer'
+              }}
+              title="Ver recorrido guiado con Equi el Colibrí"
+            >
+              <img src="/logo.png" alt="Equi" style={{ width: '18px', height: '18px', objectFit: 'contain' }} />
+              <span style={{ fontSize: '11.5px', fontWeight: '800', color: 'var(--primary)' }}>Tour Equi</span>
+            </button>
 
             <button onClick={toggleTheme} className="theme-toggle" style={{ border: '1px solid var(--border)', width: '36px', height: '36px', borderRadius: '50%' }} title="Cambiar Modo Claro/Oscuro">
               {theme === 'light' ? <Moon size={15} /> : <Sun size={15} />}
@@ -6152,6 +6185,30 @@ const AdminDashboard = ({ initialTab = 'analytics' }) => {
         {/* Asistente Conversacional Inteligente Equi (Gemini Flash) */}
         <EquiAssistantWidget
           onOpenBreathing={() => setShowBreathingModal(true)}
+          onStartTour={() => setShowTourModal(true)}
+        />
+
+        {/* Tour Guiado de Bienvenida con Equi el Colibrí */}
+        <EquiTourModal
+          isOpen={showTourModal}
+          onClose={() => {
+            setShowTourModal(false);
+            try {
+              if (user?.id) {
+                localStorage.setItem(`equi_tour_completed_${user.id}`, 'true');
+              }
+            } catch (e) {}
+          }}
+          userRole={user?.role || 'admin'}
+          userName={user?.first_name || ''}
+          onCompleteReward={() => {
+            try {
+              if (user?.id) {
+                localStorage.setItem(`equi_tour_completed_${user.id}`, 'true');
+              }
+            } catch (e) {}
+            showAlert('success', '¡Recorrido Completado!', 'Has finalizado la inducción del Centro de Inteligencia con Equi.');
+          }}
         />
 
       </main>
