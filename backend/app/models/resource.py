@@ -84,6 +84,7 @@ class Resource(db.Model):
             'target_indicator': self.target_indicator,
             'is_published': self.is_published,
             'institution_id': str(self.institution_id) if self.institution_id else None,
+            'is_global': self.institution_id is None,
             'created_at': self.created_at.isoformat() if self.created_at else None,
             'updated_at': self.updated_at.isoformat() if self.updated_at else None,
             'is_favorite': False,

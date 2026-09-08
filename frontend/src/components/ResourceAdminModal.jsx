@@ -224,7 +224,25 @@ const ResourceAdminModal = ({ resource, onClose, onSaved }) => {
   );
 
   const [loading, setLoading] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const [error, setError] = useState('');
+
+  const handleDelete = async () => {
+    if (!resource || !resource.id) return;
+    const isConfirmed = window.confirm(`¿Estás seguro de que deseas eliminar permanentemente el recurso "${resource.title}"? Esta acción no se puede deshacer.`);
+    if (!isConfirmed) return;
+
+    setDeleting(true);
+    setError('');
+    try {
+      await api.delete(`/wellbeing/resources/${resource.id}`);
+      if (onSaved) onSaved();
+      onClose();
+    } catch (err) {
+      setError(err.response?.data?.message || err.message || 'Error al eliminar el recurso.');
+      setDeleting(false);
+    }
+  };
 
   const handleTypeChange = (newType) => {
     setFormData(prev => ({ ...prev, resource_type: newType }));
@@ -306,7 +324,7 @@ const ResourceAdminModal = ({ resource, onClose, onSaved }) => {
       left: 0,
       right: 0,
       bottom: 0,
-      backgroundColor: 'rgba(248, 245, 240, 0.88)',
+      backgroundColor: 'rgba(10, 10, 20, 0.82)',
       backdropFilter: 'blur(16px)',
       display: 'flex',
       alignItems: 'center',
@@ -341,29 +359,29 @@ const ResourceAdminModal = ({ resource, onClose, onSaved }) => {
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
             <div style={{
-              width: '40px',
-              height: '40px',
+              width: '42px',
+              height: '42px',
               borderRadius: '12px',
               backgroundColor: 'var(--primary-light)',
-              color: 'var(--primary)',
               display: 'flex',
               alignItems: 'center',
-              justifyContent: 'center'
+              justifyContent: 'center',
+              color: 'var(--primary)'
             }}>
-              <Sparkles size={20} />
+              <Sliders size={22} />
             </div>
             <div>
-              <h3 style={{ fontSize: '17px', fontWeight: '900', color: 'var(--text-primary)' }}>
-                {isEditing ? 'Constructor: Editar Recurso' : 'Constructor Inteligente de Recursos'}
-              </h3>
-              <p style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>
-                Experiencias interactivas guiadas por el Colibrí Morado y 15 plantillas dinámicas.
-              </p>
+              <h2 style={{ fontSize: '18px', fontWeight: '900', color: 'var(--text-primary)', margin: 0 }}>
+                {isEditing ? 'Constructor Inteligente de Recursos' : 'Nuevo Recurso de Bienestar'}
+              </h2>
+              <span style={{ fontSize: '11.5px', color: 'var(--text-muted)' }}>
+                {isEditing ? `Modificando: "${formData.title}"` : 'Crea contenido interactivo guiado, lecturas o checklists para tu institución.'}
+              </span>
             </div>
           </div>
 
           {/* Pestañas de Vista: Editor vs Vista Previa */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
             <div style={{ display: 'flex', backgroundColor: 'var(--bg-secondary)', padding: '3px', borderRadius: '10px', border: '1px solid var(--border)' }}>
               <button
                 type="button"
@@ -382,7 +400,7 @@ const ResourceAdminModal = ({ resource, onClose, onSaved }) => {
                   gap: '6px'
                 }}
               >
-                <Sliders size={13} /> Constructor
+                <PenLine size={13} /> Editor
               </button>
               <button
                 type="button"
@@ -417,6 +435,31 @@ const ResourceAdminModal = ({ resource, onClose, onSaved }) => {
 
         {/* Modal Body */}
         <div style={{ padding: '24px', overflowY: 'auto', flex: 1 }}>
+          
+          {/* Badge de Alcance Institucional */}
+          <div style={{
+            padding: '12px 16px',
+            borderRadius: '12px',
+            backgroundColor: (resource?.institution_id || !isEditing) ? 'rgba(var(--primary-rgb), 0.1)' : 'rgba(16, 185, 129, 0.1)',
+            border: `1px solid ${(resource?.institution_id || !isEditing) ? 'var(--primary)' : 'var(--success)'}`,
+            display: 'flex',
+            alignItems: 'center',
+            gap: '10px',
+            fontSize: '12.5px',
+            color: 'var(--text-primary)',
+            marginBottom: '18px'
+          }}>
+            <ShieldCheck size={18} style={{ color: (resource?.institution_id || !isEditing) ? 'var(--primary)' : 'var(--success)' }} />
+            <div>
+              <strong>Alcance del Recurso: </strong>
+              {resource?.institution_id 
+                ? `Exclusivo para tu institución (${formData.source_institution || 'Institucional'}).` 
+                : (isEditing 
+                    ? 'Recurso Global del Sistema (Visible para todas las instituciones).' 
+                    : 'Recurso Institucional (Solo visible y aplicable para los miembros de tu institución).')}
+            </div>
+          </div>
+
           {error && (
             <div style={{
               padding: '12px 16px',
@@ -1018,25 +1061,54 @@ const ResourceAdminModal = ({ resource, onClose, onSaved }) => {
                 </label>
               </div>
 
-              {/* Botón de Guardado */}
-              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '10px' }}>
-                <button
-                  type="button"
-                  onClick={onClose}
-                  className="btn btn-secondary"
-                  style={{ padding: '10px 20px', fontSize: '13px', borderRadius: '12px' }}
-                >
-                  Cancelar
-                </button>
-                <button
-                  type="submit"
-                  disabled={loading}
-                  className="btn btn-primary"
-                  style={{ padding: '10px 28px', fontSize: '13px', fontWeight: '900', borderRadius: '12px' }}
-                >
-                  <Save size={16} />
-                  <span>{loading ? 'Guardando...' : (isEditing ? 'Guardar Cambios' : 'Publicar Recurso')}</span>
-                </button>
+              {/* Botón de Guardado y Eliminación */}
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px', marginTop: '10px', flexWrap: 'wrap' }}>
+                {isEditing && (
+                  <button
+                    type="button"
+                    onClick={handleDelete}
+                    disabled={loading || deleting}
+                    className="btn"
+                    style={{
+                      marginRight: 'auto',
+                      backgroundColor: 'rgba(239, 68, 68, 0.1)',
+                      border: '1px solid var(--danger)',
+                      color: 'var(--danger)',
+                      padding: '10px 18px',
+                      fontSize: '13px',
+                      fontWeight: '800',
+                      borderRadius: '12px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px',
+                      cursor: 'pointer',
+                      transition: 'all 0.2s ease'
+                    }}
+                  >
+                    <Trash2 size={16} />
+                    <span>{deleting ? 'Eliminando...' : 'Eliminar Recurso'}</span>
+                  </button>
+                )}
+
+                <div style={{ display: 'flex', gap: '12px', marginLeft: isEditing ? '0' : 'auto' }}>
+                  <button
+                    type="button"
+                    onClick={onClose}
+                    className="btn btn-secondary"
+                    style={{ padding: '10px 20px', fontSize: '13px', borderRadius: '12px' }}
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={loading || deleting}
+                    className="btn btn-primary"
+                    style={{ padding: '10px 28px', fontSize: '13px', fontWeight: '900', borderRadius: '12px' }}
+                  >
+                    <Save size={16} />
+                    <span>{loading ? 'Guardando...' : (isEditing ? 'Guardar Cambios' : 'Publicar Recurso')}</span>
+                  </button>
+                </div>
               </div>
             </form>
           )}

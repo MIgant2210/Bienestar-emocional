@@ -5,7 +5,7 @@ import {
   Search, Book, ArrowRight, ArrowLeft, UserCheck, HelpCircle, ChevronRight, Eye,
   ShieldCheck, Loader, RefreshCw, Zap, Award, Heart, ShieldAlert,
   Bookmark, BookmarkCheck, Star, Volume2, Play, Plus, Edit, Type, 
-  ExternalLink, Filter, RotateCcw, CheckSquare, Lock, Phone, User, X, ArrowUpDown,
+  ExternalLink, Filter, RotateCcw, CheckSquare, Lock, Phone, User, X, ArrowUpDown, Trash2,
   Flame, Trophy, Building, BarChart3, Smile, Frown, Meh, Sun, Coffee
 } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
@@ -291,6 +291,31 @@ const MyWellbeing = ({ onNavigateToTab, initialResourceId, onResourceCompleted }
       }
     } catch (err) {
       console.error('Error guardando respuestas interactivas:', err);
+    }
+  };
+
+  const canManageResource = (res) => {
+    if (!isAdminOrSupport || !res) return false;
+    if (user?.role === 'superadmin') return true;
+    return Boolean(user?.institution_id && res.institution_id && String(res.institution_id) === String(user.institution_id));
+  };
+
+  const handleDeleteResource = async (res) => {
+    if (!res || !res.id) return;
+    const isConfirmed = window.confirm(`¿Estás seguro de que deseas eliminar permanentemente el recurso "${res.title}"? Esta acción no se puede deshacer.`);
+    if (!isConfirmed) return;
+
+    try {
+      await api.delete(`/wellbeing/resources/${res.id}`);
+      if (selectedResource?.id === res.id) {
+        setSelectedResource(null);
+      }
+      setReflectionSuccess(`Recurso "${res.title}" eliminado exitosamente.`);
+      setTimeout(() => setReflectionSuccess(''), 4000);
+      fetchResources();
+    } catch (err) {
+      setReflectionError(err.response?.data?.message || 'Error al eliminar el recurso.');
+      setTimeout(() => setReflectionError(''), 4000);
     }
   };
 
@@ -1453,20 +1478,45 @@ const MyWellbeing = ({ onNavigateToTab, initialResourceId, onResourceCompleted }
                     <span>{selectedResource.is_favorite ? 'Guardado en Favoritos' : 'Guardar en Favoritos'}</span>
                   </button>
 
-                  {isAdminOrSupport && (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setEditingResource(selectedResource);
-                        setShowAdminModal(true);
-                      }}
-                      className="btn btn-secondary"
-                      style={{ padding: '8px 12px', borderRadius: '10px', fontSize: '12px', fontWeight: '800', display: 'flex', alignItems: 'center', gap: '6px' }}
-                      title="Editar este recurso"
-                    >
-                      <Edit size={14} />
-                      <span>Editar</span>
-                    </button>
+                  {canManageResource(selectedResource) && (
+                    <>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setEditingResource(selectedResource);
+                          setShowAdminModal(true);
+                        }}
+                        className="btn btn-secondary"
+                        style={{ padding: '8px 12px', borderRadius: '10px', fontSize: '12px', fontWeight: '800', display: 'flex', alignItems: 'center', gap: '6px' }}
+                        title="Editar este recurso"
+                      >
+                        <Edit size={14} />
+                        <span>Editar</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => handleDeleteResource(selectedResource)}
+                        className="btn"
+                        style={{
+                          padding: '8px 12px',
+                          borderRadius: '10px',
+                          fontSize: '12px',
+                          fontWeight: '800',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '6px',
+                          backgroundColor: 'rgba(239, 68, 68, 0.1)',
+                          border: '1px solid var(--danger)',
+                          color: 'var(--danger)',
+                          cursor: 'pointer'
+                        }}
+                        title="Eliminar este recurso permanentemente"
+                      >
+                        <Trash2 size={14} />
+                        <span>Eliminar</span>
+                      </button>
+                    </>
                   )}
                 </div>
               </div>
@@ -1474,6 +1524,17 @@ const MyWellbeing = ({ onNavigateToTab, initialResourceId, onResourceCompleted }
               {/* Encabezado Principal del Recurso */}
               <div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', marginBottom: '8px' }}>
+                  <span style={{
+                    fontSize: '10.5px',
+                    fontWeight: '800',
+                    padding: '3px 9px',
+                    borderRadius: '6px',
+                    backgroundColor: selectedResource.institution_id ? 'rgba(var(--primary-rgb), 0.12)' : 'rgba(16, 185, 129, 0.12)',
+                    color: selectedResource.institution_id ? 'var(--primary)' : 'var(--success)',
+                    border: `1px solid ${selectedResource.institution_id ? 'var(--primary)' : 'var(--success)'}`
+                  }}>
+                    {selectedResource.institution_id ? '🏢 Institucional' : '🌐 Global'}
+                  </span>
                   <span style={{ fontSize: '10.5px', fontWeight: '800', color: 'var(--primary)', backgroundColor: 'var(--primary-light)', padding: '3px 9px', borderRadius: '6px', textTransform: 'uppercase' }}>
                     {selectedResource.category}
                   </span>
@@ -1921,6 +1982,17 @@ const MyWellbeing = ({ onNavigateToTab, initialResourceId, onResourceCompleted }
                       {/* Cabecera de la Tarjeta */}
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '8px' }}>
                         <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', alignItems: 'center' }}>
+                          <span style={{
+                            fontSize: '9.5px',
+                            fontWeight: '800',
+                            padding: '2px 6px',
+                            borderRadius: '5px',
+                            backgroundColor: res.institution_id ? 'rgba(var(--primary-rgb), 0.12)' : 'rgba(16, 185, 129, 0.12)',
+                            color: res.institution_id ? 'var(--primary)' : 'var(--success)',
+                            border: `1px solid ${res.institution_id ? 'var(--primary)' : 'var(--success)'}`
+                          }}>
+                            {res.institution_id ? '🏢 Institucional' : '🌐 Global'}
+                          </span>
                           <span style={{ fontSize: '10px', fontWeight: '800', color: 'var(--primary)', backgroundColor: 'var(--primary-light)', padding: '2px 8px', borderRadius: '6px', textTransform: 'uppercase' }}>
                             {res.category}
                           </span>
@@ -1993,19 +2065,38 @@ const MyWellbeing = ({ onNavigateToTab, initialResourceId, onResourceCompleted }
                       </span>
 
                       <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
-                        {isAdminOrSupport && (
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setEditingResource(res);
-                              setShowAdminModal(true);
-                            }}
-                            className="btn btn-secondary"
-                            style={{ padding: '6px 10px', fontSize: '11px' }}
-                            title="Editar recurso"
-                          >
-                            <Edit size={13} />
-                          </button>
+                        {canManageResource(res) && (
+                          <>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setEditingResource(res);
+                                setShowAdminModal(true);
+                              }}
+                              className="btn btn-secondary"
+                              style={{ padding: '6px 10px', fontSize: '11px' }}
+                              title="Editar recurso"
+                            >
+                              <Edit size={13} />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleDeleteResource(res)}
+                              className="btn"
+                              style={{
+                                padding: '6px 10px',
+                                fontSize: '11px',
+                                backgroundColor: 'rgba(239, 68, 68, 0.1)',
+                                border: '1px solid var(--danger)',
+                                color: 'var(--danger)',
+                                borderRadius: '8px',
+                                cursor: 'pointer'
+                              }}
+                              title="Eliminar recurso permanentemente"
+                            >
+                              <Trash2 size={13} />
+                            </button>
+                          </>
                         )}
 
                         <button

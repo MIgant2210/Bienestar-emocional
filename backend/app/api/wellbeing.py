@@ -507,8 +507,18 @@ def get_resources(current_user):
         query = query.filter_by(is_published=True)
 
     # Filtrar por pertenencia institucional o global
-    if current_user.institution_id:
-        query = query.filter(or_(Resource.institution_id.is_(None), Resource.institution_id == current_user.institution_id))
+    if current_user.role != 'superadmin':
+        if current_user.institution_id:
+            query = query.filter(or_(Resource.institution_id.is_(None), Resource.institution_id == current_user.institution_id))
+        else:
+            query = query.filter(Resource.institution_id.is_(None))
+    else:
+        target_inst = request.args.get('institution_id')
+        if target_inst:
+            if target_inst == 'global':
+                query = query.filter(Resource.institution_id.is_(None))
+            else:
+                query = query.filter(Resource.institution_id == target_inst)
 
     # Filtro de Favoritos
     if favorites_only:
@@ -1023,6 +1033,20 @@ def create_resource(current_user):
     if not is_valid:
         return jsonify({'message': f'Error de validación en la plantilla ({resource_type}): {err_msg}'}), 400
 
+    # Determinación institucional estricta
+    if current_user.role != 'superadmin':
+        if not current_user.institution_id:
+            return jsonify({'message': 'No puede crear recursos sin estar vinculado a una institución.'}), 400
+        target_institution_id = current_user.institution_id
+        source_inst = data.get('source_institution')
+        if not source_inst or source_inst in ['Institucional', '']:
+            from app.models.institution import Institution
+            inst = Institution.query.get(current_user.institution_id)
+            source_inst = inst.name if inst else 'Institucional'
+    else:
+        target_institution_id = data.get('institution_id') or None
+        source_inst = data.get('source_institution') or ('Global / EquilibrIA' if not target_institution_id else 'Institucional')
+
     new_res = Resource(
         title=title,
         description=description,
@@ -1035,7 +1059,7 @@ def create_resource(current_user):
         level=data.get('level', 'principiante'),
         tags=data.get('tags', ''),
         source_url=data.get('source_url'),
-        source_institution=data.get('source_institution', 'Institucional'),
+        source_institution=source_inst,
         xp_reward=int(data.get('xp_reward', 15)),
         counts_for_streak=bool(data.get('counts_for_streak', True)),
         allow_ai_recommendation=bool(data.get('allow_ai_recommendation', True)),
@@ -1044,7 +1068,7 @@ def create_resource(current_user):
         media_url=data.get('media_url') or sanitized_config.get('audio_url') or sanitized_config.get('video_url'),
         target_indicator=data.get('target_indicator', 'general'),
         is_published=bool(data.get('is_published', True)),
-        institution_id=current_user.institution_id if current_user.role != 'superadmin' else data.get('institution_id')
+        institution_id=target_institution_id
     )
     db.session.add(new_res)
     db.session.commit()
@@ -1074,9 +1098,12 @@ def update_resource(current_user, res_id):
     if not resource:
         return jsonify({'message': 'Recurso no encontrado.'}), 404
 
-    # Aislamiento institucional
-    if current_user.role != 'superadmin' and resource.institution_id and str(resource.institution_id) != str(current_user.institution_id):
-        return jsonify({'message': 'No puede modificar recursos de otra institución.'}), 403
+    # Aislamiento institucional estricto
+    if current_user.role != 'superadmin':
+        if resource.institution_id is None:
+            return jsonify({'message': 'Acceso denegado: Los recursos globales del sistema solo pueden ser modificados por un SuperAdmin.'}), 403
+        if str(resource.institution_id) != str(current_user.institution_id):
+            return jsonify({'message': 'Acceso denegado: No puede modificar recursos de otra institución.'}), 403
 
     data = request.get_json() or {}
     resource_type = data.get('resource_type', resource.resource_type)
@@ -1136,6 +1163,13 @@ def toggle_publish_resource(current_user, res_id):
     if not resource:
         return jsonify({'message': 'Recurso no encontrado.'}), 404
 
+    # Aislamiento institucional estricto
+    if current_user.role != 'superadmin':
+        if resource.institution_id is None:
+            return jsonify({'message': 'Acceso denegado: Los recursos globales del sistema solo pueden ser modificados por un SuperAdmin.'}), 403
+        if str(resource.institution_id) != str(current_user.institution_id):
+            return jsonify({'message': 'Acceso denegado: No puede modificar recursos de otra institución.'}), 403
+
     resource.is_published = not resource.is_published
     resource.updated_at = datetime.utcnow()
     db.session.commit()
@@ -1151,27 +1185,36 @@ def toggle_publish_resource(current_user, res_id):
 @token_required
 def delete_resource(current_user, res_id):
     """
-    Eliminación lógica o segura de un recurso.
+    Eliminación completa y permanente de un recurso del catálogo.
     """
     if current_user.role not in ['superadmin', 'admin_institucion', 'profesional_apoyo']:
-        return jsonify({'message': 'Acceso denegado.'}), 403
+        return jsonify({'message': 'Acceso denegado: Su rol no tiene permisos para eliminar recursos.'}), 403
 
     resource = Resource.query.get(res_id)
     if not resource:
         return jsonify({'message': 'Recurso no encontrado.'}), 404
 
-    # Desactivación lógica para preservar historial de completitud y auditoría
-    resource.is_published = False
-    resource.updated_at = datetime.utcnow()
+    # Aislamiento institucional estricto
+    if current_user.role != 'superadmin':
+        if resource.institution_id is None:
+            return jsonify({'message': 'Acceso denegado: Los recursos globales del sistema solo pueden ser eliminados por un SuperAdmin.'}), 403
+        if str(resource.institution_id) != str(current_user.institution_id):
+            return jsonify({'message': 'Acceso denegado: No puede eliminar recursos de otra institución.'}), 403
+
+    resource_title = resource.title
+    db.session.delete(resource)
     db.session.commit()
 
     AuditService.log_action(
         user_id=current_user.id,
-        action="RESOURCE_DEACTIVATED",
-        details=f"Recurso '{resource.title}' desactivado por {current_user.first_name} {current_user.last_name}."
+        action="RESOURCE_DELETED",
+        details=f"Recurso '{resource_title}' eliminado permanentemente por {current_user.first_name} {current_user.last_name} ({current_user.role})."
     )
 
-    return jsonify({'message': 'Recurso retirado del catálogo exitosamente.'}), 200
+    return jsonify({
+        'message': f"Recurso '{resource_title}' eliminado exitosamente.",
+        'deleted_id': str(res_id)
+    }), 200
 
 
 @wellbeing_bp.route('/consents', methods=['GET'])
