@@ -9,6 +9,7 @@ import {
 } from 'lucide-react';
 import api from '../services/api';
 import StarryBackground from '../components/StarryBackground';
+import PrivacyTermsModal from '../components/PrivacyTermsModal';
 
 const NAME_REGEX = /^[a-zA-ZáéíóúÁÉÍÓÚñÑüÜ' -]{2,50}$/;
 const EMAIL_REGEX = /^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$/;
@@ -28,6 +29,8 @@ const Register = ({ onNavigate }) => {
   const [showPasswordConfirm, setShowPasswordConfirm] = useState(false);
   const [invitationCode, setInvitationCode] = useState('');
   const [termsAccepted, setTermsAccepted] = useState(false);
+  const [privacyModalOpen, setPrivacyModalOpen] = useState(false);
+  const [privacyModalTab, setPrivacyModalTab] = useState('privacy');
 
   // Estados de validación de código de invitación
   const [invitationLoading, setInvitationLoading] = useState(false);
@@ -583,8 +586,50 @@ const Register = ({ onNavigate }) => {
                     required
                     style={{ marginTop: '2px', cursor: 'pointer', accentColor: 'var(--primary)' }}
                   />
-                  <span>
-                    He leído y acepto los <strong style={{ color: 'var(--text-primary)' }}>Términos y Condiciones</strong> y el <strong style={{ color: 'var(--text-primary)' }}>Aviso de Privacidad</strong> de EquilibrIA.
+                  <span style={{ color: 'var(--text-secondary)' }}>
+                    He leído y acepto los{' '}
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        setPrivacyModalTab('terms');
+                        setPrivacyModalOpen(true);
+                      }}
+                      style={{
+                        background: 'none',
+                        border: 'none',
+                        color: 'var(--primary)',
+                        fontWeight: '800',
+                        cursor: 'pointer',
+                        textDecoration: 'underline',
+                        padding: 0,
+                        font: 'inherit'
+                      }}
+                    >
+                      Términos y Condiciones
+                    </button>
+                    {' '}y el{' '}
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        setPrivacyModalTab('privacy');
+                        setPrivacyModalOpen(true);
+                      }}
+                      style={{
+                        background: 'none',
+                        border: 'none',
+                        color: 'var(--primary)',
+                        fontWeight: '800',
+                        cursor: 'pointer',
+                        textDecoration: 'underline',
+                        padding: 0,
+                        font: 'inherit'
+                      }}
+                    >
+                      Aviso de Privacidad
+                    </button>
+                    {' '}de EquilibrIA.
                   </span>
                 </label>
               </div>
@@ -621,6 +666,12 @@ const Register = ({ onNavigate }) => {
           </>
         )}
       </div>
+
+      <PrivacyTermsModal
+        isOpen={privacyModalOpen}
+        onClose={() => setPrivacyModalOpen(false)}
+        initialTab={privacyModalTab}
+      />
     </div>
   );
 };

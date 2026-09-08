@@ -125,6 +125,7 @@ const MyWellbeing = ({ onNavigateToTab, initialResourceId, onResourceCompleted }
   const [userConsents, setUserConsents] = useState({});
   const timerRef = useRef(null);
   const recognitionRef = useRef(null);
+  const baseReflectionTextRef = useRef('');
 
   const [loading, setLoading] = useState(true);
 
@@ -333,6 +334,8 @@ const MyWellbeing = ({ onNavigateToTab, initialResourceId, onResourceCompleted }
       return;
     }
 
+    baseReflectionTextRef.current = reflectionText ? reflectionText.trim() + ' ' : '';
+
     try {
       const recognition = new SpeechRecognition();
       recognition.lang = 'es-ES';
@@ -340,11 +343,11 @@ const MyWellbeing = ({ onNavigateToTab, initialResourceId, onResourceCompleted }
       recognition.interimResults = true;
 
       recognition.onresult = (event) => {
-        let currentText = '';
+        let sessionTranscript = '';
         for (let i = 0; i < event.results.length; i++) {
-          currentText += event.results[i][0].transcript + ' ';
+          sessionTranscript += event.results[i][0].transcript;
         }
-        setReflectionText(prev => (prev ? prev + ' ' : '') + currentText.trim());
+        setReflectionText((baseReflectionTextRef.current + sessionTranscript).trim());
       };
 
       recognition.onerror = (e) => {

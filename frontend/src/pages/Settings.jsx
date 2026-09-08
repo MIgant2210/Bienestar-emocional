@@ -204,6 +204,18 @@ const Settings = () => {
     voice_analysis: 'Análisis y Dictado de Voz a Texto'
   };
 
+  const CONSENT_DESCRIPTIONS = {
+    wellbeing_data: 'Tus estados de ánimo y reflexiones individuales se resguardan de forma estrictamente confidencial. Las métricas para líderes institucionales son agregadas y 100% anónimas.',
+    ai_analysis: 'Modelos de IA analizan reflexiones para sugerirte recursos de autocuidado oportunos, sin compartir información identificable con entidades externas.',
+    voice_analysis: 'Permite utilizar el micrófono para dictar tus reflexiones mediante la Web Speech API sin almacenar grabaciones de audio permanentes.'
+  };
+
+  const defaultConsents = [
+    { consent_type: 'wellbeing_data', status: 'not_accepted', version: 'v1.0' },
+    { consent_type: 'ai_analysis', status: 'not_accepted', version: 'v1.0' },
+    { consent_type: 'voice_analysis', status: 'not_accepted', version: 'v1.0' }
+  ];
+
   return (
     <div className="animate-fade" style={{ maxWidth: '1100px', margin: '0 auto', width: '100%', padding: '24px 16px', display: 'grid', gap: '20px' }}>
       
@@ -777,68 +789,99 @@ const Settings = () => {
           {/* PESTAÑA 4: PRIVACIDAD Y CONSENTIMIENTOS                  */}
           {/* ======================================================== */}
           {activeTab === 'privacy' && (
-            <div className="animate-fade" style={{ display: 'grid', gap: '18px' }}>
+            <div className="animate-fade" style={{ display: 'grid', gap: '20px' }}>
               <div>
-                <h3 style={{ fontSize: '16px', fontWeight: '900', color: 'var(--text-primary)', marginBottom: '4px' }}>
+                <h3 style={{ fontSize: '17px', fontWeight: '900', color: 'var(--text-primary)', marginBottom: '4px' }}>
                   Privacidad y Consentimiento Informado
                 </h3>
-                <p style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>
+                <p style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>
                   En EquilibrIA protegemos tu información emocional. Puedes revisar, aceptar o revocar tus consentimientos legales en cualquier momento.
                 </p>
               </div>
 
               <div style={{
-                backgroundColor: 'var(--primary-light)',
-                border: '1px solid var(--primary)',
-                padding: '14px 18px',
-                borderRadius: '12px',
-                fontSize: '12px',
+                backgroundColor: 'rgba(var(--primary-rgb), 0.12)',
+                border: '1.5px solid var(--primary)',
+                padding: '16px 20px',
+                borderRadius: '16px',
+                fontSize: '13px',
                 color: 'var(--text-primary)',
-                lineHeight: '1.5'
+                lineHeight: '1.55',
+                display: 'flex',
+                gap: '12px',
+                alignItems: 'flex-start'
               }}>
-                <strong>Garantía de Confidencialidad:</strong> Los directivos y líderes de departamento nunca tienen acceso a tus registros individuales ni textos nominales. La agregación de métricas se realiza directamente en el servidor.
+                <ShieldCheck size={20} style={{ color: 'var(--primary)', flexShrink: 0, marginTop: '2px' }} />
+                <div>
+                  <strong style={{ color: 'var(--primary)' }}>Garantía de Confidencialidad y Secreto Profesional:</strong> Los directivos y líderes de departamento nunca tienen acceso a tus registros individuales ni textos nominales. Toda la agregación de tendencias se realiza de manera colectiva y anónima en el servidor conforme al principio de mínimo privilegio.
+                </div>
               </div>
 
-              <div style={{ display: 'grid', gap: '12px' }}>
-                {consents.map(c => {
+              <div style={{ display: 'grid', gap: '14px' }}>
+                {((consents && consents.length > 0) ? consents : defaultConsents).map(c => {
                   const isAccepted = c.status === 'accepted';
                   return (
                     <div
                       key={c.consent_type}
                       style={{
-                        padding: '16px',
-                        borderRadius: '12px',
-                        backgroundColor: 'var(--bg-primary)',
-                        border: '1px solid var(--border)',
+                        padding: '18px 20px',
+                        borderRadius: '16px',
+                        backgroundColor: 'var(--bg-secondary, #1d1828)',
+                        background: 'linear-gradient(145deg, var(--bg-secondary, #1d1828) 0%, var(--bg-tertiary, #2d2437) 100%)',
+                        border: '1.5px solid var(--border)',
                         display: 'flex',
                         justifyContent: 'space-between',
                         alignItems: 'center',
-                        gap: '14px',
+                        gap: '18px',
                         flexWrap: 'wrap'
                       }}
                     >
-                      <div style={{ flex: 1 }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
-                          <h4 style={{ fontSize: '13.5px', fontWeight: '800', color: 'var(--text-primary)', margin: 0 }}>
+                      <div style={{ flex: 1, minWidth: '260px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '6px', flexWrap: 'wrap' }}>
+                          <h4 style={{ fontSize: '14.5px', fontWeight: '800', color: 'var(--text-primary)', margin: 0 }}>
                             {CONSENT_TITLES[c.consent_type] || c.consent_type}
                           </h4>
                           <span style={{
-                            fontSize: '10px',
+                            fontSize: '10.5px',
                             fontWeight: '800',
-                            padding: '2px 8px',
-                            borderRadius: '10px',
+                            padding: '3px 10px',
+                            borderRadius: '12px',
                             backgroundColor: isAccepted ? 'var(--success-light)' : 'var(--danger-light)',
-                            color: isAccepted ? 'var(--success)' : 'var(--danger)'
+                            color: isAccepted ? 'var(--success)' : 'var(--danger)',
+                            border: `1px solid ${isAccepted ? 'var(--success)' : 'var(--danger)'}`
                           }}>
-                            {isAccepted ? 'ACTIVO' : 'REVOCADO / NO ACEPTADO'}
+                            {isAccepted ? 'ACTIVO' : 'NO ACEPTADO'}
                           </span>
                         </div>
+                        
+                        <p style={{ fontSize: '12.5px', color: 'var(--text-secondary)', margin: '0 0 8px 0', lineHeight: '1.45' }}>
+                          {CONSENT_DESCRIPTIONS[c.consent_type] || 'Gestión de políticas y salvaguardas de tratamiento de datos personales.'}
+                        </p>
+
                         <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
                           Versión: {c.version || 'v1.0'} • {c.accepted_at ? `Aceptado el: ${new Date(c.accepted_at).toLocaleDateString()}` : 'Pendiente de aceptación'}
                         </span>
                       </div>
 
-                      <div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+                        <button
+                          type="button"
+                          onClick={() => setActiveConsentToAccept(c.consent_type)}
+                          className="btn btn-secondary"
+                          style={{
+                            padding: '8px 14px',
+                            borderRadius: '10px',
+                            fontSize: '12px',
+                            fontWeight: '700',
+                            backgroundColor: 'var(--bg-tertiary)',
+                            color: 'var(--text-primary)',
+                            border: '1px solid var(--border)',
+                            cursor: 'pointer'
+                          }}
+                        >
+                          Ver Detalles
+                        </button>
+
                         {isAccepted ? (
                           <button
                             type="button"
@@ -848,21 +891,27 @@ const Settings = () => {
                               backgroundColor: 'transparent',
                               border: '1px solid var(--danger)',
                               color: 'var(--danger)',
-                              padding: '6px 14px',
-                              borderRadius: '8px',
-                              fontSize: '11.5px',
+                              padding: '8px 14px',
+                              borderRadius: '10px',
+                              fontSize: '12px',
                               fontWeight: '700',
                               cursor: 'pointer'
                             }}
                           >
-                            Revocar Consentimiento
+                            Revocar
                           </button>
                         ) : (
                           <button
                             type="button"
                             onClick={() => setActiveConsentToAccept(c.consent_type)}
                             className="btn btn-primary"
-                            style={{ padding: '6px 14px', borderRadius: '8px', fontSize: '11.5px', fontWeight: '800' }}
+                            style={{
+                              padding: '8px 16px',
+                              borderRadius: '10px',
+                              fontSize: '12px',
+                              fontWeight: '800',
+                              boxShadow: '0 2px 10px rgba(var(--primary-rgb), 0.3)'
+                            }}
                           >
                             Aceptar Consentimiento
                           </button>

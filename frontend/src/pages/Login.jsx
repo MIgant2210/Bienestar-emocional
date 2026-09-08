@@ -4,6 +4,7 @@ import { AuthContext } from '../contexts/AuthContext';
 import { ThemeContext } from '../contexts/ThemeContext';
 import { Sun, Moon, Lock, Mail, Loader, BrainCircuit, Sparkles, ShieldCheck, HeartHandshake, ArrowRight, Eye, EyeOff, AlertCircle, KeyRound, Building2, CheckCircle2, Check, ArrowLeft } from 'lucide-react';
 import StarryBackground from '../components/StarryBackground';
+import PrivacyTermsModal from '../components/PrivacyTermsModal';
 
 const Login = ({ onNavigate }) => {
   const navigate = useNavigate();
@@ -58,6 +59,8 @@ const Login = ({ onNavigate }) => {
   const [termsAccepted, setTermsAccepted] = useState(false);
   const [googleRegError, setGoogleRegError] = useState('');
   const [googleRegSubmitting, setGoogleRegSubmitting] = useState(false);
+  const [privacyModalOpen, setPrivacyModalOpen] = useState(false);
+  const [privacyModalTab, setPrivacyModalTab] = useState('privacy');
 
   // Referencias y estados para el efecto 3D Tilt
   const containerRef = useRef(null);
@@ -692,7 +695,49 @@ const Login = ({ onNavigate }) => {
                     }}
                   />
                   <label htmlFor="google-terms-checkbox" style={{ fontSize: '11.5px', color: 'var(--text-secondary)', cursor: 'pointer', lineHeight: '1.4' }}>
-                    Acepto los <strong>Términos de Servicio</strong> y la <strong>Política de Privacidad</strong> de EquilibrIA para la gestión de mi bienestar.
+                    Acepto los{' '}
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        setPrivacyModalTab('terms');
+                        setPrivacyModalOpen(true);
+                      }}
+                      style={{
+                        background: 'none',
+                        border: 'none',
+                        color: 'var(--primary)',
+                        fontWeight: '800',
+                        cursor: 'pointer',
+                        textDecoration: 'underline',
+                        padding: 0,
+                        font: 'inherit'
+                      }}
+                    >
+                      Términos de Servicio
+                    </button>
+                    {' '}y la{' '}
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        setPrivacyModalTab('privacy');
+                        setPrivacyModalOpen(true);
+                      }}
+                      style={{
+                        background: 'none',
+                        border: 'none',
+                        color: 'var(--primary)',
+                        fontWeight: '800',
+                        cursor: 'pointer',
+                        textDecoration: 'underline',
+                        padding: 0,
+                        font: 'inherit'
+                      }}
+                    >
+                      Política de Privacidad
+                    </button>
+                    {' '}de EquilibrIA para la gestión de mi bienestar.
                   </label>
                 </div>
 
@@ -757,6 +802,11 @@ const Login = ({ onNavigate }) => {
         </div>
       </div>
 
+      <PrivacyTermsModal
+        isOpen={privacyModalOpen}
+        onClose={() => setPrivacyModalOpen(false)}
+        initialTab={privacyModalTab}
+      />
     </div>
   );
 };

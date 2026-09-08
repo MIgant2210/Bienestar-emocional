@@ -78,15 +78,19 @@ const ConsentModal = ({ isOpen, consentType, onClose, onAccepted }) => {
       zIndex: 10000,
       padding: '20px'
     }}>
-      <div className="glass-card animate-fade" style={{
-        maxWidth: '560px',
+      <div className="animate-fade" style={{
+        maxWidth: '580px',
         width: '100%',
-        backgroundColor: 'var(--bg-secondary)',
+        backgroundColor: 'var(--bg-secondary, #1d1828)',
+        background: 'linear-gradient(145deg, var(--bg-secondary, #1d1828) 0%, var(--bg-tertiary, #2d2437) 100%)',
         border: '2px solid var(--primary)',
-        borderRadius: '20px',
-        padding: '28px',
-        boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.4)',
-        position: 'relative'
+        borderRadius: '24px',
+        padding: '30px',
+        boxShadow: '0 25px 60px -10px rgba(0, 0, 0, 0.6), 0 0 24px rgba(var(--primary-rgb), 0.25)',
+        position: 'relative',
+        color: 'var(--text-primary)',
+        maxHeight: '90vh',
+        overflowY: 'auto'
       }}>
         
         {/* Header */}
@@ -121,27 +125,27 @@ const ConsentModal = ({ isOpen, consentType, onClose, onAccepted }) => {
         </div>
 
         {/* Descripción Principal */}
-        <p style={{ fontSize: '13px', color: 'var(--text-secondary)', lineHeight: '1.6', marginBottom: '18px' }}>
+        <p style={{ fontSize: '13.5px', color: 'var(--text-primary)', opacity: 0.92, lineHeight: '1.6', marginBottom: '20px' }}>
           {info.description}
         </p>
 
         {/* Puntos Clave */}
         <div style={{
-          backgroundColor: 'var(--bg-primary)',
-          borderRadius: '12px',
-          padding: '16px',
-          border: '1px solid var(--border)',
-          marginBottom: '20px',
+          backgroundColor: 'var(--bg-primary, #17121f)',
+          borderRadius: '16px',
+          padding: '18px',
+          border: '1.5px solid var(--border)',
+          marginBottom: '22px',
           display: 'grid',
-          gap: '10px'
+          gap: '12px'
         }}>
-          <span style={{ fontSize: '11.5px', fontWeight: '800', color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '6px' }}>
-            <Info size={14} style={{ color: 'var(--primary)' }} /> Principios de Seguridad y Privacidad:
+          <span style={{ fontSize: '12px', fontWeight: '800', color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <Info size={16} style={{ color: 'var(--primary)' }} /> Principios de Seguridad y Privacidad:
           </span>
           {info.points.map((pt, idx) => (
-            <div key={idx} style={{ display: 'flex', alignItems: 'flex-start', gap: '8px', fontSize: '12px', color: 'var(--text-secondary)', lineHeight: '1.4' }}>
-              <CheckCircle2 size={15} style={{ color: 'var(--success)', flexShrink: 0, marginTop: '2px' }} />
-              <span>{pt}</span>
+            <div key={idx} style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', fontSize: '12.5px', lineHeight: '1.45' }}>
+              <CheckCircle2 size={16} style={{ color: 'var(--success)', flexShrink: 0, marginTop: '2px' }} />
+              <span style={{ color: 'var(--text-primary)' }}>{pt}</span>
             </div>
           ))}
         </div>
@@ -169,7 +173,16 @@ const ConsentModal = ({ isOpen, consentType, onClose, onAccepted }) => {
             type="button"
             onClick={onClose}
             className="btn btn-secondary"
-            style={{ padding: '10px 20px', borderRadius: '10px', fontSize: '13px', fontWeight: '700' }}
+            style={{
+              padding: '10px 20px',
+              borderRadius: '12px',
+              fontSize: '13px',
+              fontWeight: '700',
+              backgroundColor: 'var(--bg-tertiary)',
+              color: 'var(--text-primary)',
+              border: '1px solid var(--border)',
+              cursor: 'pointer'
+            }}
             disabled={loading}
           >
             Cancelar
@@ -179,7 +192,16 @@ const ConsentModal = ({ isOpen, consentType, onClose, onAccepted }) => {
             type="button"
             onClick={handleAccept}
             className="btn btn-primary"
-            style={{ padding: '10px 24px', borderRadius: '10px', fontSize: '13px', fontWeight: '800', display: 'flex', alignItems: 'center', gap: '8px' }}
+            style={{
+              padding: '10px 24px',
+              borderRadius: '12px',
+              fontSize: '13px',
+              fontWeight: '800',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              boxShadow: '0 4px 16px rgba(var(--primary-rgb), 0.35)'
+            }}
             disabled={loading}
           >
             {loading ? (
