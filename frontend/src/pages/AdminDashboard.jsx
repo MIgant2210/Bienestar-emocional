@@ -28,7 +28,7 @@ import InstitutionalReportView from '../components/reports/InstitutionalReportVi
 import BreathingExerciseModal from '../components/wellness/BreathingExerciseModal';
 import EquiAssistantWidget from '../components/assistant/EquiAssistantWidget';
 import EquiTourModal from '../components/EquiTourModal';
-import { generateAndDownloadKudoCard } from '../utils/kudoCardGenerator';
+import ModularAvatar, { DEFAULT_AVATAR_CONFIG } from '../components/ModularAvatar';
 import { useNavigate } from 'react-router-dom';
 import { hasModuleAccess } from '../components/ProtectedRoute';
 
@@ -104,8 +104,15 @@ const AdminDashboard = ({ initialTab = 'analytics' }) => {
   // Sub-Tab State for Evaluations: 'active_tests', 'templates', 'create_custom'
   const [evalSubTab, setEvalSubTab] = useState('active_tests');
 
-  // Sub-Tab State for Members: 'directory', 'roles_rbac'
+  // Sub-Tab State for Members: 'directory', 'avatar_gallery', 'pending_accounts', 'roles_rbac'
   const [membersSubTab, setMembersSubTab] = useState('directory');
+  const [selectedAvatarUser, setSelectedAvatarUser] = useState(null);
+  const [avatarModalPose, setAvatarModalPose] = useState('neutral');
+  const [avatarGalleryPose, setAvatarGalleryPose] = useState('neutral');
+  const [avatarSearchText, setAvatarSearchText] = useState('');
+  const [avatarDeptFilter, setAvatarDeptFilter] = useState('todos');
+  const [avatarInstFilter, setAvatarInstFilter] = useState('todos');
+  const [avatarOnlyCustom, setAvatarOnlyCustom] = useState(false);
 
   // Style Chat & Group States
   const [chatChannel, setChatChannel] = useState('general'); // 'general', 'kudos', 'direct', 'group'
@@ -3857,6 +3864,17 @@ const AdminDashboard = ({ initialTab = 'analytics' }) => {
                   <span>Directorio de Miembros ({(members || []).length})</span>
                 </button>
                 <button 
+                  onClick={() => setMembersSubTab('avatar_gallery')}
+                  className={`duo-pill ${membersSubTab === 'avatar_gallery' ? 'selected' : ''}`}
+                  style={{
+                    borderColor: membersSubTab === 'avatar_gallery' ? 'var(--primary)' : undefined,
+                    boxShadow: membersSubTab === 'avatar_gallery' ? '0 0 12px rgba(108, 92, 231, 0.25)' : undefined
+                  }}
+                >
+                  <Sparkles size={13} style={{ color: 'var(--primary)' }} />
+                  <span>Galería de Avatares (🎨 {(members || []).filter(m => m.avatar_config).length || (members || []).length})</span>
+                </button>
+                <button 
                   onClick={() => setMembersSubTab('pending_accounts')}
                   className={`duo-pill ${membersSubTab === 'pending_accounts' ? 'selected' : ''}`}
                 >
@@ -4387,21 +4405,69 @@ const AdminDashboard = ({ initialTab = 'analytics' }) => {
                       return (
                         <div key={m.id} className="futuristic-card-item" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', padding: '16px', gap: '12px' }}>
                           <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px' }}>
-                            <div style={{
-                              width: '44px',
-                              height: '44px',
-                              borderRadius: '50%',
-                              background: 'linear-gradient(135deg, var(--primary) 0%, var(--accent) 100%)',
-                              color: '#fff',
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                              fontWeight: '900',
-                              fontSize: '15px',
-                              flexShrink: 0
-                            }}>
-                              {m.first_name?.[0]}{m.last_name?.[0]}
-                            </div>
+                            {/* Avatar del usuario (ModularAvatar / Foto / Iniciales) */}
+                            {m.avatar_config ? (
+                              <button
+                                type="button"
+                                onClick={() => { setSelectedAvatarUser(m); setAvatarModalPose('neutral'); }}
+                                style={{
+                                  width: '46px',
+                                  height: '46px',
+                                  borderRadius: '50%',
+                                  overflow: 'hidden',
+                                  position: 'relative',
+                                  border: '2px solid var(--primary)',
+                                  backgroundColor: 'var(--bg-secondary)',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                  flexShrink: 0,
+                                  cursor: 'pointer',
+                                  padding: 0,
+                                  boxShadow: '0 2px 8px rgba(108, 92, 231, 0.2)'
+                                }}
+                                title={`Ver avatar de ${m.first_name} (${m.avatar_name || 'Mi Avatar'})`}
+                              >
+                                <div style={{
+                                  position: 'absolute',
+                                  top: '-12px',
+                                  transform: 'scale(0.38)',
+                                  transformOrigin: 'top center',
+                                  pointerEvents: 'none'
+                                }}>
+                                  <ModularAvatar config={m.avatar_config} compact={true} pose="neutral" />
+                                </div>
+                              </button>
+                            ) : m.avatar_url ? (
+                              <img
+                                src={m.avatar_url}
+                                alt={m.first_name}
+                                style={{
+                                  width: '44px',
+                                  height: '44px',
+                                  borderRadius: '50%',
+                                  objectFit: 'cover',
+                                  border: '2px solid var(--primary)',
+                                  flexShrink: 0
+                                }}
+                              />
+                            ) : (
+                              <div style={{
+                                width: '44px',
+                                height: '44px',
+                                borderRadius: '50%',
+                                background: 'linear-gradient(135deg, var(--primary) 0%, var(--accent) 100%)',
+                                color: '#fff',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                fontWeight: '900',
+                                fontSize: '15px',
+                                flexShrink: 0
+                              }}>
+                                {m.first_name?.[0]}{m.last_name?.[0]}
+                              </div>
+                            )}
 
                             <div style={{ flex: 1, minWidth: 0 }}>
                               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '6px', marginBottom: '2px' }}>
@@ -4522,6 +4588,16 @@ const AdminDashboard = ({ initialTab = 'analytics' }) => {
                               )}
                               <button
                                 type="button"
+                                onClick={() => { setSelectedAvatarUser(m); setAvatarModalPose('neutral'); }}
+                                className="duo-pill"
+                                style={{ padding: '4px 8px', fontSize: '10.5px', color: 'var(--primary)', borderColor: 'var(--primary)', fontWeight: '800' }}
+                                title="Ver avatar interactivo de este usuario"
+                              >
+                                <Sparkles size={11} />
+                                <span>Avatar</span>
+                              </button>
+                              <button
+                                type="button"
                                 onClick={() => openEditUserModal(m)}
                                 className="duo-pill"
                                 style={{ padding: '4px 10px', fontSize: '11px', fontWeight: '800' }}
@@ -4536,6 +4612,487 @@ const AdminDashboard = ({ initialTab = 'analytics' }) => {
                       );
                     })
                   )}
+                </div>
+              </div>
+            )}
+
+            {/* SUB-TAB: GALERÍA DE AVATARES INSTITUCIONALES */}
+            {membersSubTab === 'avatar_gallery' && (
+              <div className="animate-fade">
+                {/* ENCABEZADO Y FILTROS DE LA GALERÍA DE AVATARES */}
+                <div style={{
+                  backgroundColor: 'var(--bg-secondary)',
+                  padding: '20px',
+                  borderRadius: '20px',
+                  border: '1px solid var(--border)',
+                  marginBottom: '22px',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '16px'
+                }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
+                    <div>
+                      <h4 style={{ fontSize: '16px', fontWeight: '900', color: 'var(--text-primary)', margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <Sparkles size={18} style={{ color: 'var(--primary)' }} />
+                        <span>Galería e Identidad de Avatares Institucionales</span>
+                      </h4>
+                      <p style={{ fontSize: '12.5px', color: 'var(--text-secondary)', margin: '4px 0 0 0' }}>
+                        Explora los avatares interactivos creados por los colaboradores de tu comunidad educativa u organizacional.
+                      </p>
+                    </div>
+
+                    {/* Selector de Pose Global para la Galería */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', backgroundColor: 'var(--bg-primary)', padding: '6px 12px', borderRadius: '14px', border: '1px solid var(--border)', flexWrap: 'wrap' }}>
+                      <span style={{ fontSize: '11px', fontWeight: '800', color: 'var(--text-muted)' }}>Pose en Vivo:</span>
+                      {[
+                        { id: 'neutral', label: '🧍 Natural' },
+                        { id: 'wave', label: '👋 Saludo' },
+                        { id: 'celebrate', label: '🎉 Festejar' },
+                        { id: 'thinking', label: '💡 Pensar' },
+                        { id: 'inhale', label: '🧘 Calma' }
+                      ].map(p => (
+                        <button
+                          key={p.id}
+                          type="button"
+                          onClick={() => setAvatarGalleryPose(p.id)}
+                          style={{
+                            border: 'none',
+                            backgroundColor: avatarGalleryPose === p.id ? 'var(--primary)' : 'transparent',
+                            color: avatarGalleryPose === p.id ? '#ffffff' : 'var(--text-secondary)',
+                            fontSize: '11px',
+                            fontWeight: '800',
+                            padding: '4px 10px',
+                            borderRadius: '8px',
+                            cursor: 'pointer',
+                            transition: 'all 0.15s ease'
+                          }}
+                        >
+                          {p.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Filtros de la Galería */}
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '12px', alignItems: 'center' }}>
+                    {/* Búsqueda por texto */}
+                    <div style={{ position: 'relative' }}>
+                      <Search size={15} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
+                      <input
+                        type="text"
+                        placeholder="Buscar por colaborador o avatar..."
+                        value={avatarSearchText}
+                        onChange={(e) => setAvatarSearchText(e.target.value)}
+                        style={{ width: '100%', paddingLeft: '34px', paddingRight: '12px', fontSize: '12px', borderRadius: '10px', height: '38px' }}
+                      />
+                    </div>
+
+                    {/* Filtro por Departamento */}
+                    <div>
+                      <CustomSelect
+                        options={[
+                          { value: 'todos', label: 'Todos los Departamentos' },
+                          ...Array.from(new Set((members || []).map(m => m.department || 'General'))).map(d => ({ value: d, label: d }))
+                        ]}
+                        value={avatarDeptFilter}
+                        onChange={(val) => setAvatarDeptFilter(val)}
+                      />
+                    </div>
+
+                    {/* Filtro por Institución (SuperAdmin) */}
+                    {user?.role === 'superadmin' && allInstitutions.length > 0 && (
+                      <div>
+                        <CustomSelect
+                          options={[
+                            { value: 'todos', label: 'Todas las Instituciones' },
+                            ...allInstitutions.map(inst => ({ value: inst.id, label: `${inst.name} (${inst.code})` }))
+                          ]}
+                          value={avatarInstFilter}
+                          onChange={(val) => setAvatarInstFilter(val)}
+                        />
+                      </div>
+                    )}
+
+                    {/* Toggle: Solo con Avatar Personalizado */}
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12px', fontWeight: '700', color: 'var(--text-secondary)', cursor: 'pointer', userSelect: 'none' }}>
+                      <input
+                        type="checkbox"
+                        checked={avatarOnlyCustom}
+                        onChange={(e) => setAvatarOnlyCustom(e.target.checked)}
+                        style={{ cursor: 'pointer' }}
+                      />
+                      <span>Solo avatares creados</span>
+                    </label>
+                  </div>
+                </div>
+
+                {/* SHOWCASE DE TARJETAS DE AVATARES */}
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '20px' }}>
+                  {(members || []).filter(m => {
+                    if (avatarSearchText.trim()) {
+                      const q = avatarSearchText.toLowerCase();
+                      const fullName = `${m.first_name || ''} ${m.last_name || ''}`.toLowerCase();
+                      const avName = (m.avatar_name || '').toLowerCase();
+                      const email = (m.email || '').toLowerCase();
+                      if (!fullName.includes(q) && !avName.includes(q) && !email.includes(q)) return false;
+                    }
+                    if (avatarDeptFilter !== 'todos' && (m.department !== avatarDeptFilter && m.department_id !== avatarDeptFilter)) return false;
+                    if (avatarInstFilter !== 'todos' && m.institution_id !== avatarInstFilter) return false;
+                    if (avatarOnlyCustom && !m.avatar_config) return false;
+                    return true;
+                  }).length === 0 ? (
+                    <div style={{ gridColumn: '1 / -1', padding: '48px 24px', textAlign: 'center', backgroundColor: 'var(--bg-secondary)', borderRadius: '20px', border: '1px dashed var(--border)' }}>
+                      <Users size={36} style={{ color: 'var(--text-muted)', margin: '0 auto 12px' }} />
+                      <h4 style={{ fontSize: '15px', fontWeight: '800', color: 'var(--text-primary)', margin: '0 0 6px' }}>No se encontraron avatares</h4>
+                      <p style={{ color: 'var(--text-muted)', fontSize: '12.5px', margin: 0 }}>Intenta ajustar los filtros o el término de búsqueda.</p>
+                    </div>
+                  ) : (
+                    (members || []).filter(m => {
+                      if (avatarSearchText.trim()) {
+                        const q = avatarSearchText.toLowerCase();
+                        const fullName = `${m.first_name || ''} ${m.last_name || ''}`.toLowerCase();
+                        const avName = (m.avatar_name || '').toLowerCase();
+                        const email = (m.email || '').toLowerCase();
+                        if (!fullName.includes(q) && !avName.includes(q) && !email.includes(q)) return false;
+                      }
+                      if (avatarDeptFilter !== 'todos' && (m.department !== avatarDeptFilter && m.department_id !== avatarDeptFilter)) return false;
+                      if (avatarInstFilter !== 'todos' && m.institution_id !== avatarInstFilter) return false;
+                      if (avatarOnlyCustom && !m.avatar_config) return false;
+                      return true;
+                    }).map(m => {
+                      const avConfig = m.avatar_config || DEFAULT_AVATAR_CONFIG;
+                      const avName = m.avatar_name || `Avatar de ${m.first_name || 'Miembro'}`;
+                      const hasCustom = Boolean(m.avatar_config);
+
+                      return (
+                        <div
+                          key={m.id}
+                          className="glass-card futuristic-card-item animate-scale"
+                          style={{
+                            display: 'flex',
+                            flexDirection: 'column',
+                            borderRadius: '24px',
+                            padding: '18px',
+                            gap: '14px',
+                            border: hasCustom ? '1.5px solid var(--primary)' : '1px solid var(--border)',
+                            boxShadow: hasCustom ? '0 12px 28px -8px rgba(108, 92, 231, 0.2)' : 'var(--shadow-sm)',
+                            position: 'relative',
+                            overflow: 'hidden'
+                          }}
+                        >
+                          {/* Badge Superior */}
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '8px' }}>
+                            <span style={{
+                              fontSize: '10.5px',
+                              fontWeight: '900',
+                              padding: '3px 10px',
+                              borderRadius: '10px',
+                              backgroundColor: hasCustom ? 'var(--primary-light)' : 'var(--bg-secondary)',
+                              color: hasCustom ? 'var(--primary)' : 'var(--text-muted)',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '4px'
+                            }}>
+                              <Sparkles size={11} />
+                              <span>{hasCustom ? 'Personalizado' : 'Predeterminado'}</span>
+                            </span>
+
+                            <span style={{ fontSize: '11px', fontWeight: '800', color: 'var(--text-secondary)' }}>
+                              Nivel {m.current_level || 1} • {m.total_xp || 0} XP
+                            </span>
+                          </div>
+
+                          {/* Escenario de Exhibición del Avatar 3D */}
+                          <div
+                            onClick={() => { setSelectedAvatarUser(m); setAvatarModalPose(avatarGalleryPose); }}
+                            style={{
+                              height: '220px',
+                              width: '100%',
+                              backgroundColor: 'var(--bg-primary)',
+                              borderRadius: '18px',
+                              display: 'flex',
+                              alignItems: 'flex-end',
+                              justifyContent: 'center',
+                              position: 'relative',
+                              overflow: 'hidden',
+                              cursor: 'pointer',
+                              border: '1px solid var(--border)',
+                              background: 'radial-gradient(circle at 50% 30%, rgba(168, 85, 247, 0.12) 0%, rgba(99, 102, 241, 0.05) 50%, var(--bg-primary) 80%)'
+                            }}
+                            title="Haz clic para inspeccionar este avatar"
+                          >
+                            {/* Pedestal Luminoso Circular */}
+                            <div style={{
+                              position: 'absolute',
+                              bottom: '10px',
+                              width: '140px',
+                              height: '24px',
+                              borderRadius: '50%',
+                              backgroundColor: 'rgba(108, 92, 231, 0.18)',
+                              filter: 'blur(8px)',
+                              zIndex: 0
+                            }} />
+
+                            <div style={{
+                              transform: 'scale(0.72)',
+                              transformOrigin: 'bottom center',
+                              zIndex: 1,
+                              transition: 'transform 0.25s ease'
+                            }}>
+                              <ModularAvatar
+                                config={avConfig}
+                                compact={true}
+                                pose={avatarGalleryPose}
+                              />
+                            </div>
+                          </div>
+
+                          {/* Datos del Avatar y del Creador */}
+                          <div>
+                            <h4 style={{ fontSize: '15px', fontWeight: '900', color: 'var(--text-primary)', margin: '0 0 4px 0', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                              <span>{avName}</span>
+                            </h4>
+
+                            <div style={{ fontSize: '12px', fontWeight: '700', color: 'var(--text-secondary)', marginBottom: '4px' }}>
+                              Creado por: <strong style={{ color: 'var(--text-primary)' }}>{m.first_name} {m.last_name}</strong>
+                            </div>
+
+                            <p style={{ fontSize: '11px', color: 'var(--text-muted)', margin: '0 0 8px 0', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                              {m.email}
+                            </p>
+
+                            <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', marginBottom: '10px' }}>
+                              <span style={{ fontSize: '10px', fontWeight: '800', padding: '2px 8px', borderRadius: '8px', backgroundColor: 'var(--primary-light)', color: 'var(--primary)' }}>
+                                {m.department || 'General'}
+                              </span>
+                              <span style={{ fontSize: '10px', fontWeight: '800', padding: '2px 8px', borderRadius: '8px', backgroundColor: 'var(--bg-secondary)', color: 'var(--text-secondary)', border: '1px solid var(--border)' }}>
+                                {m.institution_name || 'EquilibrIA'}
+                              </span>
+                            </div>
+
+                            {/* Botón de Inspección */}
+                            <button
+                              type="button"
+                              onClick={() => { setSelectedAvatarUser(m); setAvatarModalPose(avatarGalleryPose); }}
+                              className="btn btn-secondary"
+                              style={{
+                                width: '100%',
+                                padding: '8px 12px',
+                                borderRadius: '12px',
+                                fontSize: '12px',
+                                fontWeight: '800',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                gap: '6px',
+                                border: '1.5px solid var(--primary)',
+                                color: 'var(--primary)'
+                              }}
+                            >
+                              <Sparkles size={13} />
+                              <span>Inspeccionar Avatar</span>
+                            </button>
+                          </div>
+                        </div>
+                      );
+                    })
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* MODAL DE INSPECCIÓN DE AVATAR INSTITUCIONAL */}
+            {selectedAvatarUser && (
+              <div style={{
+                position: 'fixed',
+                inset: 0,
+                backgroundColor: 'rgba(15, 23, 42, 0.75)',
+                backdropFilter: 'blur(8px)',
+                zIndex: 100000,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                padding: '20px'
+              }}>
+                <div
+                  className="glass-card animate-scale"
+                  style={{
+                    maxWidth: '680px',
+                    width: '100%',
+                    maxHeight: '92vh',
+                    overflowY: 'auto',
+                    backgroundColor: 'var(--bg-primary)',
+                    borderRadius: '24px',
+                    border: '2px solid var(--primary)',
+                    boxShadow: '0 25px 60px rgba(0, 0, 0, 0.35)',
+                    padding: '24px',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '18px'
+                  }}
+                >
+                  {/* Cabecera del Modal */}
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--border)', paddingBottom: '14px' }}>
+                    <div>
+                      <span style={{ fontSize: '11px', fontWeight: '900', color: 'var(--primary)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                        Avatar de la Comunidad
+                      </span>
+                      <h3 style={{ fontSize: '18px', fontWeight: '900', color: 'var(--text-primary)', margin: '2px 0 0 0' }}>
+                        {selectedAvatarUser.avatar_name || `Avatar de ${selectedAvatarUser.first_name}`}
+                      </h3>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setSelectedAvatarUser(null)}
+                      style={{
+                        border: 'none',
+                        background: 'transparent',
+                        color: 'var(--text-muted)',
+                        cursor: 'pointer',
+                        padding: '6px',
+                        borderRadius: '8px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center'
+                      }}
+                    >
+                      <X size={20} />
+                    </button>
+                  </div>
+
+                  {/* Contenido en 2 columnas: Avatar Grande a la izquierda, detalles a la derecha */}
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '20px', alignItems: 'center' }}>
+                    {/* Visualizador del Avatar con selector de poses */}
+                    <div style={{
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      backgroundColor: 'var(--bg-secondary)',
+                      padding: '16px',
+                      borderRadius: '20px',
+                      border: '1px solid var(--border)'
+                    }}>
+                      <div style={{
+                        width: '200px',
+                        height: '280px',
+                        display: 'flex',
+                        alignItems: 'flex-end',
+                        justifyContent: 'center',
+                        position: 'relative'
+                      }}>
+                        <ModularAvatar
+                          config={selectedAvatarUser.avatar_config || DEFAULT_AVATAR_CONFIG}
+                          compact={true}
+                          pose={avatarModalPose}
+                        />
+                      </div>
+
+                      {/* Selector de Poses Interactivo */}
+                      <div style={{ marginTop: '14px', width: '100%', textAlign: 'center' }}>
+                        <span style={{ fontSize: '11px', fontWeight: '800', color: 'var(--text-muted)', display: 'block', marginBottom: '8px' }}>
+                          Probar Pose Interactiva:
+                        </span>
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', justifyContent: 'center' }}>
+                          {[
+                            { id: 'neutral', label: '🧍 Natural' },
+                            { id: 'wave', label: '👋 Saludo' },
+                            { id: 'celebrate', label: '🎉 Festejar' },
+                            { id: 'thinking', label: '💡 Pensar' },
+                            { id: 'inhale', label: '🧘 Calma' }
+                          ].map(p => (
+                            <button
+                              key={p.id}
+                              type="button"
+                              onClick={() => setAvatarModalPose(p.id)}
+                              style={{
+                                border: 'none',
+                                backgroundColor: avatarModalPose === p.id ? 'var(--primary)' : 'var(--bg-primary)',
+                                color: avatarModalPose === p.id ? '#ffffff' : 'var(--text-primary)',
+                                fontSize: '11.5px',
+                                fontWeight: '800',
+                                padding: '5px 10px',
+                                borderRadius: '8px',
+                                cursor: 'pointer',
+                                transition: 'all 0.15s ease'
+                              }}
+                            >
+                              {p.label}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Ficha de Detalles del Colaborador */}
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                      <div style={{ backgroundColor: 'var(--bg-secondary)', padding: '16px', borderRadius: '16px', border: '1px solid var(--border)' }}>
+                        <span style={{ fontSize: '11px', fontWeight: '900', color: 'var(--text-muted)', textTransform: 'uppercase', display: 'block', marginBottom: '10px' }}>
+                          Información del Creador
+                        </span>
+                        <div style={{ display: 'grid', gap: '8px', fontSize: '13px' }}>
+                          <div>
+                            <span style={{ color: 'var(--text-muted)', fontSize: '11.5px' }}>Nombre completo:</span>
+                            <div style={{ fontWeight: '800', color: 'var(--text-primary)' }}>
+                              {selectedAvatarUser.first_name} {selectedAvatarUser.last_name}
+                            </div>
+                          </div>
+                          <div>
+                            <span style={{ color: 'var(--text-muted)', fontSize: '11.5px' }}>Correo:</span>
+                            <div style={{ fontWeight: '700', color: 'var(--text-secondary)', wordBreak: 'break-all' }}>
+                              {selectedAvatarUser.email}
+                            </div>
+                          </div>
+                          <div>
+                            <span style={{ color: 'var(--text-muted)', fontSize: '11.5px' }}>Institución:</span>
+                            <div style={{ fontWeight: '700', color: 'var(--text-primary)' }}>
+                              {selectedAvatarUser.institution_name || 'EquilibrIA General'}
+                            </div>
+                          </div>
+                          <div>
+                            <span style={{ color: 'var(--text-muted)', fontSize: '11.5px' }}>Departamento:</span>
+                            <div style={{ fontWeight: '700', color: 'var(--text-primary)' }}>
+                              {selectedAvatarUser.department || 'General'}
+                            </div>
+                          </div>
+                          <div>
+                            <span style={{ color: 'var(--text-muted)', fontSize: '11.5px' }}>Rol institucional:</span>
+                            <div>
+                              <span style={{ fontSize: '11px', fontWeight: '800', padding: '2px 8px', borderRadius: '8px', backgroundColor: 'var(--primary-light)', color: 'var(--primary)' }}>
+                                {selectedAvatarUser.role}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Nivel y Progreso */}
+                      <div style={{ backgroundColor: 'var(--bg-secondary)', padding: '14px 16px', borderRadius: '16px', border: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <div>
+                          <span style={{ fontSize: '11px', fontWeight: '800', color: 'var(--text-muted)', display: 'block' }}>Nivel de Gamificación</span>
+                          <strong style={{ fontSize: '16px', color: 'var(--primary)', fontWeight: '900' }}>Nivel {selectedAvatarUser.current_level || 1}</strong>
+                        </div>
+                        <div>
+                          <span style={{ fontSize: '11px', fontWeight: '800', color: 'var(--text-muted)', display: 'block' }}>Puntos Acumulados</span>
+                          <strong style={{ fontSize: '16px', color: 'var(--warning)', fontWeight: '900' }}>{selectedAvatarUser.total_xp || 0} XP</strong>
+                        </div>
+                      </div>
+
+                      {/* Botón Cerrar */}
+                      <button
+                        type="button"
+                        onClick={() => setSelectedAvatarUser(null)}
+                        className="btn btn-primary"
+                        style={{
+                          padding: '11px',
+                          borderRadius: '12px',
+                          fontWeight: '900',
+                          fontSize: '13px'
+                        }}
+                      >
+                        Cerrar Visualizador
+                      </button>
+                    </div>
+                  </div>
                 </div>
               </div>
             )}
