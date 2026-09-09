@@ -315,7 +315,7 @@ const Settings = () => {
         </div>
 
         {/* Panel de Contenido */}
-        <div className="glass-card" style={{ padding: '24px' }}>
+        <div className="glass-card glass-card-overflow-visible" style={{ padding: activeTab === 'my_avatar' ? '12px' : '24px', overflow: 'visible' }}>
           
           {/* ======================================================== */}
           {/* PESTAÑA 1: MI CUENTA                                    */}

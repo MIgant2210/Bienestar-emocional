@@ -2453,6 +2453,135 @@ input[type="date"]:focus, input[type="datetime-local"]:focus {
   }
 }
 
+/* ==========================================================================
+   ESTUDIO DE AVATAR RESPONSIVO (VISTA PREVIA FIJA EN PC Y CELULAR)
+   ========================================================================== */
+
+/* Columna de vista previa fija en PC */
+.avatar-preview-column {
+  position: sticky !important;
+  top: 20px !important;
+  align-self: flex-start !important;
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 14px !important;
+  z-index: 30 !important;
+  max-height: calc(100vh - 40px);
+  overflow-y: auto;
+  scrollbar-width: none;
+}
+
+.avatar-preview-column::-webkit-scrollbar {
+  display: none;
+}
+
+.avatar-stage-box {
+  position: relative;
+  border-radius: 24px;
+  background: linear-gradient(150deg, var(--bg-primary) 0%, var(--primary-light) 60%, var(--bg-secondary) 100%);
+  border: 1.5px solid var(--border);
+  padding: 24px 20px 16px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  min-height: 380px;
+  overflow: hidden;
+  box-shadow: 0 16px 36px -12px rgba(0,0,0,0.15);
+}
+
+.avatar-stage-platform {
+  position: absolute;
+  bottom: 16px;
+  width: 220px;
+  height: 46px;
+  border-radius: 50%;
+  background: linear-gradient(180deg, var(--primary-light) 0%, var(--primary) 100%);
+  box-shadow: 0 12px 28px rgba(0,0,0,0.12), inset 0 2px 4px rgba(255,255,255,0.8);
+  border: 1.5px solid rgba(255,255,255,0.7);
+  z-index: 1;
+}
+
+.avatar-stage-inner {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  width: 100%;
+  min-height: 320px;
+  transition: transform 0.2s ease;
+}
+
+.avatar-pose-toggle-label {
+  display: none;
+}
+
+.avatar-mobile-quick-save {
+  display: none !important;
+}
+
+/* En Celulares y Tablets (<= 880px): La vista previa queda fija arriba */
+@media (max-width: 880px) {
+  .responsive-split-studio {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 12px !important;
+  }
+
+  .avatar-preview-column {
+    order: -1 !important; /* Pasa arriba del todo */
+    position: sticky !important;
+    top: 0 !important;
+    z-index: 99 !important;
+    background: var(--bg-primary) !important;
+    padding: 6px 0 8px 0 !important;
+    margin-bottom: 6px !important;
+    border-bottom: 2px solid var(--border) !important;
+    box-shadow: 0 8px 24px -6px rgba(0, 0, 0, 0.15) !important;
+    max-height: unset !important;
+    overflow-y: visible !important;
+    gap: 8px !important;
+  }
+
+  .avatar-stage-box {
+    min-height: 220px !important;
+    height: 220px !important;
+    padding: 8px 12px 8px !important;
+    border-radius: 18px !important;
+    box-shadow: 0 10px 24px -8px rgba(0,0,0,0.2) !important;
+  }
+
+  .avatar-stage-platform {
+    width: 160px !important;
+    height: 34px !important;
+    bottom: 8px !important;
+  }
+
+  .avatar-stage-inner {
+    min-height: 185px !important;
+    transform: scale(0.82) !important;
+    transform-origin: bottom center !important;
+  }
+
+  .avatar-mobile-quick-save {
+    display: inline-flex !important;
+  }
+
+  .avatar-pose-toggle-label {
+    display: inline-block !important;
+  }
+
+  .avatar-pose-buttons-grid {
+    display: none;
+  }
+
+  .avatar-pose-buttons-grid.open {
+    display: block !important;
+    animation: fadeIn 0.2s ease;
+  }
+}
+
 
 
 

@@ -479,6 +479,7 @@ export const AvatarCreator = ({ onSavedCallback }) => {
     (currentConfig.bodyType || '').startsWith('hombre') ? 'hombre' : 'mujer'
   );
   const [previewPose, setPreviewPose] = useState('neutral');
+  const [showPosesTester, setShowPosesTester] = useState(false);
   const [loading, setLoading] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
@@ -2615,40 +2616,65 @@ export const AvatarCreator = ({ onSavedCallback }) => {
 
           </div>
 
-          {/* COLUMNA DERECHA: ESCENARIO 3D EN VIVO */}
-          <div style={{ position: 'sticky', top: '24px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+          {/* COLUMNA DERECHA: ESCENARIO 3D EN VIVO (STICKY / FIJA EN PC Y CELULAR) */}
+          <div className="avatar-preview-column">
             
-            <div
-              style={{
-                position: 'relative',
-                borderRadius: '24px',
-                background: 'linear-gradient(150deg, var(--bg-primary) 0%, var(--primary-light) 60%, var(--bg-secondary) 100%)',
-                border: '1.5px solid var(--border)',
-                padding: '24px 20px 16px',
+            {/* ESCENARIO DEL AVATAR */}
+            <div className="avatar-stage-box">
+              {/* Barra de estado superior del escenario */}
+              <div style={{
+                position: 'absolute',
+                top: '12px',
+                left: '14px',
+                right: '14px',
                 display: 'flex',
-                flexDirection: 'column',
+                justifyContent: 'space-between',
                 alignItems: 'center',
-                justifyContent: 'flex-end',
-                minHeight: '390px',
-                overflow: 'hidden',
-                boxShadow: '0 20px 40px -15px rgba(0,0,0,0.1)'
-              }}
-            >
-              <div
-                style={{
-                  position: 'absolute',
-                  bottom: '16px',
-                  width: '220px',
-                  height: '46px',
-                  borderRadius: '50%',
-                  background: 'linear-gradient(180deg, var(--primary-light) 0%, var(--primary) 100%)',
-                  boxShadow: '0 12px 28px rgba(0,0,0,0.12), inset 0 2px 4px rgba(255,255,255,0.8)',
-                  border: '1.5px solid rgba(255,255,255,0.7)',
-                  zIndex: 1
-                }}
-              />
+                zIndex: 10,
+                pointerEvents: 'auto'
+              }}>
+                <span style={{
+                  fontSize: '11px',
+                  fontWeight: '900',
+                  color: 'var(--primary)',
+                  backgroundColor: 'rgba(255, 255, 255, 0.9)',
+                  padding: '4px 10px',
+                  borderRadius: '20px',
+                  boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+                  backdropFilter: 'blur(6px)',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '5px'
+                }}>
+                  <Sparkles size={12} /> {avatarName || 'Mi Avatar'}
+                </span>
 
-              <div style={{ position: 'relative', zIndex: 2, display: 'flex', alignItems: 'flex-end', justifyContent: 'center', width: '100%', minHeight: '330px' }}>
+                <button
+                  type="button"
+                  onClick={handleSaveAvatar}
+                  disabled={loading}
+                  className="btn btn-primary avatar-mobile-quick-save"
+                  style={{
+                    padding: '5px 12px',
+                    borderRadius: '20px',
+                    fontSize: '11px',
+                    fontWeight: '900',
+                    boxShadow: '0 4px 12px rgba(59, 130, 246, 0.3)',
+                    alignItems: 'center',
+                    gap: '4px'
+                  }}
+                  title="Guardar cambios de avatar"
+                >
+                  {loading ? <RefreshCw size={12} className="animate-spin" /> : <Save size={12} />}
+                  <span>Guardar</span>
+                </button>
+              </div>
+
+              {/* Plataforma brillante */}
+              <div className="avatar-stage-platform" />
+
+              {/* Contenedor del Avatar Modular */}
+              <div className="avatar-stage-inner">
                 <ModularAvatar
                   config={currentConfig}
                   pose={previewPose}
@@ -2658,43 +2684,53 @@ export const AvatarCreator = ({ onSavedCallback }) => {
               </div>
             </div>
 
-            <div style={{ backgroundColor: 'var(--bg-secondary)', borderRadius: '20px', border: '1px solid var(--border)', padding: '16px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                <span style={{ fontSize: '11px', fontWeight: '900', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                  PROBADOR DE POSES Y ANIMACIONES:
+            {/* PROBADOR DE POSES Y ANIMACIONES */}
+            <div className="avatar-pose-box" style={{ backgroundColor: 'var(--bg-secondary)', borderRadius: '20px', border: '1px solid var(--border)', padding: '14px' }}>
+              <div
+                onClick={() => setShowPosesTester(!showPosesTester)}
+                style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer', userSelect: 'none' }}
+              >
+                <span style={{ fontSize: '11px', fontWeight: '900', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  PROBADOR DE POSES:
+                  <span style={{ color: 'var(--primary)', fontWeight: '800' }}>
+                    {PREVIEW_POSES.find(p => p.id === previewPose)?.desc}
+                  </span>
                 </span>
-                <span style={{ fontSize: '11px', fontWeight: '800', color: 'var(--primary)' }}>
-                  {PREVIEW_POSES.find(p => p.id === previewPose)?.desc}
+                <span className="avatar-pose-toggle-label" style={{ fontSize: '11px', color: 'var(--primary)', fontWeight: '800' }}>
+                  {showPosesTester ? '▲ Ocultar' : '▼ Cambiar'}
                 </span>
               </div>
 
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
-                {PREVIEW_POSES.map(pos => {
-                  const isSel = previewPose === pos.id;
-                  return (
-                    <button
-                      key={pos.id}
-                      type="button"
-                      onClick={() => setPreviewPose(pos.id)}
-                      style={{
-                        padding: '6px 10px',
-                        borderRadius: '8px',
-                        border: `1px solid ${isSel ? 'var(--primary)' : 'var(--border)'}`,
-                        backgroundColor: isSel ? 'var(--primary)' : 'var(--bg-tertiary)',
-                        color: isSel ? '#ffffff' : 'var(--text-secondary)',
-                        fontSize: '11.5px',
-                        fontWeight: isSel ? '900' : '700',
-                        cursor: 'pointer',
-                        transition: 'all 0.15s ease'
-                      }}
-                    >
-                      {pos.label}
-                    </button>
-                  );
-                })}
+              <div className={`avatar-pose-buttons-grid ${showPosesTester ? 'open' : ''}`} style={{ marginTop: '10px' }}>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                  {PREVIEW_POSES.map(pos => {
+                    const isSel = previewPose === pos.id;
+                    return (
+                      <button
+                        key={pos.id}
+                        type="button"
+                        onClick={() => setPreviewPose(pos.id)}
+                        style={{
+                          padding: '6px 10px',
+                          borderRadius: '8px',
+                          border: `1px solid ${isSel ? 'var(--primary)' : 'var(--border)'}`,
+                          backgroundColor: isSel ? 'var(--primary)' : 'var(--bg-tertiary)',
+                          color: isSel ? '#ffffff' : 'var(--text-secondary)',
+                          fontSize: '11.5px',
+                          fontWeight: isSel ? '900' : '700',
+                          cursor: 'pointer',
+                          transition: 'all 0.15s ease'
+                        }}
+                      >
+                        {pos.label}
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
             </div>
 
+            {/* BOTONES PRINCIPALES DE GUARDADO */}
             <div style={{ display: 'flex', gap: '10px' }}>
               <button
                 type="button"
