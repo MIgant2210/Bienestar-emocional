@@ -1642,7 +1642,7 @@ const AdminDashboard = ({ initialTab = 'analytics' }) => {
     Negativo: 'var(--danger)'
   };
 
-  const formattedHistoricalTrends = React.useMemo(() => {
+  const formattedHistoricalTrends = (() => {
     const trends = stats?.historical_trends;
     if (!trends || trends.length === 0) return [];
     if (trends.length === 1) {
@@ -1659,7 +1659,7 @@ const AdminDashboard = ({ initialTab = 'analytics' }) => {
       const dateDisplay = dateParts.length === 3 ? `${dateParts[2]}/${dateParts[1]}` : t.date;
       return { ...t, dateDisplay };
     });
-  }, [stats?.historical_trends]);
+  })();
 
   const fallbackDeptNames = departmentsList.length > 0 
     ? departmentsList.map(d => typeof d === 'string' ? d : d.name)
