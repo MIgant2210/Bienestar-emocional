@@ -97,13 +97,13 @@ export default function GamificationWidget({ onNavigateToFullProgress }) {
       </div>
 
       {/* Grid de 4 Pilares: Nivel & XP, Racha, Medallas, Ranking */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 190px), 1fr))', gap: '14px', marginBottom: '18px', width: '100%', boxSizing: 'border-box' }}>
+      <div className="gamification-widget-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 190px), 1fr))', gap: '14px', marginBottom: '18px', width: '100%', boxSizing: 'border-box' }}>
         
         {/* 1. Nivel y XP */}
-        <div style={{ backgroundColor: 'var(--bg-secondary)', borderRadius: '16px', padding: '14px 16px', border: '1px solid var(--border)' }}>
+        <div className="gamification-widget-card" style={{ backgroundColor: 'var(--bg-secondary)', borderRadius: '16px', padding: '14px 16px', border: '1px solid var(--border)' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
             <span style={{ fontSize: '11px', fontWeight: '800', color: 'var(--text-muted)' }}>NIVEL ACTUAL</span>
-            <span className="duo-pill" style={{ backgroundColor: 'var(--primary-light)', color: 'var(--primary)', fontWeight: '900', fontSize: '11px' }}>
+            <span className="duo-pill" style={{ backgroundColor: 'var(--primary-light)', color: 'var(--primary)', fontWeight: '900', fontSize: '11px', padding: '4px 10px' }}>
               NIVEL {lvl.level || 1}
             </span>
           </div>
@@ -123,12 +123,12 @@ export default function GamificationWidget({ onNavigateToFullProgress }) {
           </div>
           <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '10.5px', color: 'var(--text-muted)', fontWeight: '700' }}>
             <span>{lvl.xp_in_current_level || 0} XP</span>
-            <span>Faltan {lvl.xp_remaining || 0} XP para Nivel {(lvl.level || 1) + 1}</span>
+            <span>Faltan {lvl.xp_remaining || 0} XP</span>
           </div>
         </div>
 
         {/* 2. Racha Diaria */}
-        <div style={{ backgroundColor: 'var(--bg-secondary)', borderRadius: '16px', padding: '14px 16px', border: '1px solid var(--border)' }}>
+        <div className="gamification-widget-card" style={{ backgroundColor: 'var(--bg-secondary)', borderRadius: '16px', padding: '14px 16px', border: '1px solid var(--border)' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
             <span style={{ fontSize: '11px', fontWeight: '800', color: 'var(--text-muted)' }}>RACHA ACTIVA</span>
             <Flame size={18} style={{ color: '#f97316' }} />
@@ -139,19 +139,19 @@ export default function GamificationWidget({ onNavigateToFullProgress }) {
             <span style={{ fontSize: '13px', color: 'var(--text-primary)' }}>DÍAS</span>
           </div>
           <p style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '6px' }}>
-            Mejor racha histórica: <strong>{profile.longest_streak || 0} días</strong>
+            Racha récord: <strong>{profile.longest_streak || 0} días</strong>
           </p>
         </div>
 
         {/* 3. Resumen de Medallas */}
-        <div style={{ backgroundColor: 'var(--bg-secondary)', borderRadius: '16px', padding: '14px 16px', border: '1px solid var(--border)' }}>
+        <div className="gamification-widget-card" style={{ backgroundColor: 'var(--bg-secondary)', borderRadius: '16px', padding: '14px 16px', border: '1px solid var(--border)' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-            <span style={{ fontSize: '11px', fontWeight: '800', color: 'var(--text-muted)' }}>MEDALLAS LOGRADAS</span>
+            <span style={{ fontSize: '11px', fontWeight: '800', color: 'var(--text-muted)' }}>MEDALLAS</span>
             <span style={{ fontSize: '11px', fontWeight: '900', color: 'var(--primary)' }}>{unlockedCount} de 6</span>
           </div>
           
           {/* Fila de Íconos de Medallas */}
-          <div style={{ display: 'flex', gap: '6px', alignItems: 'center', marginTop: '6px' }}>
+          <div style={{ display: 'flex', gap: '5px', alignItems: 'center', marginTop: '6px', flexWrap: 'wrap' }}>
             {badges.slice(0, 6).map(badge => {
               const IconComponent = ICON_MAP[badge.icon] || Award;
               const isUnlocked = badge.unlocked;
@@ -160,9 +160,9 @@ export default function GamificationWidget({ onNavigateToFullProgress }) {
                   key={badge.id}
                   title={`${badge.name}: ${badge.description}`}
                   style={{
-                    width: '32px',
-                    height: '32px',
-                    borderRadius: '10px',
+                    width: '28px',
+                    height: '28px',
+                    borderRadius: '8px',
                     backgroundColor: isUnlocked ? badge.color : 'var(--bg-primary)',
                     color: isUnlocked ? '#ffffff' : 'var(--text-muted)',
                     display: 'flex',
@@ -174,9 +174,9 @@ export default function GamificationWidget({ onNavigateToFullProgress }) {
                     position: 'relative'
                   }}
                 >
-                  <IconComponent size={15} />
+                  <IconComponent size={14} />
                   {!isUnlocked && (
-                    <Lock size={10} style={{ position: 'absolute', bottom: '-2px', right: '-2px', backgroundColor: 'var(--bg-secondary)', borderRadius: '50%', color: 'var(--text-muted)' }} />
+                    <Lock size={9} style={{ position: 'absolute', bottom: '-2px', right: '-2px', backgroundColor: 'var(--bg-secondary)', borderRadius: '50%', color: 'var(--text-muted)' }} />
                   )}
                 </div>
               );
@@ -185,16 +185,16 @@ export default function GamificationWidget({ onNavigateToFullProgress }) {
         </div>
 
         {/* 4. Posición en Ranking */}
-        <div style={{ backgroundColor: 'var(--bg-secondary)', borderRadius: '16px', padding: '14px 16px', border: '1px solid var(--border)' }}>
+        <div className="gamification-widget-card" style={{ backgroundColor: 'var(--bg-secondary)', borderRadius: '16px', padding: '14px 16px', border: '1px solid var(--border)' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-            <span style={{ fontSize: '11px', fontWeight: '800', color: 'var(--text-muted)' }}>POSICIÓN INSTITUCIONAL</span>
+            <span style={{ fontSize: '11px', fontWeight: '800', color: 'var(--text-muted)' }}>POSICIÓN</span>
             <ShieldCheck size={18} style={{ color: 'var(--primary)' }} />
           </div>
           <div style={{ fontSize: '22px', fontWeight: '900', color: 'var(--primary)', marginBottom: '4px' }}>
             #{profile.institution_rank || 1}
           </div>
           <p style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
-            Basado en XP de participación constante.
+            Ranking institucional activo.
           </p>
         </div>
 
@@ -202,7 +202,7 @@ export default function GamificationWidget({ onNavigateToFullProgress }) {
 
       {/* Tarjeta Próximo Logro */}
       {lockedNextBadge && (
-        <div style={{
+        <div className="gamification-widget-next-banner" style={{
           backgroundColor: 'var(--primary-light)',
           borderRadius: '14px',
           border: '1px solid var(--primary)',

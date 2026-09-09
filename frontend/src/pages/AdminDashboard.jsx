@@ -400,6 +400,14 @@ const AdminDashboard = ({ initialTab = 'analytics' }) => {
   // Template Targeting States & Preview Modal
   const [templateTargets, setTemplateTargets] = useState({});
   const [previewTemplate, setPreviewTemplate] = useState(null);
+  const [previewQIndex, setPreviewQIndex] = useState(0);
+  const [previewViewMode, setPreviewViewMode] = useState('single'); // 'single' | 'list'
+
+  // Mobile UX Toggle States
+  const [showUserFiltersMobile, setShowUserFiltersMobile] = useState(false);
+  const [showCreateInstForm, setShowCreateInstForm] = useState(false);
+  const [showCreateDeptForm, setShowCreateDeptForm] = useState(false);
+  const [mobileChatView, setMobileChatView] = useState('list'); // 'list' | 'chat'
 
   // Estado para Inspeccionar Respuestas y Métricas de un Test
   const [selectedTestAnalytics, setSelectedTestAnalytics] = useState(null);
@@ -3473,7 +3481,11 @@ const AdminDashboard = ({ initialTab = 'analytics' }) => {
 
                           <button
                             type="button"
-                            onClick={() => setPreviewTemplate(tpl)}
+                            onClick={() => {
+                              setPreviewTemplate(tpl);
+                              setPreviewQIndex(0);
+                              setPreviewViewMode('single');
+                            }}
                             className="btn btn-secondary"
                             style={{ width: '100%', padding: '6px 12px', fontSize: '11.5px', borderRadius: '8px', fontWeight: '800', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', backgroundColor: 'var(--bg-tertiary)' }}
                           >
@@ -3532,7 +3544,7 @@ const AdminDashboard = ({ initialTab = 'analytics' }) => {
 
             {/* MODAL DE VISTA PREVIA DE PREGUNTAS PRECARGADAS */}
             {previewTemplate && (
-              <div style={{
+              <div className="preview-test-modal-backdrop" style={{
                 position: 'fixed',
                 top: 0, left: 0, right: 0, bottom: 0,
                 backgroundColor: 'rgba(0, 0, 0, 0.75)',
@@ -3544,20 +3556,21 @@ const AdminDashboard = ({ initialTab = 'analytics' }) => {
                 padding: '20px',
                 animation: 'fadeIn 0.2s ease'
               }}>
-                <div style={{
+                <div className="preview-test-modal-box" style={{
                   backgroundColor: 'var(--bg-secondary)',
                   borderRadius: '24px',
                   border: '2px solid var(--primary)',
                   maxWidth: '680px',
                   width: '100%',
-                  maxHeight: '85vh',
+                  maxHeight: '88vh',
                   overflowY: 'auto',
-                  padding: '26px',
+                  padding: '24px',
                   boxShadow: 'var(--tech-glow)'
                 }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '16px', borderBottom: '1px solid var(--border)', paddingBottom: '14px' }}>
+                  {/* Encabezado del Modal */}
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '12px', borderBottom: '1px solid var(--border)', paddingBottom: '12px' }}>
                     <div>
-                      <div style={{ display: 'flex', gap: '8px', alignItems: 'center', marginBottom: '6px' }}>
+                      <div style={{ display: 'flex', gap: '8px', alignItems: 'center', marginBottom: '4px', flexWrap: 'wrap' }}>
                         <span style={{ fontSize: '10px', fontWeight: '900', padding: '3px 8px', borderRadius: '10px', backgroundColor: 'var(--primary-light)', color: 'var(--primary)', textTransform: 'uppercase' }}>
                           {previewTemplate.category}
                         </span>
@@ -3565,76 +3578,235 @@ const AdminDashboard = ({ initialTab = 'analytics' }) => {
                           {previewTemplate.questions.length} PREGUNTAS
                         </span>
                       </div>
-                      <h3 style={{ fontSize: '18px', fontWeight: '900', color: 'var(--text-primary)' }}>
+                      <h3 style={{ fontSize: '17px', fontWeight: '900', color: 'var(--text-primary)', margin: 0 }}>
                         {previewTemplate.title.replace('[Plantilla] ', '').replace('[Plantilla Express] ', '')}
                       </h3>
                     </div>
                     <button 
                       onClick={() => setPreviewTemplate(null)} 
-                      style={{ background: 'none', border: 'none', color: 'var(--text-muted)', fontSize: '22px', cursor: 'pointer', fontWeight: 'bold', lineHeight: 1 }}
+                      style={{ background: 'none', border: 'none', color: 'var(--text-muted)', fontSize: '24px', cursor: 'pointer', fontWeight: 'bold', lineHeight: 1, padding: '0 4px' }}
                       aria-label="Cerrar modal"
                     >
                       ×
                     </button>
                   </div>
 
-                  <p style={{ fontSize: '13px', color: 'var(--text-secondary)', marginBottom: '16px', lineHeight: '1.5' }}>
-                    {previewTemplate.description}
-                  </p>
+                  {/* NAVEGADOR PASO A PASO (COLOCADO HASTA ARRIBA PARA CELULARES) */}
+                  {(() => {
+                    const questions = previewTemplate.questions || [];
+                    const currentQ = questions[previewQIndex] || questions[0] || {};
+                    const totalQ = questions.length;
+                    const qType = currentQ.type || 'scale_1_5';
 
-                  <div style={{ display: 'flex', gap: '8px', marginBottom: '18px', flexWrap: 'wrap' }}>
-                    <span style={{ fontSize: '11px', fontWeight: '800', padding: '5px 12px', borderRadius: '10px', backgroundColor: 'rgba(236, 72, 153, 0.12)', color: '#ec4899', border: '1px solid rgba(236, 72, 153, 0.3)', display: 'flex', alignItems: 'center', gap: '5px' }}>
-                      Incluye Lienzo de Dibujo Canvas Interactivo
-                    </span>
-                    <span style={{ fontSize: '11px', fontWeight: '800', padding: '5px 12px', borderRadius: '10px', backgroundColor: 'var(--success-light)', color: 'var(--success)', border: '1px solid var(--success)', display: 'flex', alignItems: 'center', gap: '5px' }}>
-                      Dictado de Voz y Estados de Ánimo
-                    </span>
-                  </div>
+                    const typeLabels = {
+                      scale_1_5: { label: 'Escala 1 a 5', color: 'var(--primary)' },
+                      scale_1_10: { label: 'Escala 1 a 10', color: 'var(--accent)' },
+                      emoji_scale_5: { label: 'Escala 5 Emojis (1-5)', color: 'var(--warning)' },
+                      boolean: { label: 'Sí / No', color: 'var(--success)' },
+                      text: { label: 'Texto libre / Voz', color: 'var(--info)' },
+                      drawing: { label: 'Lienzo de Dibujo Canvas', color: '#ec4899' }
+                    };
+                    const tInfo = typeLabels[qType] || { label: qType, color: 'var(--text-secondary)' };
 
-                  <h4 style={{ fontSize: '13.5px', fontWeight: '900', color: 'var(--primary)', marginBottom: '12px' }}>
-                    Cuestionario Precargado Completo:
-                  </h4>
+                    return (
+                      <div style={{ backgroundColor: 'var(--bg-primary)', borderRadius: '18px', padding: '16px', border: '1.5px solid var(--border)', marginBottom: '16px' }}>
+                        {/* Barra de Controles Anterior / Contador / Siguiente */}
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
+                          <button
+                            type="button"
+                            onClick={() => setPreviewQIndex(p => Math.max(0, p - 1))}
+                            disabled={previewQIndex === 0}
+                            className="duo-pill"
+                            style={{ padding: '5px 12px', fontSize: '11px', opacity: previewQIndex === 0 ? 0.4 : 1 }}
+                          >
+                            <ChevronLeft size={14} /> Anterior
+                          </button>
 
-                  <div style={{ display: 'grid', gap: '10px', marginBottom: '20px' }}>
-                    {previewTemplate.questions.map((q, idx) => {
-                      const typeLabels = {
-                        scale_1_5: { label: 'Escala 1 a 5', color: 'var(--primary)' },
-                        scale_1_10: { label: 'Escala 1 a 10', color: 'var(--accent)' },
-                        emoji_scale_5: { label: 'Escala 5 Emojis (1-5)', color: 'var(--warning)' },
-                        boolean: { label: 'Sí / No', color: 'var(--success)' },
-                        text: { label: 'Texto libre / Voz', color: 'var(--info)' },
-                        drawing: { label: 'Lienzo de Dibujo Canvas', color: '#ec4899' }
-                      };
-                      const tInfo = typeLabels[q.type] || { label: q.type, color: 'var(--text-secondary)' };
+                          <span style={{ fontSize: '12px', fontWeight: '900', color: 'var(--primary)' }}>
+                            Pregunta {previewQIndex + 1} de {totalQ}
+                          </span>
 
-                      return (
-                        <div key={q.id || idx} style={{ backgroundColor: 'var(--bg-primary)', padding: '12px 14px', borderRadius: '12px', border: q.type === 'drawing' ? '2px solid rgba(236, 72, 153, 0.4)' : '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px' }}>
-                          <div style={{ display: 'flex', gap: '10px', alignItems: 'flex-start' }}>
-                            <span style={{ fontWeight: '900', color: 'var(--primary)', fontSize: '13px', minWidth: '24px' }}>#{idx + 1}</span>
-                            <span style={{ fontSize: '13px', fontWeight: '700', color: 'var(--text-primary)' }}>{q.question}</span>
+                          <button
+                            type="button"
+                            onClick={() => setPreviewQIndex(p => Math.min(totalQ - 1, p + 1))}
+                            disabled={previewQIndex >= totalQ - 1}
+                            className="duo-pill"
+                            style={{ padding: '5px 12px', fontSize: '11px', opacity: previewQIndex >= totalQ - 1 ? 0.4 : 1 }}
+                          >
+                            Siguiente <ChevronRight size={14} />
+                          </button>
+                        </div>
+
+                        {/* Barra de Progreso */}
+                        <div style={{ width: '100%', height: '6px', backgroundColor: 'var(--border)', borderRadius: '10px', overflow: 'hidden', marginBottom: '14px' }}>
+                          <div style={{
+                            width: `${totalQ > 0 ? Math.round(((previewQIndex + 1) / totalQ) * 100) : 0}%`,
+                            height: '100%',
+                            background: 'linear-gradient(90deg, var(--primary) 0%, var(--accent) 100%)',
+                            transition: 'width 0.25s ease'
+                          }} />
+                        </div>
+
+                        {/* Enunciado de la Pregunta */}
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '10px', marginBottom: '12px' }}>
+                          <div style={{ fontSize: '14px', fontWeight: '800', color: 'var(--text-primary)', lineHeight: '1.4' }}>
+                            <span style={{ color: 'var(--primary)', marginRight: '6px' }}>#{previewQIndex + 1}</span>
+                            {currentQ.question}
                           </div>
-                          <span style={{ fontSize: '10px', fontWeight: '900', padding: '4px 8px', borderRadius: '8px', backgroundColor: 'var(--bg-tertiary)', color: tInfo.color, whiteSpace: 'nowrap', border: `1px solid ${tInfo.color}` }}>
+                          <span style={{ fontSize: '10px', fontWeight: '900', padding: '3px 8px', borderRadius: '8px', backgroundColor: 'var(--bg-tertiary)', color: tInfo.color, border: `1px solid ${tInfo.color}`, whiteSpace: 'nowrap', flexShrink: 0 }}>
                             {tInfo.label}
                           </span>
                         </div>
-                      );
-                    })}
+
+                        {/* Mock interactivo según tipo de pregunta */}
+                        <div style={{ padding: '12px', backgroundColor: 'var(--bg-secondary)', borderRadius: '12px', border: '1px solid var(--border)' }}>
+                          {qType === 'scale_1_5' && (
+                            <div>
+                              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '10px', color: 'var(--text-muted)', marginBottom: '6px', fontWeight: '700' }}>
+                                <span>1 - Muy Bajo</span>
+                                <span>5 - Excelente</span>
+                              </div>
+                              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '6px' }}>
+                                {[1, 2, 3, 4, 5].map(n => (
+                                  <div key={n} style={{ padding: '8px', textAlign: 'center', borderRadius: '8px', backgroundColor: 'var(--bg-primary)', border: '1px solid var(--border)', fontWeight: '900', fontSize: '13px', color: 'var(--primary)' }}>
+                                    {n}
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+
+                          {qType === 'scale_1_10' && (
+                            <div>
+                              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '10px', color: 'var(--text-muted)', marginBottom: '6px', fontWeight: '700' }}>
+                                <span>1 - Mínimo</span>
+                                <span>10 - Máximo</span>
+                              </div>
+                              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(10, 1fr)', gap: '4px' }}>
+                                {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(n => (
+                                  <div key={n} style={{ padding: '6px 2px', textAlign: 'center', borderRadius: '6px', backgroundColor: 'var(--bg-primary)', border: '1px solid var(--border)', fontWeight: '800', fontSize: '11px', color: 'var(--accent)' }}>
+                                    {n}
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+
+                          {qType === 'emoji_scale_5' && (
+                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '6px', textAlign: 'center' }}>
+                              {[
+                                { emoji: '😞', label: '1 - Mal' },
+                                { emoji: '😕', label: '2 - Regular' },
+                                { emoji: '😐', label: '3 - Neutro' },
+                                { emoji: '🙂', label: '4 - Bien' },
+                                { emoji: '🤩', label: '5 - Excelente' }
+                              ].map(em => (
+                                <div key={em.label} style={{ padding: '8px 4px', borderRadius: '8px', backgroundColor: 'var(--bg-primary)', border: '1px solid var(--border)' }}>
+                                  <div style={{ fontSize: '20px' }}>{em.emoji}</div>
+                                  <span style={{ fontSize: '9px', fontWeight: '800', color: 'var(--text-muted)' }}>{em.label}</span>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+
+                          {qType === 'boolean' && (
+                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '10px' }}>
+                              <div style={{ padding: '10px', borderRadius: '10px', backgroundColor: 'var(--bg-primary)', border: '1.5px solid var(--success)', textAlign: 'center', fontWeight: '900', color: 'var(--success)', fontSize: '13px' }}>
+                                👍 Sí
+                              </div>
+                              <div style={{ padding: '10px', borderRadius: '10px', backgroundColor: 'var(--bg-primary)', border: '1.5px solid var(--border)', textAlign: 'center', fontWeight: '900', color: 'var(--text-muted)', fontSize: '13px' }}>
+                                👎 No
+                              </div>
+                            </div>
+                          )}
+
+                          {qType === 'text' && (
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 14px', borderRadius: '10px', backgroundColor: 'var(--bg-primary)', border: '1px dashed var(--border)', color: 'var(--text-muted)', fontSize: '12px' }}>
+                              <Mic size={16} style={{ color: 'var(--primary)' }} />
+                              <span>Respuesta de texto libre asistida por dictado de voz inteligente</span>
+                            </div>
+                          )}
+
+                          {qType === 'drawing' && (
+                            <div style={{ padding: '14px', borderRadius: '10px', backgroundColor: 'rgba(236, 72, 153, 0.08)', border: '1.5px dashed rgba(236, 72, 153, 0.4)', textAlign: 'center', color: '#ec4899' }}>
+                              <span style={{ fontSize: '12px', fontWeight: '800', display: 'block' }}>🎨 Lienzo Gráfico Canvas Interactivo Integrado</span>
+                              <span style={{ fontSize: '10.5px', opacity: 0.85 }}>El evaluado dibuja libremente su estado emocional o mapa mental</span>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })()}
+
+                  {/* Toggle para ver todas las preguntas en formato de lista */}
+                  <div style={{ marginBottom: '14px', textAlign: 'center' }}>
+                    <button
+                      type="button"
+                      onClick={() => setPreviewViewMode(m => m === 'single' ? 'list' : 'single')}
+                      style={{ background: 'none', border: 'none', color: 'var(--primary)', fontWeight: '800', fontSize: '11.5px', cursor: 'pointer', textDecoration: 'underline' }}
+                    >
+                      {previewViewMode === 'single' ? `▼ Ver las ${previewTemplate.questions.length} preguntas en lista completa` : '▲ Ocultar lista completa de preguntas'}
+                    </button>
                   </div>
 
-                  <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', paddingTop: '16px', borderTop: '1px solid var(--border)' }}>
+                  {/* LISTA COMPLETA CONDICIONAL */}
+                  {previewViewMode === 'list' && (
+                    <div style={{ display: 'grid', gap: '8px', marginBottom: '20px', maxHeight: '280px', overflowY: 'auto', paddingRight: '4px' }}>
+                      {previewTemplate.questions.map((q, idx) => {
+                        const typeLabels = {
+                          scale_1_5: { label: 'Escala 1 a 5', color: 'var(--primary)' },
+                          scale_1_10: { label: 'Escala 1 a 10', color: 'var(--accent)' },
+                          emoji_scale_5: { label: 'Escala 5 Emojis', color: 'var(--warning)' },
+                          boolean: { label: 'Sí / No', color: 'var(--success)' },
+                          text: { label: 'Texto / Voz', color: 'var(--info)' },
+                          drawing: { label: 'Lienzo Canvas', color: '#ec4899' }
+                        };
+                        const tInfo = typeLabels[q.type] || { label: q.type, color: 'var(--text-secondary)' };
+
+                        return (
+                          <div
+                            key={q.id || idx}
+                            onClick={() => { setPreviewQIndex(idx); setPreviewViewMode('single'); }}
+                            style={{
+                              backgroundColor: previewQIndex === idx ? 'var(--primary-light)' : 'var(--bg-primary)',
+                              padding: '10px 12px',
+                              borderRadius: '10px',
+                              border: previewQIndex === idx ? '1.5px solid var(--primary)' : '1px solid var(--border)',
+                              display: 'flex',
+                              justifyContent: 'space-between',
+                              alignItems: 'center',
+                              gap: '10px',
+                              cursor: 'pointer'
+                            }}
+                          >
+                            <div style={{ display: 'flex', gap: '8px', alignItems: 'flex-start' }}>
+                              <span style={{ fontWeight: '900', color: 'var(--primary)', fontSize: '12px', minWidth: '22px' }}>#{idx + 1}</span>
+                              <span style={{ fontSize: '12px', fontWeight: '700', color: 'var(--text-primary)' }}>{q.question}</span>
+                            </div>
+                            <span style={{ fontSize: '9.5px', fontWeight: '900', padding: '3px 7px', borderRadius: '7px', backgroundColor: 'var(--bg-tertiary)', color: tInfo.color, whiteSpace: 'nowrap', border: `1px solid ${tInfo.color}` }}>
+                              {tInfo.label}
+                            </span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+
+                  {/* Acciones del Modal */}
+                  <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', paddingTop: '14px', borderTop: '1px solid var(--border)', flexWrap: 'wrap' }}>
                     <button 
                       onClick={() => setPreviewTemplate(null)} 
                       className="btn btn-secondary"
-                      style={{ padding: '9px 18px', fontSize: '12.5px', borderRadius: '10px' }}
+                      style={{ padding: '8px 16px', fontSize: '12px', borderRadius: '10px' }}
                     >
-                      Cerrar Vista Previa
+                      Cerrar Vista
                     </button>
                     <button 
                       onClick={() => { handleActivateTemplate(previewTemplate.id); setPreviewTemplate(null); }} 
                       className="btn btn-primary"
-                      style={{ padding: '9px 18px', fontSize: '12.5px', borderRadius: '10px', fontWeight: '900' }}
+                      style={{ padding: '8px 18px', fontSize: '12px', borderRadius: '10px', fontWeight: '900' }}
                     >
-                      <Zap size={14} /> Habilitar esta Plantilla
+                      <Zap size={14} /> Habilitar en Institución
                     </button>
                   </div>
                 </div>
@@ -3894,10 +4066,11 @@ const AdminDashboard = ({ initialTab = 'analytics' }) => {
                 <p style={{ fontSize: '12.5px', color: 'var(--text-secondary)' }}>Administra los usuarios registrados y los niveles de permiso por rol institucional.</p>
               </div>
 
-              <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+              <div className="wellbeing-subtabs" style={{ display: 'flex', gap: '8px', overflowX: 'auto', paddingBottom: '6px', flexWrap: 'nowrap', WebkitOverflowScrolling: 'touch', scrollbarWidth: 'none', maxWidth: '100%' }}>
                 <button 
                   onClick={() => setMembersSubTab('directory')}
                   className={`duo-pill ${membersSubTab === 'directory' ? 'selected' : ''}`}
+                  style={{ whiteSpace: 'nowrap', flexShrink: 0 }}
                 >
                   <Users size={13} />
                   <span>Directorio de Miembros ({(members || []).length})</span>
@@ -3906,6 +4079,8 @@ const AdminDashboard = ({ initialTab = 'analytics' }) => {
                   onClick={() => setMembersSubTab('avatar_gallery')}
                   className={`duo-pill ${membersSubTab === 'avatar_gallery' ? 'selected' : ''}`}
                   style={{
+                    whiteSpace: 'nowrap',
+                    flexShrink: 0,
                     borderColor: membersSubTab === 'avatar_gallery' ? 'var(--primary)' : undefined,
                     boxShadow: membersSubTab === 'avatar_gallery' ? '0 0 12px rgba(108, 92, 231, 0.25)' : undefined
                   }}
@@ -3916,6 +4091,7 @@ const AdminDashboard = ({ initialTab = 'analytics' }) => {
                 <button 
                   onClick={() => setMembersSubTab('pending_accounts')}
                   className={`duo-pill ${membersSubTab === 'pending_accounts' ? 'selected' : ''}`}
+                  style={{ whiteSpace: 'nowrap', flexShrink: 0 }}
                 >
                   <ShieldCheck size={13} />
                   <span>Cuentas Pendientes</span>
@@ -3928,6 +4104,7 @@ const AdminDashboard = ({ initialTab = 'analytics' }) => {
                 <button 
                   onClick={() => setMembersSubTab('roles_rbac')}
                   className={`duo-pill ${membersSubTab === 'roles_rbac' ? 'selected' : ''}`}
+                  style={{ whiteSpace: 'nowrap', flexShrink: 0 }}
                 >
                   <Key size={13} />
                   <span>Matriz de Permisos por Rol</span>
@@ -3937,20 +4114,20 @@ const AdminDashboard = ({ initialTab = 'analytics' }) => {
 
             {membersSubTab === 'directory' && (
               <div>
-                {/* BARRA DE BÚSQUEDA Y FILTROS AVANZADOS */}
+                {/* BARRA DE BÚSQUEDA Y FILTROS AVANZADOS COMPACTOS */}
                 <div style={{
                   backgroundColor: 'var(--bg-secondary)',
-                  padding: '16px',
+                  padding: '14px',
                   borderRadius: '16px',
                   border: '1px solid var(--border)',
-                  marginBottom: '20px',
+                  marginBottom: '18px',
                   display: 'flex',
                   flexDirection: 'column',
                   gap: '12px'
                 }}>
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '12px', alignItems: 'center' }}>
-                    {/* Búsqueda por Texto */}
-                    <div style={{ position: 'relative' }}>
+                  {/* Fila Principal: Buscador + Botón Móvil de Filtros */}
+                  <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+                    <div style={{ position: 'relative', flex: 1 }}>
                       <Search size={15} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
                       <input
                         type="text"
@@ -3961,6 +4138,38 @@ const AdminDashboard = ({ initialTab = 'analytics' }) => {
                       />
                     </div>
 
+                    <button
+                      type="button"
+                      onClick={() => setShowUserFiltersMobile(prev => !prev)}
+                      className="duo-pill"
+                      style={{
+                        height: '38px',
+                        padding: '0 12px',
+                        fontSize: '11.5px',
+                        whiteSpace: 'nowrap',
+                        borderColor: (memberRoleFilter !== 'todos' || memberDeptFilter !== 'todos' || memberStatusFilter !== 'todos' || memberInstFilter !== 'todos') ? 'var(--primary)' : undefined,
+                        backgroundColor: (memberRoleFilter !== 'todos' || memberDeptFilter !== 'todos' || memberStatusFilter !== 'todos' || memberInstFilter !== 'todos') ? 'var(--primary-light)' : undefined,
+                        color: (memberRoleFilter !== 'todos' || memberDeptFilter !== 'todos' || memberStatusFilter !== 'todos' || memberInstFilter !== 'todos') ? 'var(--primary)' : undefined
+                      }}
+                    >
+                      <Filter size={14} />
+                      <span>{showUserFiltersMobile ? 'Ocultar' : 'Filtros'}</span>
+                      {([memberRoleFilter !== 'todos', memberDeptFilter !== 'todos', memberStatusFilter !== 'todos', memberInstFilter !== 'todos'].filter(Boolean).length > 0) && (
+                        <span style={{ backgroundColor: 'var(--primary)', color: '#fff', fontSize: '10px', padding: '1px 6px', borderRadius: '10px', fontWeight: '900' }}>
+                          {[memberRoleFilter !== 'todos', memberDeptFilter !== 'todos', memberStatusFilter !== 'todos', memberInstFilter !== 'todos'].filter(Boolean).length}
+                        </span>
+                      )}
+                    </button>
+                  </div>
+
+                  {/* Dropdowns de Filtros (visibles al desplegar o en pantallas grandes) */}
+                  <div style={{
+                    display: showUserFiltersMobile ? 'grid' : 'none',
+                    gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 150px), 1fr))',
+                    gap: '10px',
+                    alignItems: 'center',
+                    paddingTop: '4px'
+                  }}>
                     {/* Filtro por Rol */}
                     <div>
                       <CustomSelect
@@ -4405,7 +4614,7 @@ const AdminDashboard = ({ initialTab = 'analytics' }) => {
                 )}
 
                 {/* GRILLA DE USUARIOS FILTRADOS */}
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '16px' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 280px), 1fr))', gap: '14px' }}>
                   {(members || []).filter(m => {
                     if (memberSearchText.trim()) {
                       const q = memberSearchText.toLowerCase();
@@ -5377,10 +5586,10 @@ const AdminDashboard = ({ initialTab = 'analytics' }) => {
 
         {/* TAB 10: CHAT ENTRE COLEGAS Y GRUPOS DE TRABAJO */}
         {activeTab === 'kudos' && (
-          <div className="glass-card animate-fade" style={{ padding: '0', overflow: 'hidden', borderRadius: '24px', border: '1px solid var(--border)', height: '650px', display: 'flex' }}>
+          <div className="glass-card animate-fade chat-workspace-container" style={{ padding: '0' }}>
             
             {/* Panel Izquierdo: Directorio de Canales, Grupos y Colegas */}
-            <div style={{ width: '300px', backgroundColor: 'var(--bg-secondary)', borderRight: '1px solid var(--border)', display: 'flex', flexDirection: 'column' }}>
+            <div className={`chat-sidebar-panel ${mobileChatView === 'chat' ? 'mobile-chat-hidden' : ''}`} style={{ width: '300px', backgroundColor: 'var(--bg-secondary)', borderRight: '1px solid var(--border)', display: 'flex', flexDirection: 'column' }}>
               <div style={{ padding: '16px', borderBottom: '1px solid var(--border)', backgroundColor: 'var(--bg-tertiary)' }}>
                 <h4 style={{ fontSize: '14px', fontWeight: '900', display: 'flex', alignItems: 'center', gap: '8px' }}>
                   <MessageSquare size={16} style={{ color: 'var(--primary)' }} /> Chat & Grupos entre Colegas
@@ -5400,11 +5609,11 @@ const AdminDashboard = ({ initialTab = 'analytics' }) => {
               <div style={{ flex: 1, overflowY: 'auto', padding: '10px', display: 'grid', gap: '6px' }}>
                 <button 
                   type="button"
-                  onClick={() => { setChatChannel('general'); setSelectedGroup(null); }}
+                  onClick={() => { setChatChannel('general'); setSelectedGroup(null); setMobileChatView('chat'); }}
                   className={`duo-card ${chatChannel === 'general' ? 'selected' : ''}`}
                   style={{ justifyContent: 'flex-start', padding: '10px 12px', gap: '10px' }}
                 >
-                  <span style={{ fontSize: '20px' }}></span>
+                  <MessageSquare size={18} style={{ color: 'var(--primary)', flexShrink: 0 }} />
                   <div style={{ textAlign: 'left' }}>
                     <h5 style={{ fontSize: '13px', fontWeight: '800' }}>Canal General EquilibrIA</h5>
                     <span style={{ fontSize: '10.5px', color: 'var(--text-muted)' }}>Comunidad Institucional</span>
@@ -5413,11 +5622,11 @@ const AdminDashboard = ({ initialTab = 'analytics' }) => {
 
                 <button 
                   type="button"
-                  onClick={() => { setChatChannel('kudos'); setSelectedGroup(null); }}
+                  onClick={() => { setChatChannel('kudos'); setSelectedGroup(null); setMobileChatView('chat'); }}
                   className={`duo-card ${chatChannel === 'kudos' ? 'selected' : ''}`}
                   style={{ justifyContent: 'flex-start', padding: '10px 12px', gap: '10px' }}
                 >
-                  <span style={{ fontSize: '20px' }}></span>
+                  <Heart size={18} style={{ color: '#ec4899', flexShrink: 0 }} />
                   <div style={{ textAlign: 'left' }}>
                     <h5 style={{ fontSize: '13px', fontWeight: '800' }}>Muro de Gratitud e Insignias</h5>
                     <span style={{ fontSize: '10.5px', color: 'var(--text-muted)' }}>Reconocimientos comunitarios</span>
@@ -5435,12 +5644,13 @@ const AdminDashboard = ({ initialTab = 'analytics' }) => {
                     onClick={() => {
                       setSelectedGroup(g);
                       setChatChannel('group');
+                      setMobileChatView('chat');
                     }}
                     className={`duo-card ${selectedGroup?.id === g.id && chatChannel === 'group' ? 'selected' : ''}`}
                     style={{ justifyContent: 'flex-start', padding: '8px 10px', gap: '10px' }}
                   >
                     <div style={{ width: '32px', height: '32px', borderRadius: '50%', backgroundColor: 'var(--accent-light)', color: 'var(--accent)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '900', fontSize: '14px' }}>
-                      
+                      <Users size={16} />
                     </div>
                     <div style={{ textAlign: 'left', flex: 1, overflow: 'hidden' }}>
                       <h5 style={{ fontSize: '12.5px', fontWeight: '800', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{g.name}</h5>
@@ -5462,6 +5672,7 @@ const AdminDashboard = ({ initialTab = 'analytics' }) => {
                       setKudoReceiverName(`${m.first_name} ${m.last_name}`);
                       setChatChannel('direct');
                       setSelectedGroup(null);
+                      setMobileChatView('chat');
                     }}
                     className={`duo-card ${kudoReceiverName === `${m.first_name} ${m.last_name}` && chatChannel === 'direct' ? 'selected' : ''}`}
                     style={{ justifyContent: 'flex-start', padding: '8px 10px', gap: '10px' }}
@@ -5479,19 +5690,30 @@ const AdminDashboard = ({ initialTab = 'analytics' }) => {
             </div>
 
             {/* Panel Derecho: Sala de Chat Stream de Bienestar con Entrada Fija */}
-            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', backgroundColor: 'var(--bg-primary)', height: '100%' }}>
+            <div className={`chat-main-panel ${mobileChatView === 'list' ? 'mobile-chat-hidden' : ''}`} style={{ flex: 1, display: 'flex', flexDirection: 'column', backgroundColor: 'var(--bg-primary)', height: '100%' }}>
               
               {/* Cabecera de la Sala Activa */}
-              <div style={{ padding: '14px 20px', borderBottom: '1px solid var(--border)', backgroundColor: 'var(--bg-secondary)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div style={{ padding: '12px 18px', borderBottom: '1px solid var(--border)', backgroundColor: 'var(--bg-secondary)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '10px' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                  <div style={{ width: '38px', height: '38px', borderRadius: '50%', backgroundColor: 'var(--primary)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '900', fontSize: '16px' }}>
-                    {chatChannel === 'general' ? '' : chatChannel === 'kudos' ? '' : chatChannel === 'group' ? '' : ''}
+                  {/* Botón Volver a la Lista de Chats en Celulares (Estilo WhatsApp) */}
+                  <button
+                    type="button"
+                    onClick={() => setMobileChatView('list')}
+                    className="btn btn-secondary mobile-chat-back-btn"
+                    style={{ padding: '6px 10px', borderRadius: '10px', fontSize: '11.5px', fontWeight: '800', alignItems: 'center', gap: '4px' }}
+                  >
+                    <ArrowLeft size={15} />
+                    <span>Chats</span>
+                  </button>
+
+                  <div style={{ width: '36px', height: '36px', borderRadius: '50%', backgroundColor: 'var(--primary)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '900', fontSize: '15px' }}>
+                    {chatChannel === 'general' ? <MessageSquare size={17} /> : chatChannel === 'kudos' ? <Heart size={17} /> : chatChannel === 'group' ? <Users size={17} /> : (kudoReceiverName?.[0] || '💬')}
                   </div>
                   <div>
-                    <h4 style={{ fontSize: '14.5px', fontWeight: '900' }}>
+                    <h4 style={{ fontSize: '14px', fontWeight: '900', margin: 0 }}>
                       {chatChannel === 'general' ? 'Canal General EquilibrIA' : chatChannel === 'kudos' ? 'Muro de Gratitud e Insignias' : chatChannel === 'group' ? selectedGroup?.name || 'Grupo de Trabajo' : `Chat Directo con ${kudoReceiverName || 'Compañero'}`}
                     </h4>
-                    <span style={{ fontSize: '11px', color: 'var(--success)', fontWeight: '700' }}>● En línea • Mensajería Cifrada de Equipo</span>
+                    <span style={{ fontSize: '10.5px', color: 'var(--success)', fontWeight: '700' }}>● En línea • Mensajería Cifrada de Equipo</span>
                   </div>
                 </div>
               </div>
@@ -5694,11 +5916,12 @@ const AdminDashboard = ({ initialTab = 'analytics' }) => {
                   </p>
                 </div>
 
-                <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                <div className="wellbeing-subtabs" style={{ display: 'flex', gap: '8px', overflowX: 'auto', paddingBottom: '6px', flexWrap: 'nowrap', WebkitOverflowScrolling: 'touch', scrollbarWidth: 'none', maxWidth: '100%' }}>
                   <button
                     type="button"
                     onClick={() => setInstSubTab('institutions')}
                     className={`duo-pill ${instSubTab === 'institutions' ? 'selected' : ''}`}
+                    style={{ whiteSpace: 'nowrap', flexShrink: 0 }}
                   >
                     <Building size={13} />
                     <span>Instituciones ({allInstitutions.length})</span>
@@ -5707,6 +5930,7 @@ const AdminDashboard = ({ initialTab = 'analytics' }) => {
                     type="button"
                     onClick={() => setInstSubTab('departments')}
                     className={`duo-pill ${instSubTab === 'departments' ? 'selected' : ''}`}
+                    style={{ whiteSpace: 'nowrap', flexShrink: 0 }}
                   >
                     <Layers size={13} />
                     <span>Departamentos ({departmentsList.length})</span>
@@ -5715,6 +5939,7 @@ const AdminDashboard = ({ initialTab = 'analytics' }) => {
                     type="button"
                     onClick={() => setInstSubTab('invitations')}
                     className={`duo-pill ${instSubTab === 'invitations' ? 'selected' : ''}`}
+                    style={{ whiteSpace: 'nowrap', flexShrink: 0 }}
                   >
                     <Key size={13} />
                     <span>Invitaciones ({invitationsList.length})</span>
@@ -5725,8 +5950,31 @@ const AdminDashboard = ({ initialTab = 'analytics' }) => {
               {/* SUB-PESTAÑA 1: INSTITUCIONES */}
               {instSubTab === 'institutions' && (
                 <div>
-                  {/* Formulario de Creación Exclusivo para SuperAdmin */}
+                  {/* Botón Compacto para Desplegar Creación Exclusivo para SuperAdmin */}
                   {user?.role === 'superadmin' && (
+                    <div style={{ marginBottom: '16px' }}>
+                      <button
+                        type="button"
+                        onClick={() => setShowCreateInstForm(prev => !prev)}
+                        className="btn btn-primary"
+                        style={{
+                          padding: '9px 16px',
+                          borderRadius: '12px',
+                          fontSize: '12.5px',
+                          fontWeight: '800',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '6px'
+                        }}
+                      >
+                        <PlusCircle size={15} />
+                        <span>{showCreateInstForm ? '✕ Cerrar Formulario' : '＋ Crear Nueva Institución'}</span>
+                      </button>
+                    </div>
+                  )}
+
+                  {/* Formulario de Creación Exclusivo para SuperAdmin (Colapsable) */}
+                  {user?.role === 'superadmin' && showCreateInstForm && (
                     <div style={{ backgroundColor: 'var(--bg-secondary)', padding: '20px', borderRadius: '16px', border: '1px solid var(--border)', marginBottom: '24px' }}>
                       <h4 style={{ fontSize: '14px', fontWeight: '900', color: 'var(--primary)', marginBottom: '14px', display: 'flex', alignItems: 'center', gap: '6px' }}>
                         <PlusCircle size={16} /> Crear Nueva Organización Institucional (Exclusivo SuperAdmin)
@@ -5964,64 +6212,87 @@ const AdminDashboard = ({ initialTab = 'analytics' }) => {
                     </div>
                   )}
 
-                  {/* Formulario de Creación de Departamento */}
-                  <div style={{ backgroundColor: 'var(--bg-secondary)', padding: '18px', borderRadius: '16px', border: '1px solid var(--border)', marginBottom: '22px' }}>
-                    <h4 style={{ fontSize: '14px', fontWeight: '900', color: 'var(--primary)', marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                      <PlusCircle size={16} /> Crear Departamento en la Institución
-                    </h4>
-
-                    <form onSubmit={handleCreateDepartment} style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '12px', alignItems: 'end' }}>
-                      <div>
-                        <label style={{ fontSize: '10.5px', fontWeight: '800', display: 'block', marginBottom: '4px' }}>NOMBRE DEL DEPARTAMENTO *:</label>
-                        <input
-                          type="text"
-                          placeholder="Ej. Innovación y Desarrollo"
-                          value={newDeptName}
-                          onChange={(e) => setNewDeptName(e.target.value)}
-                          required
-                          style={{ width: '100%', fontSize: '12px', padding: '9px', borderRadius: '9px' }}
-                        />
-                      </div>
-
-                      <div>
-                        <label style={{ fontSize: '10.5px', fontWeight: '800', display: 'block', marginBottom: '4px' }}>CÓDIGO ÚNICO (Ej. I+D, TEC, RRHH) *:</label>
-                        <input
-                          type="text"
-                          placeholder="Ej. INV"
-                          value={newDeptCode}
-                          onChange={(e) => setNewDeptCode(e.target.value)}
-                          required
-                          style={{ width: '100%', fontSize: '12px', padding: '9px', borderRadius: '9px', textTransform: 'uppercase' }}
-                        />
-                      </div>
-
-                      <div>
-                        <label style={{ fontSize: '10.5px', fontWeight: '800', display: 'block', marginBottom: '4px' }}>ASIGNAR LÍDER (OPCIONAL):</label>
-                        <select
-                          value={newDeptLeaderId}
-                          onChange={(e) => setNewDeptLeaderId(e.target.value)}
-                          style={{ width: '100%', fontSize: '12px', padding: '9px', borderRadius: '9px', backgroundColor: 'var(--bg-primary)', border: '1px solid var(--border)', color: 'var(--text-primary)' }}
-                        >
-                          <option value="">Sin Líder Asignado</option>
-                          {members.map(m => (
-                            <option key={m.id} value={m.id}>{m.first_name} {m.last_name} ({m.email})</option>
-                          ))}
-                        </select>
-                      </div>
-
-                      <div>
-                        <button
-                          type="submit"
-                          className="btn btn-primary"
-                          disabled={deptCreateLoading}
-                          style={{ width: '100%', padding: '10px', borderRadius: '10px', fontWeight: '900', height: '40px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
-                        >
-                          {deptCreateLoading ? <Loader className="animate-spin" size={14} /> : <Plus size={14} />}
-                          <span>Crear Departamento</span>
-                        </button>
-                      </div>
-                    </form>
+                  {/* Botón para Desplegar Formulario de Creación de Departamento */}
+                  <div style={{ marginBottom: '16px' }}>
+                    <button
+                      type="button"
+                      onClick={() => setShowCreateDeptForm(prev => !prev)}
+                      className="btn btn-primary"
+                      style={{
+                        padding: '9px 16px',
+                        borderRadius: '12px',
+                        fontSize: '12.5px',
+                        fontWeight: '800',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '6px'
+                      }}
+                    >
+                      <PlusCircle size={15} />
+                      <span>{showCreateDeptForm ? '✕ Cerrar Formulario' : '＋ Crear Nuevo Departamento'}</span>
+                    </button>
                   </div>
+
+                  {/* Formulario de Creación de Departamento (Colapsable) */}
+                  {showCreateDeptForm && (
+                    <div style={{ backgroundColor: 'var(--bg-secondary)', padding: '18px', borderRadius: '16px', border: '1px solid var(--border)', marginBottom: '22px' }}>
+                      <h4 style={{ fontSize: '14px', fontWeight: '900', color: 'var(--primary)', marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <PlusCircle size={16} /> Crear Departamento en la Institución
+                      </h4>
+
+                      <form onSubmit={handleCreateDepartment} style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '12px', alignItems: 'end' }}>
+                        <div>
+                          <label style={{ fontSize: '10.5px', fontWeight: '800', display: 'block', marginBottom: '4px' }}>NOMBRE DEL DEPARTAMENTO *:</label>
+                          <input
+                            type="text"
+                            placeholder="Ej. Innovación y Desarrollo"
+                            value={newDeptName}
+                            onChange={(e) => setNewDeptName(e.target.value)}
+                            required
+                            style={{ width: '100%', fontSize: '12px', padding: '9px', borderRadius: '9px' }}
+                          />
+                        </div>
+
+                        <div>
+                          <label style={{ fontSize: '10.5px', fontWeight: '800', display: 'block', marginBottom: '4px' }}>CÓDIGO ÚNICO (Ej. I+D, TEC, RRHH) *:</label>
+                          <input
+                            type="text"
+                            placeholder="Ej. INV"
+                            value={newDeptCode}
+                            onChange={(e) => setNewDeptCode(e.target.value)}
+                            required
+                            style={{ width: '100%', fontSize: '12px', padding: '9px', borderRadius: '9px', textTransform: 'uppercase' }}
+                          />
+                        </div>
+
+                        <div>
+                          <label style={{ fontSize: '10.5px', fontWeight: '800', display: 'block', marginBottom: '4px' }}>ASIGNAR LÍDER (OPCIONAL):</label>
+                          <select
+                            value={newDeptLeaderId}
+                            onChange={(e) => setNewDeptLeaderId(e.target.value)}
+                            style={{ width: '100%', fontSize: '12px', padding: '9px', borderRadius: '9px', backgroundColor: 'var(--bg-primary)', border: '1px solid var(--border)', color: 'var(--text-primary)' }}
+                          >
+                            <option value="">Sin Líder Asignado</option>
+                            {members.map(m => (
+                              <option key={m.id} value={m.id}>{m.first_name} {m.last_name} ({m.email})</option>
+                            ))}
+                          </select>
+                        </div>
+
+                        <div>
+                          <button
+                            type="submit"
+                            className="btn btn-primary"
+                            disabled={deptCreateLoading}
+                            style={{ width: '100%', padding: '10px', borderRadius: '10px', fontWeight: '900', height: '40px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
+                          >
+                            {deptCreateLoading ? <Loader className="animate-spin" size={14} /> : <Plus size={14} />}
+                            <span>Crear Departamento</span>
+                          </button>
+                        </div>
+                      </form>
+                    </div>
+                  )}
 
                   {/* Listado de Departamentos */}
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '14px' }}>
@@ -6520,21 +6791,15 @@ const AdminDashboard = ({ initialTab = 'analytics' }) => {
                     return (
                       <div 
                         key={expr.id}
+                        className="culture-expr-row"
                         style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'space-between',
-                          padding: '10px 16px',
-                          borderRadius: '12px',
                           backgroundColor: idx % 2 === 0 ? 'var(--bg-primary)' : 'var(--bg-secondary)',
                           borderLeft: `4px solid ${badgeColor}`,
-                          opacity: expr.active ? 1 : 0.6,
-                          gap: '14px',
-                          transition: 'all 0.15s ease'
+                          opacity: expr.active ? 1 : 0.6
                         }}
                       >
                         {/* Nivel y Término */}
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', minWidth: '190px' }}>
+                        <div className="culture-term-badge" style={{ display: 'flex', alignItems: 'center', gap: '10px', minWidth: '180px' }}>
                           <span style={{
                             fontSize: '10.5px',
                             fontWeight: '900',
@@ -6545,7 +6810,8 @@ const AdminDashboard = ({ initialTab = 'analytics' }) => {
                             whiteSpace: 'nowrap',
                             display: 'inline-flex',
                             alignItems: 'center',
-                            gap: '5px'
+                            gap: '5px',
+                            flexShrink: 0
                           }} title={badgeDesc}>
                             <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: badgeColor, display: 'inline-block' }}></span>
                             <span>{badgeIcon} • {badgeDesc}</span>
@@ -6561,20 +6827,20 @@ const AdminDashboard = ({ initialTab = 'analytics' }) => {
                           </div>
                         </div>
 
-                        {/* Significado y Ejemplo */}
-                        <div style={{ flex: 1, minWidth: '220px' }}>
-                          <p style={{ fontSize: '12px', color: 'var(--text-primary)', margin: 0, lineHeight: '1.35' }}>
+                        {/* Significado y Ejemplo Completo */}
+                        <div className="culture-meaning-box" style={{ flex: 1, minWidth: 0, wordBreak: 'break-word', overflowWrap: 'break-word' }}>
+                          <p style={{ fontSize: '12.5px', color: 'var(--text-primary)', margin: 0, lineHeight: '1.45', wordBreak: 'break-word', whiteSpace: 'normal' }}>
                             {expr.meaning}
                           </p>
                           {expr.example && (
-                            <span style={{ fontSize: '11px', color: 'var(--text-muted)', fontStyle: 'italic', display: 'block', marginTop: '2px' }}>
-                               "{expr.example}"
+                            <span style={{ fontSize: '11px', color: 'var(--text-muted)', fontStyle: 'italic', display: 'block', marginTop: '3px', wordBreak: 'break-word' }}>
+                              "{expr.example}"
                             </span>
                           )}
                         </div>
 
                         {/* Estado y Acciones Compactas */}
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
+                        <div className="culture-actions-box" style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
                           <button
                             type="button"
                             onClick={() => handleToggleExpressionActive(expr)}

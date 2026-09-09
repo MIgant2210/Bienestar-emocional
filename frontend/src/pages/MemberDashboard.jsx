@@ -162,6 +162,7 @@ const MemberDashboard = ({ initialTab }) => {
   const [members, setMembers] = useState([]);
   const [kudosList, setKudosList] = useState([]);
   const [chatChannel, setChatChannel] = useState('general'); // 'general', 'kudos', 'group', 'direct'
+  const [mobileChatView, setMobileChatView] = useState('list'); // 'list' | 'chat'
   const [kudoReceiverName, setKudoReceiverName] = useState('');
   const [kudoDept, setKudoDept] = useState('General');
   const [kudoMessage, setKudoMessage] = useState('');
@@ -2129,10 +2130,10 @@ const MemberDashboard = ({ initialTab }) => {
 
         {/* NUEVO MÓDULO 3: CHAT DE EQUIPO, SALAS Y GRUPOS DE TRABAJO */}
         {activeTab === 'kudos' && (
-          <div className="glass-card animate-fade" style={{ padding: '0', overflow: 'hidden', borderRadius: '24px', border: '1px solid var(--border)', height: '650px', display: 'flex' }}>
+          <div className="glass-card animate-fade chat-workspace-container" style={{ padding: '0' }}>
             
             {/* Panel Izquierdo: Directorio de Canales, Grupos y Colegas */}
-            <div style={{ width: '300px', backgroundColor: 'var(--bg-secondary)', borderRight: '1px solid var(--border)', display: 'flex', flexDirection: 'column' }}>
+            <div className={`chat-sidebar-panel ${mobileChatView === 'chat' ? 'mobile-chat-hidden' : ''}`} style={{ width: '300px', backgroundColor: 'var(--bg-secondary)', borderRight: '1px solid var(--border)', display: 'flex', flexDirection: 'column' }}>
               <div style={{ padding: '16px', borderBottom: '1px solid var(--border)', backgroundColor: 'var(--bg-tertiary)' }}>
                 <h4 style={{ fontSize: '14px', fontWeight: '900', display: 'flex', alignItems: 'center', gap: '8px' }}>
                   <MessageSquare size={16} style={{ color: 'var(--primary)' }} /> Chat & Grupos de Equipo
@@ -2152,11 +2153,11 @@ const MemberDashboard = ({ initialTab }) => {
               <div style={{ flex: 1, overflowY: 'auto', padding: '10px', display: 'grid', gap: '6px' }}>
                 <button 
                   type="button"
-                  onClick={() => { setChatChannel('general'); setSelectedGroup(null); }}
+                  onClick={() => { setChatChannel('general'); setSelectedGroup(null); setMobileChatView('chat'); }}
                   className={`duo-card ${chatChannel === 'general' ? 'selected' : ''}`}
                   style={{ justifyContent: 'flex-start', padding: '10px 12px', gap: '10px' }}
                 >
-                  <MessageSquare size={20} style={{ color: 'var(--primary)', flexShrink: 0 }} />
+                  <MessageSquare size={18} style={{ color: 'var(--primary)', flexShrink: 0 }} />
                   <div style={{ textAlign: 'left' }}>
                     <h5 style={{ fontSize: '13px', fontWeight: '800' }}>Canal General EquilibrIA</h5>
                     <span style={{ fontSize: '10.5px', color: 'var(--text-muted)' }}>Comunidad Institucional</span>
@@ -2165,11 +2166,11 @@ const MemberDashboard = ({ initialTab }) => {
 
                 <button 
                   type="button"
-                  onClick={() => { setChatChannel('kudos'); setSelectedGroup(null); }}
+                  onClick={() => { setChatChannel('kudos'); setSelectedGroup(null); setMobileChatView('chat'); }}
                   className={`duo-card ${chatChannel === 'kudos' ? 'selected' : ''}`}
                   style={{ justifyContent: 'flex-start', padding: '10px 12px', gap: '10px' }}
                 >
-                  <Heart size={20} style={{ color: '#ec4899', flexShrink: 0 }} />
+                  <Heart size={18} style={{ color: '#ec4899', flexShrink: 0 }} />
                   <div style={{ textAlign: 'left' }}>
                     <h5 style={{ fontSize: '13px', fontWeight: '800' }}>Muro de Gratitud e Insignias</h5>
                     <span style={{ fontSize: '10.5px', color: 'var(--text-muted)' }}>Reconocimientos comunitarios</span>
@@ -2187,6 +2188,7 @@ const MemberDashboard = ({ initialTab }) => {
                     onClick={() => {
                       setSelectedGroup(g);
                       setChatChannel('group');
+                      setMobileChatView('chat');
                     }}
                     className={`duo-card ${selectedGroup?.id === g.id && chatChannel === 'group' ? 'selected' : ''}`}
                     style={{ justifyContent: 'flex-start', padding: '8px 10px', gap: '10px' }}
@@ -2214,6 +2216,7 @@ const MemberDashboard = ({ initialTab }) => {
                       setKudoReceiverName(`${m.first_name} ${m.last_name}`);
                       setChatChannel('direct');
                       setSelectedGroup(null);
+                      setMobileChatView('chat');
                     }}
                     className={`duo-card ${kudoReceiverName === `${m.first_name} ${m.last_name}` && chatChannel === 'direct' ? 'selected' : ''}`}
                     style={{ justifyContent: 'flex-start', padding: '8px 10px', gap: '10px' }}
@@ -2231,19 +2234,30 @@ const MemberDashboard = ({ initialTab }) => {
             </div>
 
             {/* Panel Derecho: Sala de Chat Stream de Bienestar con Entrada Fija */}
-            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', backgroundColor: 'var(--bg-primary)', height: '100%' }}>
+            <div className={`chat-main-panel ${mobileChatView === 'list' ? 'mobile-chat-hidden' : ''}`} style={{ flex: 1, display: 'flex', flexDirection: 'column', backgroundColor: 'var(--bg-primary)', height: '100%' }}>
               
               {/* Cabecera de la Sala Activa */}
-              <div style={{ padding: '14px 20px', borderBottom: '1px solid var(--border)', backgroundColor: 'var(--bg-secondary)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div style={{ padding: '12px 18px', borderBottom: '1px solid var(--border)', backgroundColor: 'var(--bg-secondary)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '10px' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                  <div style={{ width: '38px', height: '38px', borderRadius: '50%', backgroundColor: 'var(--primary)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '900', fontSize: '16px' }}>
-                    {chatChannel === 'general' ? <MessageSquare size={18} /> : chatChannel === 'kudos' ? <Heart size={18} /> : chatChannel === 'group' ? <Users size={18} /> : <User size={18} />}
+                  {/* Botón Volver a la Lista de Chats en Celulares (Estilo WhatsApp) */}
+                  <button
+                    type="button"
+                    onClick={() => setMobileChatView('list')}
+                    className="btn btn-secondary mobile-chat-back-btn"
+                    style={{ padding: '6px 10px', borderRadius: '10px', fontSize: '11.5px', fontWeight: '800', alignItems: 'center', gap: '4px' }}
+                  >
+                    <ArrowLeft size={15} />
+                    <span>Chats</span>
+                  </button>
+
+                  <div style={{ width: '36px', height: '36px', borderRadius: '50%', backgroundColor: 'var(--primary)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '900', fontSize: '15px' }}>
+                    {chatChannel === 'general' ? <MessageSquare size={17} /> : chatChannel === 'kudos' ? <Heart size={17} /> : chatChannel === 'group' ? <Users size={17} /> : <User size={17} />}
                   </div>
                   <div>
-                    <h4 style={{ fontSize: '14.5px', fontWeight: '900' }}>
+                    <h4 style={{ fontSize: '14px', fontWeight: '900', margin: 0 }}>
                       {chatChannel === 'general' ? 'Canal General EquilibrIA' : chatChannel === 'kudos' ? 'Muro de Gratitud e Insignias' : chatChannel === 'group' ? selectedGroup?.name || 'Grupo de Trabajo' : `Chat Directo con ${kudoReceiverName || 'Compañero'}`}
                     </h4>
-                    <span style={{ fontSize: '11px', color: 'var(--success)', fontWeight: '700' }}>● En línea • Mensajería Cifrada de Equipo</span>
+                    <span style={{ fontSize: '10.5px', color: 'var(--success)', fontWeight: '700' }}>● En línea • Mensajería Cifrada de Equipo</span>
                   </div>
                 </div>
               </div>
