@@ -2509,7 +2509,9 @@ input[type="date"]:focus, input[type="datetime-local"]:focus {
   align-items: flex-end;
   justify-content: center;
   width: 100%;
-  min-height: 320px;
+  min-height: 330px;
+  transform: scale(0.92);
+  transform-origin: bottom center;
   transition: transform 0.2s ease;
 }
 
@@ -2545,23 +2547,25 @@ input[type="date"]:focus, input[type="datetime-local"]:focus {
   }
 
   .avatar-stage-box {
-    min-height: 220px !important;
-    height: 220px !important;
+    min-height: 240px !important;
+    height: 240px !important;
     padding: 8px 12px 8px !important;
     border-radius: 18px !important;
     box-shadow: 0 10px 24px -8px rgba(0,0,0,0.2) !important;
   }
 
   .avatar-stage-platform {
-    width: 160px !important;
-    height: 34px !important;
+    width: 140px !important;
+    height: 28px !important;
     bottom: 8px !important;
   }
 
   .avatar-stage-inner {
-    min-height: 185px !important;
-    transform: scale(0.82) !important;
+    min-height: 195px !important;
+    height: 195px !important;
+    transform: scale(0.56) !important;
     transform-origin: bottom center !important;
+    margin-bottom: 4px !important;
   }
 
   .avatar-mobile-quick-save {
