@@ -2330,5 +2330,129 @@ input[type="date"]:focus, input[type="datetime-local"]:focus {
   }
 }
 
+/* ==========================================================================
+   INSTITUCIONES Y DEPARTAMENTOS RESPONSIVE (SUBTABS & FORMULARIOS SIN RECORTES)
+   ========================================================================== */
+.institutions-subtabs-bar {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+@media (max-width: 640px) {
+  .institutions-subtabs-bar {
+    display: grid !important;
+    grid-template-columns: repeat(3, 1fr) !important;
+    gap: 5px !important;
+    width: 100% !important;
+  }
+
+  .institutions-subtabs-bar .duo-pill {
+    padding: 8px 3px !important;
+    font-size: 10.5px !important;
+    justify-content: center !important;
+    text-align: center !important;
+    width: 100% !important;
+    gap: 4px !important;
+    border-bottom-width: 2px !important;
+  }
+
+  .institutions-subtabs-bar .duo-pill span {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+}
+
+/* Formularios de Creación de Instituciones y Departamentos */
+.inst-form-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 14px;
+  margin-bottom: 14px;
+}
+
+@media (max-width: 640px) {
+  .inst-form-grid {
+    grid-template-columns: 1fr !important;
+    gap: 12px !important;
+  }
+}
+
+.dept-form-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 12px;
+  align-items: end;
+}
+
+@media (max-width: 640px) {
+  .dept-form-grid {
+    grid-template-columns: 1fr !important;
+    gap: 12px !important;
+    align-items: stretch !important;
+  }
+}
+
+.inst-creation-card {
+  background-color: var(--bg-secondary);
+  padding: 20px;
+  border-radius: 16px;
+  border: 1px solid var(--border);
+  margin-bottom: 24px;
+  box-sizing: border-box;
+  width: 100%;
+}
+
+@media (max-width: 640px) {
+  .inst-creation-card {
+    padding: 14px 12px !important;
+    border-radius: 14px !important;
+    margin-bottom: 16px !important;
+  }
+}
+
+/* Modal Overlay Flotante de Edición de Expresión Cultural */
+.culture-expr-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background-color: rgba(0, 0, 0, 0.75);
+  backdrop-filter: blur(8px);
+  z-index: 99999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  animation: fadeIn 0.2s ease;
+}
+
+.culture-expr-modal-box {
+  max-width: 620px;
+  width: 100%;
+  max-height: 90vh;
+  overflow-y: auto;
+  padding: 24px;
+  border-radius: 20px;
+  border: 2px solid var(--primary);
+  background-color: var(--bg-secondary);
+  box-shadow: var(--tech-glow);
+  box-sizing: border-box;
+}
+
+@media (max-width: 640px) {
+  .culture-expr-modal-backdrop {
+    align-items: flex-start !important;
+    padding: 10px !important;
+    padding-top: 16px !important;
+  }
+
+  .culture-expr-modal-box {
+    max-height: 94vh !important;
+    padding: 16px 14px !important;
+    border-radius: 16px !important;
+  }
+}
+
+
 
 

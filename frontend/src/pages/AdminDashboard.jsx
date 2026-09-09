@@ -5916,33 +5916,30 @@ const AdminDashboard = ({ initialTab = 'analytics' }) => {
                   </p>
                 </div>
 
-                <div className="wellbeing-subtabs" style={{ display: 'flex', gap: '8px', overflowX: 'auto', paddingBottom: '6px', flexWrap: 'nowrap', WebkitOverflowScrolling: 'touch', scrollbarWidth: 'none', maxWidth: '100%' }}>
+                <div className="institutions-subtabs-bar">
                   <button
                     type="button"
                     onClick={() => setInstSubTab('institutions')}
                     className={`duo-pill ${instSubTab === 'institutions' ? 'selected' : ''}`}
-                    style={{ whiteSpace: 'nowrap', flexShrink: 0 }}
                   >
                     <Building size={13} />
-                    <span>Instituciones ({allInstitutions.length})</span>
+                    <span>Institución ({allInstitutions.length})</span>
                   </button>
                   <button
                     type="button"
                     onClick={() => setInstSubTab('departments')}
                     className={`duo-pill ${instSubTab === 'departments' ? 'selected' : ''}`}
-                    style={{ whiteSpace: 'nowrap', flexShrink: 0 }}
                   >
                     <Layers size={13} />
-                    <span>Departamentos ({departmentsList.length})</span>
+                    <span>Deptos ({departmentsList.length})</span>
                   </button>
                   <button
                     type="button"
                     onClick={() => setInstSubTab('invitations')}
                     className={`duo-pill ${instSubTab === 'invitations' ? 'selected' : ''}`}
-                    style={{ whiteSpace: 'nowrap', flexShrink: 0 }}
                   >
                     <Key size={13} />
-                    <span>Invitaciones ({invitationsList.length})</span>
+                    <span>Invitación ({invitationsList.length})</span>
                   </button>
                 </div>
               </div>
@@ -5975,13 +5972,13 @@ const AdminDashboard = ({ initialTab = 'analytics' }) => {
 
                   {/* Formulario de Creación Exclusivo para SuperAdmin (Colapsable) */}
                   {user?.role === 'superadmin' && showCreateInstForm && (
-                    <div style={{ backgroundColor: 'var(--bg-secondary)', padding: '20px', borderRadius: '16px', border: '1px solid var(--border)', marginBottom: '24px' }}>
+                    <div className="inst-creation-card">
                       <h4 style={{ fontSize: '14px', fontWeight: '900', color: 'var(--primary)', marginBottom: '14px', display: 'flex', alignItems: 'center', gap: '6px' }}>
                         <PlusCircle size={16} /> Crear Nueva Organización Institucional (Exclusivo SuperAdmin)
                       </h4>
 
                       <form onSubmit={handleCreateInstitution}>
-                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '14px', marginBottom: '14px' }}>
+                        <div className="inst-form-grid">
                           <div>
                             <label style={{ fontSize: '11px', fontWeight: '800', display: 'block', marginBottom: '4px' }}>NOMBRE DE LA INSTITUCIÓN *:</label>
                             <input
@@ -5990,7 +5987,7 @@ const AdminDashboard = ({ initialTab = 'analytics' }) => {
                               value={newInstName}
                               onChange={(e) => setNewInstName(e.target.value)}
                               required
-                              style={{ width: '100%', borderRadius: '10px', fontSize: '12px', padding: '10px' }}
+                              style={{ width: '100%', borderRadius: '10px', fontSize: '12px', padding: '10px', boxSizing: 'border-box' }}
                             />
                           </div>
 
@@ -6015,7 +6012,7 @@ const AdminDashboard = ({ initialTab = 'analytics' }) => {
                               placeholder="contacto@institucion.edu.gt"
                               value={newInstEmail}
                               onChange={(e) => setNewInstEmail(e.target.value)}
-                              style={{ width: '100%', borderRadius: '10px', fontSize: '12px', padding: '10px' }}
+                              style={{ width: '100%', borderRadius: '10px', fontSize: '12px', padding: '10px', boxSizing: 'border-box' }}
                             />
                           </div>
 
@@ -6026,7 +6023,7 @@ const AdminDashboard = ({ initialTab = 'analytics' }) => {
                               placeholder="+502 2345-6789"
                               value={newInstPhone}
                               onChange={(e) => setNewInstPhone(e.target.value)}
-                              style={{ width: '100%', borderRadius: '10px', fontSize: '12px', padding: '10px' }}
+                              style={{ width: '100%', borderRadius: '10px', fontSize: '12px', padding: '10px', boxSizing: 'border-box' }}
                             />
                           </div>
 
@@ -6037,7 +6034,7 @@ const AdminDashboard = ({ initialTab = 'analytics' }) => {
                               placeholder="Ciudad de Guatemala"
                               value={newInstCity}
                               onChange={(e) => setNewInstCity(e.target.value)}
-                              style={{ width: '100%', borderRadius: '10px', fontSize: '12px', padding: '10px' }}
+                              style={{ width: '100%', borderRadius: '10px', fontSize: '12px', padding: '10px', boxSizing: 'border-box' }}
                             />
                           </div>
 
@@ -6047,7 +6044,7 @@ const AdminDashboard = ({ initialTab = 'analytics' }) => {
                               type="text"
                               value={newInstCountry}
                               onChange={(e) => setNewInstCountry(e.target.value)}
-                              style={{ width: '100%', borderRadius: '10px', fontSize: '12px', padding: '10px' }}
+                              style={{ width: '100%', borderRadius: '10px', fontSize: '12px', padding: '10px', boxSizing: 'border-box' }}
                             />
                           </div>
 
@@ -6058,7 +6055,7 @@ const AdminDashboard = ({ initialTab = 'analytics' }) => {
                               placeholder="ej. universidad.edu.gt, facultad.edu.gt"
                               value={newInstDomains}
                               onChange={(e) => setNewInstDomains(e.target.value)}
-                              style={{ width: '100%', borderRadius: '10px', fontSize: '12px', padding: '10px' }}
+                              style={{ width: '100%', borderRadius: '10px', fontSize: '12px', padding: '10px', boxSizing: 'border-box' }}
                             />
                           </div>
                         </div>
@@ -6235,12 +6232,12 @@ const AdminDashboard = ({ initialTab = 'analytics' }) => {
 
                   {/* Formulario de Creación de Departamento (Colapsable) */}
                   {showCreateDeptForm && (
-                    <div style={{ backgroundColor: 'var(--bg-secondary)', padding: '18px', borderRadius: '16px', border: '1px solid var(--border)', marginBottom: '22px' }}>
+                    <div className="inst-creation-card">
                       <h4 style={{ fontSize: '14px', fontWeight: '900', color: 'var(--primary)', marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '6px' }}>
                         <PlusCircle size={16} /> Crear Departamento en la Institución
                       </h4>
 
-                      <form onSubmit={handleCreateDepartment} style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '12px', alignItems: 'end' }}>
+                      <form onSubmit={handleCreateDepartment} className="dept-form-grid">
                         <div>
                           <label style={{ fontSize: '10.5px', fontWeight: '800', display: 'block', marginBottom: '4px' }}>NOMBRE DEL DEPARTAMENTO *:</label>
                           <input
@@ -6249,7 +6246,7 @@ const AdminDashboard = ({ initialTab = 'analytics' }) => {
                             value={newDeptName}
                             onChange={(e) => setNewDeptName(e.target.value)}
                             required
-                            style={{ width: '100%', fontSize: '12px', padding: '9px', borderRadius: '9px' }}
+                            style={{ width: '100%', fontSize: '12px', padding: '9px', borderRadius: '9px', boxSizing: 'border-box' }}
                           />
                         </div>
 
@@ -6261,7 +6258,7 @@ const AdminDashboard = ({ initialTab = 'analytics' }) => {
                             value={newDeptCode}
                             onChange={(e) => setNewDeptCode(e.target.value)}
                             required
-                            style={{ width: '100%', fontSize: '12px', padding: '9px', borderRadius: '9px', textTransform: 'uppercase' }}
+                            style={{ width: '100%', fontSize: '12px', padding: '9px', borderRadius: '9px', textTransform: 'uppercase', boxSizing: 'border-box' }}
                           />
                         </div>
 
@@ -6270,7 +6267,7 @@ const AdminDashboard = ({ initialTab = 'analytics' }) => {
                           <select
                             value={newDeptLeaderId}
                             onChange={(e) => setNewDeptLeaderId(e.target.value)}
-                            style={{ width: '100%', fontSize: '12px', padding: '9px', borderRadius: '9px', backgroundColor: 'var(--bg-primary)', border: '1px solid var(--border)', color: 'var(--text-primary)' }}
+                            style={{ width: '100%', fontSize: '12px', padding: '9px', borderRadius: '9px', backgroundColor: 'var(--bg-primary)', border: '1px solid var(--border)', color: 'var(--text-primary)', boxSizing: 'border-box' }}
                           >
                             <option value="">Sin Líder Asignado</option>
                             {members.map(m => (
@@ -6284,7 +6281,7 @@ const AdminDashboard = ({ initialTab = 'analytics' }) => {
                             type="submit"
                             className="btn btn-primary"
                             disabled={deptCreateLoading}
-                            style={{ width: '100%', padding: '10px', borderRadius: '10px', fontWeight: '900', height: '40px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
+                            style={{ width: '100%', padding: '10px', borderRadius: '10px', fontWeight: '900', height: '40px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', boxSizing: 'border-box' }}
                           >
                             {deptCreateLoading ? <Loader className="animate-spin" size={14} /> : <Plus size={14} />}
                             <span>Crear Departamento</span>
@@ -6555,145 +6552,155 @@ const AdminDashboard = ({ initialTab = 'analytics' }) => {
               </button>
             </div>
 
-            {/* FORMULARIO SUPERIOR EXPANDIBLE (SE ABRE ARRIBA AL PRESIONAR EL BOTÓN) */}
+            {/* MODAL OVERLAY FLOTANTE (SE ABRE DIRECTO DONDE ESTÁ EL USUARIO EN LA PANTALLA) */}
             {showExprModal && (
-              <div className="glass-card animate-scale" style={{
-                padding: '20px 24px',
-                borderRadius: '18px',
-                border: '2px solid var(--primary)',
-                backgroundColor: 'var(--bg-secondary)',
-                boxShadow: 'var(--shadow-md)'
-              }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px', borderBottom: '1px solid var(--border)', paddingBottom: '10px' }}>
-                  <h3 style={{ fontSize: '15px', fontWeight: '900', display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--primary)' }}>
-                    <BookOpen size={18} />
-                    <span>{editingExpr ? `Editar Expresión: "${editingExpr.term}"` : 'Registrar Nueva Expresión Cultural'}</span>
-                  </h3>
-                  <button
-                    type="button"
-                    onClick={() => setShowExprModal(false)}
-                    style={{ border: 'none', background: 'none', color: 'var(--text-muted)', cursor: 'pointer', fontSize: '18px', fontWeight: 'bold' }}
-                    title="Cerrar"
-                  >
-                    <X size={18} />
-                  </button>
-                </div>
-
-                <form onSubmit={handleSaveCulturalExpression} style={{ display: 'grid', gap: '12px' }}>
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '12px' }}>
-                    <div>
-                      <label style={{ fontSize: '10.5px', fontWeight: '800', color: 'var(--text-secondary)', display: 'block', marginBottom: '4px' }}>
-                        TÉRMINO O PALABRA: *
-                      </label>
-                      <input
-                        type="text"
-                        placeholder="Ej. cabal, chilero, patojo..."
-                        value={exprForm.term}
-                        onChange={(e) => setExprForm({ ...exprForm, term: e.target.value })}
-                        required
-                        disabled={!!editingExpr}
-                        style={{ width: '100%', borderRadius: '10px', padding: '8px 12px', fontSize: '12.5px' }}
-                      />
-                    </div>
-
-                    <div>
-                      <label style={{ fontSize: '10.5px', fontWeight: '800', color: 'var(--text-secondary)', display: 'block', marginBottom: '4px' }}>
-                        NIVEL DE SEGURIDAD: *
-                      </label>
-                      <select
-                        value={exprForm.safety_level}
-                        onChange={(e) => {
-                          const lvl = e.target.value;
-                          setExprForm({
-                            ...exprForm,
-                            safety_level: lvl,
-                            can_use: lvl === 'ALLOWED'
-                          });
-                        }}
-                        style={{ width: '100%', fontSize: '12px', padding: '8px 10px', borderRadius: '10px', backgroundColor: 'var(--bg-primary)', border: '1px solid var(--border)', color: 'var(--text-primary)' }}
-                      >
-                        <option value="ALLOWED">🟢 Nivel 1 (Permitida) • Uso sutil por IA</option>
-                        <option value="EXPLAINABLE">🟡 Nivel 2 (Solo Explicable) • Si el usuario pregunta</option>
-                        <option value="RESTRICTED">🔴 Nivel 3 (Restringida) • Vulgaridad / Bloqueo</option>
-                      </select>
-                    </div>
-
-                    <div>
-                      <label style={{ fontSize: '10.5px', fontWeight: '800', color: 'var(--text-secondary)', display: 'block', marginBottom: '4px' }}>
-                        CATEGORÍA:
-                      </label>
-                      <select
-                        value={exprForm.category}
-                        onChange={(e) => setExprForm({ ...exprForm, category: e.target.value })}
-                        style={{ width: '100%', fontSize: '12px', padding: '8px 10px', borderRadius: '10px', backgroundColor: 'var(--bg-primary)', border: '1px solid var(--border)', color: 'var(--text-primary)' }}
-                      >
-                        <option value="GUATEMALTEQUISMO">Guatemaltequismo</option>
-                        <option value="COLOQUIAL">Coloquialismo</option>
-                        <option value="JERGA">Jerga Popular</option>
-                      </select>
-                    </div>
-                  </div>
-
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '12px' }}>
-                    <div>
-                      <label style={{ fontSize: '10.5px', fontWeight: '800', color: 'var(--text-secondary)', display: 'block', marginBottom: '4px' }}>
-                        SIGNIFICADO: *
-                      </label>
-                      <input
-                        type="text"
-                        placeholder="Descripción clara y precisa del significado..."
-                        value={exprForm.meaning}
-                        onChange={(e) => setExprForm({ ...exprForm, meaning: e.target.value })}
-                        required
-                        style={{ width: '100%', borderRadius: '10px', padding: '8px 12px', fontSize: '12.5px' }}
-                      />
-                    </div>
-
-                    <div>
-                      <label style={{ fontSize: '10.5px', fontWeight: '800', color: 'var(--text-secondary)', display: 'block', marginBottom: '4px' }}>
-                        EJEMPLO DE USO COTIDIANO:
-                      </label>
-                      <input
-                        type="text"
-                        placeholder="Ej. Cabal, eso era lo que teníamos pendiente."
-                        value={exprForm.example}
-                        onChange={(e) => setExprForm({ ...exprForm, example: e.target.value })}
-                        style={{ width: '100%', borderRadius: '10px', padding: '8px 12px', fontSize: '12.5px' }}
-                      />
-                    </div>
-                  </div>
-
-                  <div>
-                    <label style={{ fontSize: '10.5px', fontWeight: '800', color: 'var(--text-secondary)', display: 'block', marginBottom: '4px' }}>
-                      NOTAS DE CONTEXTO (OPCIONAL):
-                    </label>
-                    <input
-                      type="text"
-                      placeholder="Ej. Uso positivo de afirmación / evitar dirigir al usuario..."
-                      value={exprForm.context_notes}
-                      onChange={(e) => setExprForm({ ...exprForm, context_notes: e.target.value })}
-                      style={{ width: '100%', borderRadius: '10px', padding: '8px 12px', fontSize: '12px' }}
-                    />
-                  </div>
-
-                  <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '4px' }}>
+              <div
+                className="culture-expr-modal-backdrop"
+                onClick={(e) => {
+                  if (e.target === e.currentTarget) {
+                    setShowExprModal(false);
+                    setEditingExpr(null);
+                  }
+                }}
+              >
+                <div className="culture-expr-modal-box animate-scale">
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', borderBottom: '1px solid var(--border)', paddingBottom: '12px' }}>
+                    <h3 style={{ fontSize: '15.5px', fontWeight: '900', display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--primary)', margin: 0 }}>
+                      <BookOpen size={18} />
+                      <span>{editingExpr ? `Editar Expresión: "${editingExpr.term}"` : 'Registrar Nueva Expresión Cultural'}</span>
+                    </h3>
                     <button
                       type="button"
-                      onClick={() => setShowExprModal(false)}
-                      className="btn btn-secondary"
-                      style={{ padding: '8px 16px', borderRadius: '10px', fontSize: '12px', fontWeight: '700' }}
+                      onClick={() => {
+                        setShowExprModal(false);
+                        setEditingExpr(null);
+                      }}
+                      style={{ border: 'none', background: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: '4px', display: 'flex', alignItems: 'center' }}
+                      title="Cerrar"
                     >
-                      Cancelar
-                    </button>
-                    <button
-                      type="submit"
-                      className="btn btn-primary"
-                      style={{ padding: '8px 22px', borderRadius: '10px', fontSize: '12px', fontWeight: '800' }}
-                    >
-                      {editingExpr ? 'Guardar Cambios' : ' Registrar Expresión'}
+                      <X size={20} />
                     </button>
                   </div>
-                </form>
+
+                  <form onSubmit={handleSaveCulturalExpression} style={{ display: 'grid', gap: '12px' }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '12px' }}>
+                      <div>
+                        <label style={{ fontSize: '10.5px', fontWeight: '800', color: 'var(--text-secondary)', display: 'block', marginBottom: '4px' }}>
+                          TÉRMINO O PALABRA: *
+                        </label>
+                        <input
+                          type="text"
+                          placeholder="Ej. cabal, chilero, patojo..."
+                          value={exprForm.term}
+                          onChange={(e) => setExprForm({ ...exprForm, term: e.target.value })}
+                          required
+                          disabled={!!editingExpr}
+                          style={{ width: '100%', borderRadius: '10px', padding: '8px 12px', fontSize: '12.5px', boxSizing: 'border-box' }}
+                        />
+                      </div>
+
+                      <div>
+                        <label style={{ fontSize: '10.5px', fontWeight: '800', color: 'var(--text-secondary)', display: 'block', marginBottom: '4px' }}>
+                          NIVEL DE SEGURIDAD: *
+                        </label>
+                        <select
+                          value={exprForm.safety_level}
+                          onChange={(e) => {
+                            const lvl = e.target.value;
+                            setExprForm({
+                              ...exprForm,
+                              safety_level: lvl,
+                              can_use: lvl === 'ALLOWED'
+                            });
+                          }}
+                          style={{ width: '100%', fontSize: '12px', padding: '8px 10px', borderRadius: '10px', backgroundColor: 'var(--bg-primary)', border: '1px solid var(--border)', color: 'var(--text-primary)', boxSizing: 'border-box' }}
+                        >
+                          <option value="ALLOWED">🟢 Nivel 1 (Permitida) • Uso sutil por IA</option>
+                          <option value="EXPLAINABLE">🟡 Nivel 2 (Solo Explicable) • Si el usuario pregunta</option>
+                          <option value="RESTRICTED">🔴 Nivel 3 (Restringida) • Vulgaridad / Bloqueo</option>
+                        </select>
+                      </div>
+
+                      <div>
+                        <label style={{ fontSize: '10.5px', fontWeight: '800', color: 'var(--text-secondary)', display: 'block', marginBottom: '4px' }}>
+                          CATEGORÍA:
+                        </label>
+                        <select
+                          value={exprForm.category}
+                          onChange={(e) => setExprForm({ ...exprForm, category: e.target.value })}
+                          style={{ width: '100%', fontSize: '12px', padding: '8px 10px', borderRadius: '10px', backgroundColor: 'var(--bg-primary)', border: '1px solid var(--border)', color: 'var(--text-primary)', boxSizing: 'border-box' }}
+                        >
+                          <option value="GUATEMALTEQUISMO">Guatemaltequismo</option>
+                          <option value="COLOQUIAL">Coloquialismo</option>
+                          <option value="JERGA">Jerga Popular</option>
+                        </select>
+                      </div>
+                    </div>
+
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '12px' }}>
+                      <div>
+                        <label style={{ fontSize: '10.5px', fontWeight: '800', color: 'var(--text-secondary)', display: 'block', marginBottom: '4px' }}>
+                          SIGNIFICADO: *
+                        </label>
+                        <input
+                          type="text"
+                          placeholder="Descripción clara y precisa del significado..."
+                          value={exprForm.meaning}
+                          onChange={(e) => setExprForm({ ...exprForm, meaning: e.target.value })}
+                          required
+                          style={{ width: '100%', borderRadius: '10px', padding: '8px 12px', fontSize: '12.5px', boxSizing: 'border-box' }}
+                        />
+                      </div>
+
+                      <div>
+                        <label style={{ fontSize: '10.5px', fontWeight: '800', color: 'var(--text-secondary)', display: 'block', marginBottom: '4px' }}>
+                          EJEMPLO DE USO COTIDIANO:
+                        </label>
+                        <input
+                          type="text"
+                          placeholder="Ej. Cabal, eso era lo que teníamos pendiente."
+                          value={exprForm.example}
+                          onChange={(e) => setExprForm({ ...exprForm, example: e.target.value })}
+                          style={{ width: '100%', borderRadius: '10px', padding: '8px 12px', fontSize: '12.5px', boxSizing: 'border-box' }}
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <label style={{ fontSize: '10.5px', fontWeight: '800', color: 'var(--text-secondary)', display: 'block', marginBottom: '4px' }}>
+                        NOTAS DE CONTEXTO (OPCIONAL):
+                      </label>
+                      <input
+                        type="text"
+                        placeholder="Ej. Uso positivo de afirmación / evitar dirigir al usuario..."
+                        value={exprForm.context_notes}
+                        onChange={(e) => setExprForm({ ...exprForm, context_notes: e.target.value })}
+                        style={{ width: '100%', borderRadius: '10px', padding: '8px 12px', fontSize: '12px', boxSizing: 'border-box' }}
+                      />
+                    </div>
+
+                    <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '6px' }}>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setShowExprModal(false);
+                          setEditingExpr(null);
+                        }}
+                        className="btn btn-secondary"
+                        style={{ padding: '8px 16px', borderRadius: '10px', fontSize: '12px', fontWeight: '700' }}
+                      >
+                        Cancelar
+                      </button>
+                      <button
+                        type="submit"
+                        className="btn btn-primary"
+                        style={{ padding: '8px 22px', borderRadius: '10px', fontSize: '12px', fontWeight: '800' }}
+                      >
+                        {editingExpr ? 'Guardar Cambios' : ' Registrar Expresión'}
+                      </button>
+                    </div>
+                  </form>
+                </div>
               </div>
             )}
 
