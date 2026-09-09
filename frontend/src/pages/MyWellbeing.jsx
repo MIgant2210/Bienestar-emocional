@@ -19,6 +19,7 @@ import ResourceAudioPlayer from '../components/ResourceAudioPlayer';
 import ResourceInteractivePlayer from '../components/ResourceInteractivePlayer';
 import ResourceAdminModal from '../components/ResourceAdminModal';
 import CustomSelect from '../components/CustomSelect';
+import AutoResponsiveContainer from '../components/AutoResponsiveContainer';
 
 const RESOURCE_TYPE_OPTIONS = [
   { value: 'Todos', label: 'Todos los Tipos (14)' },
@@ -1096,23 +1097,48 @@ const MyWellbeing = ({ onNavigateToTab, initialResourceId, onResourceCompleted }
               <div style={{ height: '240px', display: 'flex', justifyContent: 'center', alignItems: 'center', color: 'var(--text-muted)', fontSize: '13px' }}>
                 No hay registros disponibles en el período seleccionado.
               </div>
-            ) : (
-              <div className="chart-container-responsive">
-                <ResponsiveContainer width="100%" height="100%" minWidth={0}>
-                  <LineChart data={historyData.chart_data}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
-                    <XAxis dataKey="fecha" stroke="var(--text-muted)" fontSize={11} />
-                    <YAxis stroke="var(--text-muted)" fontSize={11} domain={[0, 100]} />
-                    <Tooltip contentStyle={{ backgroundColor: 'var(--bg-secondary)', borderColor: 'var(--border)', borderRadius: '10px', fontSize: '12px' }} />
-                    <Legend wrapperStyle={{ fontSize: '12px', paddingTop: '10px' }} />
-                    <Line type="monotone" dataKey="Estrés" stroke="var(--danger)" strokeWidth={2.5} dot={{ r: 3 }} />
-                    <Line type="monotone" dataKey="Motivación" stroke="var(--success)" strokeWidth={2.5} dot={{ r: 3 }} />
-                    <Line type="monotone" dataKey="Agotamiento" stroke="var(--warning)" strokeWidth={2} strokeDasharray="4 4" dot={{ r: 2 }} />
-                    <Line type="monotone" dataKey="Bienestar General" stroke="var(--primary)" strokeWidth={2.5} dot={{ r: 3 }} />
-                  </LineChart>
-                </ResponsiveContainer>
-              </div>
-            )}
+            ) : (() => {
+              const rawData = historyData.chart_data;
+              const chartData = rawData.length === 1 ? [
+                { ...rawData[0], fechaDisplay: `${rawData[0].fecha || 'Hoy'} (AM)` },
+                { ...rawData[0], fechaDisplay: `${rawData[0].fecha || 'Hoy'} (PM)` }
+              ] : rawData.map(d => ({ ...d, fechaDisplay: d.fecha }));
+
+              return (
+                <div>
+                  {rawData.length === 1 && (
+                    <div style={{
+                      fontSize: '11px',
+                      fontWeight: '800',
+                      color: 'var(--primary)',
+                      backgroundColor: 'var(--primary-light)',
+                      border: '1px solid var(--border)',
+                      padding: '3px 8px',
+                      borderRadius: '8px',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '4px',
+                      marginBottom: '10px'
+                    }}>
+                      <Sparkles size={12} /> Mostrando métricas de hoy. La curva comparativa se proyectará al registrar más días.
+                    </div>
+                  )}
+                  <AutoResponsiveContainer height={240}>
+                    <LineChart data={chartData} margin={{ top: 10, right: 14, left: -14, bottom: 5 }}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" opacity={0.6} />
+                      <XAxis dataKey="fechaDisplay" stroke="var(--text-muted)" fontSize={11} tickLine={false} />
+                      <YAxis stroke="var(--text-muted)" fontSize={11} domain={[0, 100]} tickLine={false} />
+                      <Tooltip contentStyle={{ backgroundColor: 'var(--bg-secondary)', borderColor: 'var(--border)', borderRadius: '10px', fontSize: '12px' }} />
+                      <Legend verticalAlign="top" height={36} iconType="circle" wrapperStyle={{ fontSize: '12px', fontWeight: '700' }} />
+                      <Line type="monotone" dataKey="Estrés" stroke="var(--danger)" strokeWidth={2.5} dot={{ r: 4 }} activeDot={{ r: 7 }} />
+                      <Line type="monotone" dataKey="Motivación" stroke="var(--success)" strokeWidth={2.5} dot={{ r: 4 }} activeDot={{ r: 7 }} />
+                      <Line type="monotone" dataKey="Agotamiento" stroke="var(--warning)" strokeWidth={2} strokeDasharray="4 4" dot={{ r: 3 }} />
+                      <Line type="monotone" dataKey="Bienestar General" stroke="var(--primary)" strokeWidth={2.5} dot={{ r: 4 }} activeDot={{ r: 7 }} />
+                    </LineChart>
+                  </AutoResponsiveContainer>
+                </div>
+              );
+            })()}
           </div>
 
           {/* Lista de Registros Históricos */}

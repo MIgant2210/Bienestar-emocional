@@ -252,6 +252,7 @@ const EquiAssistantWidget = ({ onOpenBreathing, onStartTour }) => {
       {/* Ventana Desplegable de Chat con detección inteligente de bordes */}
       {isOpen && (
         <div
+          className="equi-chat-window-responsive"
           style={{
             position: 'absolute',
             top: isTopHalf ? '56px' : 'auto',
@@ -507,6 +508,7 @@ const EquiAssistantWidget = ({ onOpenBreathing, onStartTour }) => {
       {/* Botón Flotante Principal Arrastrable y Adaptado al Color Activo */}
       <div
         onPointerDown={handlePointerDown}
+        className="equi-floating-trigger-btn"
         style={{
           padding: '10px 16px',
           borderRadius: '28px',
@@ -528,7 +530,7 @@ const EquiAssistantWidget = ({ onOpenBreathing, onStartTour }) => {
         }}
         title="Arrastra para mover • Haz clic para conversar con Equi"
       >
-        <GripVertical size={13} style={{ opacity: 0.7, cursor: 'grab' }} />
+        <GripVertical size={13} className="equi-drag-handle-icon" style={{ opacity: 0.7, cursor: 'grab' }} />
         <div style={{ position: 'relative', width: '26px', height: '26px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
           <img src="/logo.png" alt="Equi Colibrí" style={{ width: '22px', height: '22px', objectFit: 'contain', pointerEvents: 'none' }} />
           <span
@@ -546,9 +548,9 @@ const EquiAssistantWidget = ({ onOpenBreathing, onStartTour }) => {
         </div>
         <div style={{ textAlign: 'left', pointerEvents: 'none' }}>
           <span style={{ fontSize: '13px', fontWeight: '900', display: 'block', lineHeight: 1.1 }}>
-            {isOpen ? 'Cerrar Equi' : 'Equi AI'}
+            {isOpen ? 'Cerrar' : 'Equi AI'}
           </span>
-          <span style={{ fontSize: '10px', opacity: 0.88, fontWeight: '700' }}>
+          <span className="equi-trigger-subtitle" style={{ fontSize: '10px', opacity: 0.88, fontWeight: '700' }}>
             {isOpen ? 'Minimizar' : 'Asistente de Bienestar'}
           </span>
         </div>

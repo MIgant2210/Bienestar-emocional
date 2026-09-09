@@ -31,6 +31,7 @@ import EquiTourModal from '../components/EquiTourModal';
 import ModularAvatar, { DEFAULT_AVATAR_CONFIG } from '../components/ModularAvatar';
 import { useNavigate } from 'react-router-dom';
 import { hasModuleAccess } from '../components/ProtectedRoute';
+import AutoResponsiveContainer from '../components/AutoResponsiveContainer';
 
 const TAB_TO_URL = {
   bienestar: '/mi-bienestar',
@@ -1641,6 +1642,25 @@ const AdminDashboard = ({ initialTab = 'analytics' }) => {
     Negativo: 'var(--danger)'
   };
 
+  const formattedHistoricalTrends = React.useMemo(() => {
+    const trends = stats?.historical_trends;
+    if (!trends || trends.length === 0) return [];
+    if (trends.length === 1) {
+      const p = trends[0];
+      const dateParts = p.date ? p.date.split('-') : [];
+      const dateDisplay = dateParts.length === 3 ? `${dateParts[2]}/${dateParts[1]}` : (p.date || 'Hoy');
+      return [
+        { ...p, dateDisplay: `${dateDisplay} (Inicio)` },
+        { ...p, dateDisplay: `${dateDisplay} (Actual)` }
+      ];
+    }
+    return trends.map(t => {
+      const dateParts = t.date ? t.date.split('-') : [];
+      const dateDisplay = dateParts.length === 3 ? `${dateParts[2]}/${dateParts[1]}` : t.date;
+      return { ...t, dateDisplay };
+    });
+  }, [stats?.historical_trends]);
+
   const fallbackDeptNames = departmentsList.length > 0 
     ? departmentsList.map(d => typeof d === 'string' ? d : d.name)
     : ['General', 'Tecnología', 'Recursos Humanos', 'Psicología y Salud', 'Educación'];
@@ -2687,39 +2707,58 @@ const AdminDashboard = ({ initialTab = 'analytics' }) => {
 
             <div className="grid grid-2">
               <div className="glass-card">
-                <h3 style={{ fontSize: '16px', fontWeight: '900', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <Activity size={18} style={{ color: 'var(--primary)' }} /> Evolución del Clima Emocional
-                </h3>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px', marginBottom: '14px' }}>
+                  <h3 style={{ fontSize: '15.5px', fontWeight: '900', margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <Activity size={18} style={{ color: 'var(--primary)' }} /> Evolución del Clima Emocional
+                  </h3>
+                  {stats.historical_trends?.length === 1 && (
+                    <span style={{
+                      fontSize: '11px',
+                      fontWeight: '800',
+                      color: 'var(--primary)',
+                      backgroundColor: 'var(--primary-light)',
+                      border: '1px solid var(--border)',
+                      padding: '3px 8px',
+                      borderRadius: '8px',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '4px'
+                    }}>
+                      <Sparkles size={12} /> 1er día ({stats.historical_trends[0].count || 1} reflexiones)
+                    </span>
+                  )}
+                </div>
+
                 {!stats.historical_trends || stats.historical_trends.length === 0 ? (
-                  <div style={{ height: '240px', display: 'flex', justifyContent: 'center', alignItems: 'center', color: 'var(--text-muted)' }}>Sin suficientes datos históricos registrados.</div>
-                ) : (
-                  <div className="chart-container-responsive" style={{ height: '240px' }}>
-                    <ResponsiveContainer width="100%" height="100%" minWidth={0}>
-                      <LineChart data={stats.historical_trends}>
-                        <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
-                        <XAxis dataKey="date" stroke="var(--text-muted)" fontSize={11} />
-                        <YAxis stroke="var(--text-muted)" fontSize={11} domain={[0, 100]} />
-                        <Tooltip contentStyle={{ backgroundColor: 'var(--bg-secondary)', borderColor: 'var(--border)', borderRadius: '8px', color: 'var(--text-primary)' }} />
-                        <Legend verticalAlign="top" height={36} iconType="circle" />
-                        <Line type="monotone" dataKey="stress" name="Estrés" stroke="var(--danger)" strokeWidth={3} dot={{ r: 3 }} />
-                        <Line type="monotone" dataKey="motivation" name="Motivación" stroke="var(--success)" strokeWidth={3} dot={{ r: 3 }} />
-                        <Line type="monotone" dataKey="burnout" name="Agotamiento" stroke="var(--warning)" strokeWidth={3} dot={{ r: 3 }} />
-                      </LineChart>
-                    </ResponsiveContainer>
+                  <div style={{ height: '240px', display: 'flex', justifyContent: 'center', alignItems: 'center', color: 'var(--text-muted)', fontSize: '13px', textAlign: 'center', padding: '20px' }}>
+                    Sin suficientes datos históricos registrados. Registra reflexiones diarias para comenzar la evolución.
                   </div>
+                ) : (
+                  <AutoResponsiveContainer height={240}>
+                    <LineChart data={formattedHistoricalTrends} margin={{ top: 10, right: 14, left: -14, bottom: 5 }}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" opacity={0.6} />
+                      <XAxis dataKey="dateDisplay" stroke="var(--text-muted)" fontSize={11} tickLine={false} />
+                      <YAxis stroke="var(--text-muted)" fontSize={11} domain={[0, 100]} tickLine={false} />
+                      <Tooltip contentStyle={{ backgroundColor: 'var(--bg-secondary)', borderColor: 'var(--border)', borderRadius: '10px', color: 'var(--text-primary)', fontSize: '12px' }} />
+                      <Legend verticalAlign="top" height={36} iconType="circle" wrapperStyle={{ fontSize: '12px', fontWeight: '700' }} />
+                      <Line type="monotone" dataKey="stress" name="Estrés (%)" stroke="var(--danger)" strokeWidth={3} dot={{ r: 4 }} activeDot={{ r: 7 }} />
+                      <Line type="monotone" dataKey="motivation" name="Motivación (%)" stroke="var(--success)" strokeWidth={3} dot={{ r: 4 }} activeDot={{ r: 7 }} />
+                      <Line type="monotone" dataKey="burnout" name="Agotamiento (%)" stroke="var(--warning)" strokeWidth={3} dot={{ r: 4 }} activeDot={{ r: 7 }} />
+                    </LineChart>
+                  </AutoResponsiveContainer>
                 )}
               </div>
 
               <div className="glass-card">
-                <h3 style={{ fontSize: '16px', fontWeight: '900', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <h3 style={{ fontSize: '15.5px', fontWeight: '900', marginBottom: '14px', display: 'flex', alignItems: 'center', gap: '8px' }}>
                   <Users size={18} style={{ color: 'var(--accent)' }} /> Distribución del Sentimiento
                 </h3>
                 {pieData.every(d => d.value === 0) ? (
-                  <div style={{ height: '240px', display: 'flex', justifyContent: 'center', alignItems: 'center', color: 'var(--text-muted)' }}>Sin datos de sentimientos registrados.</div>
+                  <div style={{ height: '240px', display: 'flex', justifyContent: 'center', alignItems: 'center', color: 'var(--text-muted)', fontSize: '13px' }}>Sin datos de sentimientos registrados.</div>
                 ) : (
                   <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '240px', gap: '20px', flexWrap: 'wrap' }}>
                     <div style={{ width: '180px', height: '180px', minWidth: '180px' }}>
-                      <ResponsiveContainer width="100%" height="100%" minWidth={0}>
+                      <AutoResponsiveContainer height={180}>
                         <PieChart>
                           <Pie data={pieData} cx="50%" cy="50%" innerRadius={48} outerRadius={68} paddingAngle={6} dataKey="value">
                             {pieData.map((entry, index) => (
@@ -2728,11 +2767,11 @@ const AdminDashboard = ({ initialTab = 'analytics' }) => {
                           </Pie>
                           <Tooltip />
                         </PieChart>
-                      </ResponsiveContainer>
+                      </AutoResponsiveContainer>
                     </div>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                       {pieData.map((entry, index) => (
-                        <div key={index} style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12.5px' }}>
+                        <div key={index} style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12px' }}>
                           <div style={{ width: '10px', height: '10px', borderRadius: '50%', backgroundColor: COLORS[entry.name] }} />
                           <span style={{ fontWeight: '700', color: 'var(--text-primary)' }}>{entry.name}: {entry.value}</span>
                         </div>

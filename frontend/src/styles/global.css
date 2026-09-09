@@ -1040,11 +1040,38 @@ input:focus, select:focus, textarea:focus {
     overflow-x: hidden !important;
     box-sizing: border-box !important;
   }
-  /* Ocultar barra horizontal de pestañas en móvil/tablet ya que el menú hamburguesa contiene toda la navegación */
+  /* Barra horizontal deslizable para navegación fluida y táctil en móvil/tablet */
   .tab-container {
+    display: flex !important;
+    flex-wrap: nowrap !important;
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch !important;
+    scrollbar-width: none !important;
+    -ms-overflow-style: none !important;
+    padding: 6px 8px !important;
+    border-radius: 14px !important;
+    gap: 6px !important;
+    margin-bottom: 14px !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    box-sizing: border-box !important;
+    background: var(--bg-secondary) !important;
+    border: 1px solid var(--border) !important;
+  }
+  .tab-container::-webkit-scrollbar {
     display: none !important;
   }
-  /* Sub-pestañas internas específicas para scroll horizontal suave si se requieren */
+  .tab-container .tab-btn {
+    flex-shrink: 0 !important;
+    min-width: max-content !important;
+    padding: 7px 12px !important;
+    font-size: 12px !important;
+    white-space: nowrap !important;
+    border-radius: 10px !important;
+    gap: 6px !important;
+  }
+
+  /* Sub-pestañas internas específicas para scroll horizontal suave */
   .wellbeing-subtabs {
     display: flex !important;
     flex-wrap: nowrap !important;
@@ -1052,10 +1079,10 @@ input:focus, select:focus, textarea:focus {
     -webkit-overflow-scrolling: touch !important;
     scrollbar-width: none !important;
     -ms-overflow-style: none !important;
-    padding: 8px 10px !important;
-    border-radius: 16px !important;
+    padding: 6px 8px !important;
+    border-radius: 14px !important;
     gap: 6px !important;
-    margin-bottom: 18px !important;
+    margin-bottom: 14px !important;
     width: 100% !important;
     max-width: 100% !important;
     box-sizing: border-box !important;
@@ -1065,7 +1092,7 @@ input:focus, select:focus, textarea:focus {
   }
   .wellbeing-subtabs .tab-btn {
     min-width: max-content !important;
-    padding: 8px 14px !important;
+    padding: 7px 12px !important;
     font-size: 12px !important;
     flex-shrink: 0 !important;
   }
@@ -1084,6 +1111,7 @@ input:focus, select:focus, textarea:focus {
     max-width: 100% !important;
     overflow-x: hidden !important;
     box-sizing: border-box !important;
+    padding: 12px 10px !important;
   }
   .dashboard-main-content * {
     max-width: 100%;
@@ -1095,9 +1123,29 @@ input:focus, select:focus, textarea:focus {
     overflow-x: auto !important;
     -webkit-overflow-scrolling: touch !important;
   }
-  .grid-2, .grid-3, .grid-4 {
+  .grid-2 {
     grid-template-columns: 1fr !important;
-    gap: 12px !important;
+    gap: 10px !important;
+  }
+  /* KPIs y estadísticas en 2 columnas compactas en móvil para evitar scroll infinito */
+  .grid-3, .grid-4 {
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 8px !important;
+  }
+  .grid-3 > .glass-card,
+  .grid-4 > .glass-card {
+    padding: 10px 12px !important;
+    border-radius: 14px !important;
+    margin-bottom: 0 !important;
+  }
+  .grid-3 > .glass-card h2,
+  .grid-4 > .glass-card h2 {
+    font-size: 20px !important;
+    margin-top: 2px !important;
+  }
+  .grid-3 > .glass-card span,
+  .grid-4 > .glass-card span {
+    font-size: 9.5px !important;
   }
   .responsive-two-column-form {
     grid-template-columns: 1fr !important;
@@ -1134,7 +1182,7 @@ input:focus, select:focus, textarea:focus {
 /* SMARTPHONES (< 640px) */
 @media (max-width: 640px) {
   .dashboard-main-content {
-    padding: 12px 10px !important;
+    padding: 10px 8px !important;
   }
   .chat-bubble {
     max-width: 90% !important;
@@ -1143,41 +1191,72 @@ input:focus, select:focus, textarea:focus {
     word-break: break-word !important;
   }
   .chat-container {
-    height: clamp(380px, 62vh, 500px) !important;
+    height: clamp(360px, 60vh, 480px) !important;
   }
   .chat-input-area {
-    padding: 10px !important;
+    padding: 8px !important;
     gap: 6px !important;
   }
   .modal-responsive-shell {
-    padding: 16px !important;
-    border-radius: 18px !important;
+    padding: 14px !important;
+    border-radius: 16px !important;
   }
   .futuristic-card-item {
-    padding: 12px 10px !important;
+    padding: 10px 8px !important;
   }
   .glass-card {
-    padding: 16px 12px !important;
-    border-radius: 16px !important;
-    margin-bottom: 12px !important;
+    padding: 13px 10px !important;
+    border-radius: 14px !important;
+    margin-bottom: 10px !important;
     width: 100% !important;
     max-width: 100% !important;
     box-sizing: border-box !important;
   }
+  .glass-card h2 {
+    font-size: 18px !important;
+  }
+  .glass-card h3 {
+    font-size: 14.5px !important;
+    margin-bottom: 10px !important;
+  }
   .duo-card {
-    padding: 12px 14px !important;
-    border-radius: 14px !important;
+    padding: 10px 12px !important;
+    border-radius: 12px !important;
+  }
+
+  /* Botón Flotante Equi AI ultra-compacto para que no estorbe */
+  .equi-floating-trigger-btn {
+    padding: 7px 11px !important;
+    border-radius: 20px !important;
+    bottom: 14px !important;
+    right: 12px !important;
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.28) !important;
+  }
+  .equi-drag-handle-icon {
+    display: none !important;
+  }
+  .equi-trigger-subtitle {
+    display: none !important;
+  }
+  .equi-chat-window-responsive {
+    width: calc(100vw - 20px) !important;
+    max-width: calc(100vw - 20px) !important;
+    left: 10px !important;
+    right: 10px !important;
+    bottom: 66px !important;
+    max-height: 75vh !important;
+    border-radius: 20px !important;
   }
 }
 
 /* SMARTPHONES COMPACTOS (< 480px) */
 @media (max-width: 480px) {
   .dashboard-main-content {
-    padding: 10px 8px !important;
+    padding: 8px 6px !important;
   }
   .glass-card {
-    padding: 14px 10px !important;
-    border-radius: 14px !important;
+    padding: 12px 9px !important;
+    border-radius: 12px !important;
   }
   .app-header-title h1 {
     font-size: 14.5px !important;
@@ -1186,12 +1265,16 @@ input:focus, select:focus, textarea:focus {
     display: none !important;
   }
   .duo-streak-badge, .duo-xp-badge {
-    padding: 4px 8px !important;
-    font-size: 11px !important;
-    gap: 4px !important;
+    padding: 3px 6px !important;
+    font-size: 10.5px !important;
+    gap: 3px !important;
   }
   .dashboard-hero h2 {
-    font-size: 1.25rem !important;
+    font-size: 1.15rem !important;
+  }
+  .chart-container-responsive {
+    height: 210px !important;
+    min-height: 190px !important;
   }
 }
 
