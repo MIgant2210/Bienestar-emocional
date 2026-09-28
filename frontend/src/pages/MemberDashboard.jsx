@@ -1392,7 +1392,7 @@ const MemberDashboard = ({ initialTab }) => {
               </button>
 
               {showPaletteMenu && (
-                <div className="notification-popover" style={{ width: '290px', right: 0, padding: '12px', zIndex: 10000 }}>
+                <div className="notification-popover" style={{ width: '290px', maxWidth: 'calc(100vw - 24px)', right: 0, padding: '12px', zIndex: 10000, boxSizing: 'border-box' }}>
                   {/* Selector de Pestañas: Temáticas vs Colores */}
                   <div style={{ display: 'flex', gap: '6px', marginBottom: '10px', borderBottom: '1px solid var(--border)', paddingBottom: '8px' }}>
                     <button

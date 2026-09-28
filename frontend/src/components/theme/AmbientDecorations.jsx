@@ -277,6 +277,46 @@ const AmbientDecorations = () => {
             opacity: 0;
           }
         }
+
+        /* Responsividad Total: Sin obstaculizar textos ni módulos en ninguna pantalla */
+        .ambient-burst-layer,
+        .ambient-flanks-layer {
+          pointer-events: none !important;
+          user-select: none !important;
+        }
+
+        .ambient-burst-layer span,
+        .ambient-flanks-layer span {
+          pointer-events: none !important;
+          user-select: none !important;
+        }
+
+        @media (max-width: 1024px) {
+          .ambient-burst-layer span {
+            font-size: calc(var(--p-size, 16px) * 0.85) !important;
+          }
+          .ambient-flanks-layer {
+            opacity: 0.75 !important;
+          }
+          .ambient-flanks-layer span {
+            font-size: calc(var(--p-size, 14px) * 0.85) !important;
+          }
+        }
+
+        @media (max-width: 768px) {
+          /* En teléfonos móviles: las partículas de la cascada son más sutiles y pequeñas */
+          .ambient-burst-layer span {
+            font-size: calc(var(--p-size, 16px) * 0.68) !important;
+            opacity: calc(var(--p-opacity, 0.7) * 0.75) !important;
+          }
+          /* En modo claro en móviles: atenuar los emojis laterales para lectura impecable */
+          .ambient-flanks-layer {
+            opacity: 0.32 !important;
+          }
+          .ambient-flanks-layer span {
+            font-size: calc(var(--p-size, 14px) * 0.7) !important;
+          }
+        }
       `}</style>
 
       {/* Capa 1: Cascada de Bienvenida Inicial (recorre toda la pantalla y sale por el borde) */}
@@ -287,7 +327,8 @@ const AmbientDecorations = () => {
             position: 'absolute',
             inset: 0,
             transition: 'opacity 1.5s ease',
-            opacity: isShowerBurst ? 1 : 0
+            opacity: isShowerBurst ? 1 : 0,
+            pointerEvents: 'none'
           }}
         >
           {burstParticles.map(p => (
@@ -299,6 +340,7 @@ const AmbientDecorations = () => {
                 fontSize: `${p.size}px`,
                 opacity: p.opacity,
                 '--p-opacity': p.opacity,
+                '--p-size': `${p.size}px`,
                 color: themeParticlesConfig.color,
                 animation: isDown 
                   ? `ambientWaterfallFall ${p.duration}s ease-in forwards` 
@@ -306,7 +348,8 @@ const AmbientDecorations = () => {
                 animationDelay: `${p.delay}s`,
                 filter: 'drop-shadow(0 2px 8px rgba(0,0,0,0.12))',
                 willChange: 'transform, opacity',
-                userSelect: 'none'
+                userSelect: 'none',
+                pointerEvents: 'none'
               }}
             >
               {p.icon}
@@ -322,7 +365,8 @@ const AmbientDecorations = () => {
           style={{
             position: 'absolute',
             inset: 0,
-            transition: 'opacity 1.5s ease'
+            transition: 'opacity 1.5s ease',
+            pointerEvents: 'none'
           }}
         >
           {flankParticles.map(p => (
@@ -334,6 +378,7 @@ const AmbientDecorations = () => {
                 fontSize: `${p.size}px`,
                 opacity: p.opacity,
                 '--p-opacity': p.opacity,
+                '--p-size': `${p.size}px`,
                 color: themeParticlesConfig.color,
                 animation: isDown 
                   ? `ambientFlankFall ${p.duration}s infinite linear` 
@@ -341,7 +386,8 @@ const AmbientDecorations = () => {
                 animationDelay: `${p.delay}s`,
                 filter: 'drop-shadow(0 2px 6px rgba(0,0,0,0.08))',
                 willChange: 'transform, opacity',
-                userSelect: 'none'
+                userSelect: 'none',
+                pointerEvents: 'none'
               }}
             >
               {p.icon}

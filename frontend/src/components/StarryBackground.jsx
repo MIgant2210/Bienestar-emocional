@@ -617,6 +617,67 @@ const StarryBackground = ({ count = 135 }) => {
         [data-theme='dark'] .star-node.star-module-subtle {
           box-shadow: 0 0 3px rgba(255, 255, 255, 0.6) !important;
         }
+
+        /* Responsividad Total: Las constelaciones y destellos se adaptan armónicamente en cualquier pantalla */
+        .constellation-wrapper {
+          transition: transform 0.4s ease, opacity 0.4s ease;
+          pointer-events: none !important;
+          user-select: none !important;
+          max-width: 90vw;
+          box-sizing: border-box;
+        }
+
+        /* Laptops y monitores compactos (1024px a 1366px) */
+        @media (max-width: 1366px) {
+          .constellation-wrapper {
+            transform: scale(0.85) !important;
+            opacity: 0.85;
+          }
+        }
+
+        /* Tablets e iPads (768px a 1023px) */
+        @media (max-width: 1023px) {
+          .constellation-wrapper {
+            transform: scale(0.70) !important;
+            opacity: 0.65;
+          }
+          .constellation-badge {
+            padding: 2.5px 8px !important;
+            max-width: 200px !important;
+          }
+          .constellation-badge-text {
+            font-size: 9px !important;
+          }
+        }
+
+        /* Móviles y pantallas angostas (<= 767px): Jamás interrumpir ni tapar la UI */
+        @media (max-width: 767px) {
+          .constellation-wrapper {
+            transform: scale(0.52) !important;
+            opacity: 0.42 !important;
+            max-width: 155px !important;
+            max-height: 115px !important;
+          }
+          .constellation-wrapper.pos-top {
+            top: 65px !important;
+          }
+          .constellation-wrapper.pos-bottom {
+            bottom: 22px !important;
+          }
+          .constellation-badge {
+            padding: 2px 7px !important;
+            max-width: 145px !important;
+            border-radius: 8px !important;
+          }
+          .constellation-badge-text {
+            font-size: 8px !important;
+            letter-spacing: 0.6px !important;
+          }
+          /* Destellitos interiores en móvil aún más tenues para lectura óptima */
+          .star-node.star-module-subtle {
+            opacity: calc(var(--base-opacity, 0.2) * 0.45) !important;
+          }
+        }
       `}</style>
 
       {/* Capa de Estrellas Base (Destellitos sutiles en el centro de módulos, vivas en orillas) */}
@@ -638,116 +699,137 @@ const StarryBackground = ({ count = 135 }) => {
       ))}
 
       {/* Capa de Constelaciones Zodiacales & Celestiales en Modo Oscuro */}
-      {isDark && activeConstellation && (
-        <div
-          key={`constellation-${activeConstellation.id}-${constellationKey}`}
-          className="constellation-wrapper"
-          style={{
-            position: 'absolute',
-            ...activeConstellation.position,
-            width: activeConstellation.width,
-            height: activeConstellation.height,
-            pointerEvents: 'none',
-            zIndex: 2,
-            animation: 'constellationAppearance 12s ease-in-out infinite',
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center'
-          }}
-        >
-          <svg
-            width="100%"
-            height="100%"
-            viewBox={activeConstellation.viewBox}
-            style={{ 
-              overflow: 'visible', 
-              filter: isLibra 
-                ? 'drop-shadow(0 0 10px rgba(250, 204, 21, 0.85))' 
-                : 'drop-shadow(0 0 8px rgba(165, 180, 252, 0.7))' 
-            }}
-          >
-            {/* Líneas tenues que conectan las estrellas */}
-            {activeConstellation.lines.map(([p1, p2], idx) => (
-              <line
-                key={`line-${idx}`}
-                x1={p1[0]}
-                y1={p1[1]}
-                x2={p2[0]}
-                y2={p2[1]}
-                stroke={isLibra ? 'rgba(253, 224, 71, 0.78)' : 'rgba(224, 231, 255, 0.65)'}
-                strokeWidth={isLibra ? '1.8' : '1.5'}
-                strokeDasharray="220"
-                style={{
-                  animation: 'drawCelestialLine 1.8s ease-out forwards',
-                  animationDelay: `${idx * 0.08}s`,
-                  strokeLinecap: 'round'
-                }}
-              />
-            ))}
+      {isDark && activeConstellation && (() => {
+        const isTop = Boolean(activeConstellation.position.top);
+        const isRight = Boolean(activeConstellation.position.right);
+        const transformOrigin = isTop 
+          ? (isRight ? 'top right' : 'top left') 
+          : (isRight ? 'bottom right' : 'bottom left');
 
-            {/* Estrellas nodo brillantes */}
-            {activeConstellation.nodes.map(([x, y], idx) => {
-              const isFulcrum = isLibra && idx === 0;
-              return (
-                <g key={`node-${idx}`} transform={`translate(${x}, ${y})`}>
-                  <circle
-                    r={isFulcrum ? '4.8' : '3.4'}
-                    fill={isLibra ? '#fef08a' : '#ffffff'}
-                    style={{
-                      filter: isLibra 
-                        ? 'drop-shadow(0 0 8px #fde047) drop-shadow(0 0 16px #eab308)' 
-                        : 'drop-shadow(0 0 6px #ffffff) drop-shadow(0 0 12px rgba(199, 210, 254, 0.9))',
-                      animation: isFulcrum 
-                        ? 'libraFulcrumGlow 2s infinite ease-in-out' 
-                        : `constellationStarPulse ${2.5 + (idx % 3) * 0.5}s infinite ease-in-out`,
-                      animationDelay: `${idx * 0.12}s`
-                    }}
-                  />
-                  {(idx % 2 === 0 || isFulcrum) && (
-                    <circle
-                      r={isFulcrum ? '10' : '7.5'}
-                      fill="none"
-                      stroke={isLibra ? 'rgba(250, 204, 21, 0.5)' : 'rgba(255, 255, 255, 0.35)'}
-                      strokeWidth="0.8"
-                      strokeDasharray={isFulcrum ? 'none' : '3 2'}
-                    />
-                  )}
-                </g>
-              );
-            })}
-          </svg>
-
-          {/* Etiqueta mística con el nombre de la constelación */}
+        return (
           <div
+            key={`constellation-${activeConstellation.id}-${constellationKey}`}
+            className={`constellation-wrapper ${isTop ? 'pos-top' : 'pos-bottom'} ${isRight ? 'pos-right' : 'pos-left'}`}
             style={{
-              marginTop: '4px',
-              padding: isLibra ? '4px 14px' : '3px 10px',
-              borderRadius: '12px',
-              background: isLibra ? 'rgba(30, 27, 75, 0.75)' : 'rgba(15, 23, 42, 0.55)',
-              backdropFilter: 'blur(8px)',
-              border: isLibra ? '1px solid rgba(250, 204, 21, 0.6)' : '1px solid rgba(165, 180, 252, 0.25)',
-              boxShadow: isLibra 
-                ? '0 0 18px rgba(250, 204, 21, 0.4), 0 0 8px rgba(99, 102, 241, 0.3)' 
-                : '0 0 12px rgba(99, 102, 241, 0.25)'
+              position: 'absolute',
+              ...activeConstellation.position,
+              width: activeConstellation.width,
+              height: activeConstellation.height,
+              pointerEvents: 'none',
+              userSelect: 'none',
+              transformOrigin,
+              zIndex: 2,
+              animation: 'constellationAppearance 12s ease-in-out infinite',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center'
             }}
           >
-            <span
-              style={{
-                fontSize: isLibra ? '11px' : '10.5px',
-                fontWeight: isLibra ? '700' : '600',
-                letterSpacing: '1.2px',
-                color: isLibra ? '#fef08a' : '#e0e7ff',
-                textTransform: 'uppercase',
-                textShadow: isLibra 
-                  ? '0 0 10px rgba(250, 204, 21, 0.9)' 
-                  : '0 0 8px rgba(165, 180, 252, 0.8)'
+            <svg
+              width="100%"
+              height="100%"
+              viewBox={activeConstellation.viewBox}
+              preserveAspectRatio="xMidYMid meet"
+              style={{ 
+                overflow: 'visible', 
+                filter: isLibra 
+                  ? 'drop-shadow(0 0 10px rgba(250, 204, 21, 0.85))' 
+                  : 'drop-shadow(0 0 8px rgba(165, 180, 252, 0.7))',
+                pointerEvents: 'none'
               }}
             >
-              {activeConstellation.name}
-            </span>
+              {/* Líneas tenues que conectan las estrellas */}
+              {activeConstellation.lines.map(([p1, p2], idx) => (
+                <line
+                  key={`line-${idx}`}
+                  x1={p1[0]}
+                  y1={p1[1]}
+                  x2={p2[0]}
+                  y2={p2[1]}
+                  stroke={isLibra ? 'rgba(253, 224, 71, 0.78)' : 'rgba(224, 231, 255, 0.65)'}
+                  strokeWidth={isLibra ? '1.8' : '1.5'}
+                  strokeDasharray="220"
+                  style={{
+                    animation: 'drawCelestialLine 1.8s ease-out forwards',
+                    animationDelay: `${idx * 0.08}s`,
+                    strokeLinecap: 'round'
+                  }}
+                />
+              ))}
+
+              {/* Estrellas nodo brillantes */}
+              {activeConstellation.nodes.map(([x, y], idx) => {
+                const isFulcrum = isLibra && idx === 0;
+                return (
+                  <g key={`node-${idx}`} transform={`translate(${x}, ${y})`}>
+                    <circle
+                      r={isFulcrum ? '4.8' : '3.4'}
+                      fill={isLibra ? '#fef08a' : '#ffffff'}
+                      style={{
+                        filter: isLibra 
+                          ? 'drop-shadow(0 0 8px #fde047) drop-shadow(0 0 16px #eab308)' 
+                          : 'drop-shadow(0 0 6px #ffffff) drop-shadow(0 0 12px rgba(199, 210, 254, 0.9))',
+                        animation: isFulcrum 
+                          ? 'libraFulcrumGlow 2s infinite ease-in-out' 
+                          : `constellationStarPulse ${2.5 + (idx % 3) * 0.5}s infinite ease-in-out`,
+                        animationDelay: `${idx * 0.12}s`
+                      }}
+                    />
+                    {(idx % 2 === 0 || isFulcrum) && (
+                      <circle
+                        r={isFulcrum ? '10' : '7.5'}
+                        fill="none"
+                        stroke={isLibra ? 'rgba(250, 204, 21, 0.5)' : 'rgba(255, 255, 255, 0.35)'}
+                        strokeWidth="0.8"
+                        strokeDasharray={isFulcrum ? 'none' : '3 2'}
+                      />
+                    )}
+                  </g>
+                );
+              })}
+            </svg>
+
+            {/* Etiqueta mística con el nombre de la constelación */}
+            <div
+              className="constellation-badge"
+              style={{
+                marginTop: '4px',
+                padding: isLibra ? '4px 14px' : '3px 10px',
+                borderRadius: '12px',
+                background: isLibra ? 'rgba(30, 27, 75, 0.75)' : 'rgba(15, 23, 42, 0.55)',
+                backdropFilter: 'blur(8px)',
+                border: isLibra ? '1px solid rgba(250, 204, 21, 0.6)' : '1px solid rgba(165, 180, 252, 0.25)',
+                boxShadow: isLibra 
+                  ? '0 0 18px rgba(250, 204, 21, 0.4), 0 0 8px rgba(99, 102, 241, 0.3)' 
+                  : '0 0 12px rgba(99, 102, 241, 0.25)',
+                pointerEvents: 'none',
+                userSelect: 'none',
+                maxWidth: '90%',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                whiteSpace: 'nowrap'
+              }}
+            >
+              <span
+                className="constellation-badge-text"
+                style={{
+                  fontSize: isLibra ? '11px' : '10.5px',
+                  fontWeight: isLibra ? '700' : '600',
+                  letterSpacing: '1.2px',
+                  color: isLibra ? '#fef08a' : '#e0e7ff',
+                  textTransform: 'uppercase',
+                  textShadow: isLibra 
+                    ? '0 0 10px rgba(250, 204, 21, 0.9)' 
+                    : '0 0 8px rgba(165, 180, 252, 0.8)',
+                  whiteSpace: 'nowrap'
+                }}
+              >
+                {activeConstellation.name}
+              </span>
+            </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
     </div>
   );
 };
