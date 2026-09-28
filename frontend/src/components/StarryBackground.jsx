@@ -317,10 +317,21 @@ const StarryBackground = ({ count = 135 }) => {
   const isDark = themeCtx?.theme === 'dark';
 
   const [constellationIndex, setConstellationIndex] = useState(0);
+  const [constellationActive, setConstellationActive] = useState(false);
 
   // Ciclo periódico de constelaciones en Modo Oscuro (aleatorias sin repetir la misma consecutivamente)
+  // Comienza una vez que la lluvia de bienvenida completa su recorrido (~8.5s)
   useEffect(() => {
-    if (!isDark) return;
+    if (!isDark) {
+      setConstellationActive(false);
+      return;
+    }
+
+    const delayTimer = setTimeout(() => {
+      setConstellationActive(true);
+      setConstellationIndex(Math.floor(Math.random() * CELESTIAL_CONSTELLATIONS.length));
+    }, 8500);
+
     const interval = setInterval(() => {
       setConstellationIndex((prevIndex) => {
         let nextIndex;
@@ -329,8 +340,12 @@ const StarryBackground = ({ count = 135 }) => {
         } while (nextIndex === prevIndex && CELESTIAL_CONSTELLATIONS.length > 1);
         return nextIndex;
       });
-    }, 12000);
-    return () => clearInterval(interval);
+    }, 12500);
+
+    return () => {
+      clearTimeout(delayTimer);
+      clearInterval(interval);
+    };
   }, [isDark]);
 
   const defaultColors = [
@@ -493,7 +508,7 @@ const StarryBackground = ({ count = 135 }) => {
       ))}
 
       {/* Capa de Constelaciones Zodiacales & Celestiales en Modo Oscuro */}
-      {isDark && currentConstellation && (
+      {isDark && constellationActive && currentConstellation && (
         <div
           key={`constellation-${currentConstellation.id}-${constellationIndex}`}
           className="constellation-wrapper"

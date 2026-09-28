@@ -3,26 +3,29 @@ import { ThemeContext } from '../../contexts/ThemeContext';
 
 /**
  * Decoraciones Ambientales y Lluvia Temática de EquilibrIA
- * - Al entrar, recargar o cambiar de tema/modo:
- *   Despliega una lluvia inicial festiva por TODA la pantalla (incluyendo el centro) durante 4.5 segundos.
- * - Después de los 4.5 segundos:
- *   - En Modo Oscuro: Se desvanece por completo para dejar el cielo nocturno con estrellas puras y constelaciones.
- *   - En Modo Claro: El centro se limpia al 100%, pero en las ORILLAS (márgenes laterales) siguen flotando
- *     los emojis de la temática como destellos sutiles, fusionándose con las estrellas de fondo.
+ * - Cascada de Bienvenida Inicial:
+ *   Las partículas recorren la pantalla completa desde arriba hasta abajo (o viceversa)
+ *   completando su viaje en 8.5s - 9.0s y desvaneciéndose al cruzar el borde inferior.
+ * - Modo Claro:
+ *   Al terminar la cascada inicial, el centro queda 100% limpio y despejado; en las orillas
+ *   laterales continúan flotando suavemente los emojis de la temática mezclados con destellos.
+ * - Modo Oscuro:
+ *   Al terminar la cascada inicial, se desvanece por completo dando paso al cielo nocturno puro
+ *   y a las constelaciones mágicas aleatorias.
  */
 const AmbientDecorations = () => {
   const themeCtx = useContext(ThemeContext);
   const activeTheme = themeCtx?.activeTheme || 'equilibria';
   const isDark = themeCtx?.theme === 'dark';
 
-  // Control de lluvia de bienvenida inicial o al cambiar de temática o modo claro/oscuro
+  // Control de lluvia de bienvenida inicial (dura 8.8s para completar todo el recorrido visual)
   const [isShowerBurst, setIsShowerBurst] = useState(true);
 
   useEffect(() => {
     setIsShowerBurst(true);
     const timer = setTimeout(() => {
       setIsShowerBurst(false);
-    }, 4500); // 4.5 segundos de lluvia inicial de bienvenida
+    }, 8800); // 8.8 segundos para que todas las partículas lleguen abajo y completen su recorrido
     return () => clearTimeout(timer);
   }, [activeTheme, isDark]);
 
@@ -137,47 +140,47 @@ const AmbientDecorations = () => {
     }
   }, [activeTheme]);
 
-  const count = isShowerBurst ? 36 : 18;
-
-  // Generar partículas: durante la lluvia inicial en toda la pantalla; luego solo en las orillas
-  const particles = useMemo(() => {
+  // 1. Partículas de Cascada Inicial (por toda la pantalla, completando su trayectoria)
+  const burstParticles = useMemo(() => {
     if (!themeParticlesConfig) return [];
-    return Array.from({ length: count }, (_, i) => {
-      let leftPosition;
-
-      if (isShowerBurst) {
-        // Lluvia inicial: distribuida armónicamente por toda la pantalla (3% al 97%)
-        leftPosition = Math.round(((i * 7.7) + (i % 5) * 6.3) % 94) + 3;
-      } else {
-        // En modo continuo (Modo Claro): 50% en orilla izquierda (1.5% a 11.5%), 50% en orilla derecha (88.5% a 98.5%)
-        const isLeftFlank = i % 2 === 0;
-        leftPosition = isLeftFlank
-          ? Math.round(((i * 2.9) % 10) + 1.5)
-          : Math.round(((i * 2.9) % 10) + 88.5);
-      }
-
+    return Array.from({ length: 36 }, (_, i) => {
+      const left = Math.round(((i * 7.7) + (i % 5) * 6.3) % 94) + 3;
       return {
-        id: i,
-        left: leftPosition,
-        delay: isShowerBurst ? (i * 0.11).toFixed(2) : (i * 0.9).toFixed(2),
-        duration: isShowerBurst ? (14 + (i % 5) * 1.8).toFixed(1) : (18 + (i % 5) * 2.2).toFixed(1),
-        size: isShowerBurst ? (12 + (i % 4) * 3.2) : (11 + (i % 4) * 2.8),
+        id: `burst-${i}`,
+        left,
+        delay: (i * 0.05).toFixed(2), // 0s a 1.8s
+        duration: (6.5 + (i % 5) * 0.25).toFixed(2), // 6.5s a 7.5s: completan la caída a tiempo
+        size: (12 + (i % 4) * 3.2),
         icon: themeParticlesConfig.items[i % themeParticlesConfig.items.length],
-        // En las orillas tienen opacidad suave tipo destello para mezclarse con las estrellas
-        opacity: isShowerBurst 
-          ? (0.65 + (i % 3) * 0.12).toFixed(2) 
-          : (0.38 + (i % 3) * 0.08).toFixed(2)
+        opacity: (0.65 + (i % 3) * 0.12).toFixed(2)
       };
     });
-  }, [themeParticlesConfig, count, isShowerBurst]);
+  }, [themeParticlesConfig]);
 
-  if (!themeParticlesConfig || particles.length === 0) {
+  // 2. Partículas Continuas de Orillas para Modo Claro (solo en los márgenes laterales)
+  const flankParticles = useMemo(() => {
+    if (!themeParticlesConfig || isDark) return [];
+    return Array.from({ length: 18 }, (_, i) => {
+      const isLeft = i % 2 === 0;
+      const left = isLeft
+        ? Math.round(((i * 2.9) % 10) + 1.5) // 1.5% a 11.5%
+        : Math.round(((i * 2.9) % 10) + 88.5); // 88.5% a 98.5%
+
+      return {
+        id: `flank-${i}`,
+        left,
+        delay: (i * 0.8).toFixed(2),
+        duration: (17 + (i % 5) * 1.8).toFixed(1), // Lentas y zen
+        size: (11 + (i % 4) * 2.6),
+        icon: themeParticlesConfig.items[i % themeParticlesConfig.items.length],
+        opacity: (0.38 + (i % 3) * 0.08).toFixed(2) // Sutiles como destellos
+      };
+    });
+  }, [themeParticlesConfig, isDark]);
+
+  if (!themeParticlesConfig) {
     return null;
   }
-
-  // En Modo Oscuro, tras los 4.5s iniciales se oculta para dejar las estrellas puras y constelaciones.
-  // En Modo Claro, permanece visible (en los lados con destellos y emojis de la temática).
-  const isVisible = isShowerBurst || !isDark;
 
   const isDown = themeParticlesConfig.direction === 'down';
 
@@ -194,71 +197,158 @@ const AmbientDecorations = () => {
         height: '100vh',
         pointerEvents: 'none',
         zIndex: 1,
-        overflow: 'hidden',
-        opacity: isVisible ? 1 : 0,
-        transition: 'opacity 1.2s ease'
+        overflow: 'hidden'
       }}
     >
       <style>{`
-        /* Caída lenta y serena (Zen Float) */
-        @keyframes ambientFallZen {
+        /* Recorrido completo de cascada inicial: desde arriba (-70px) hasta salir por abajo (100vh + 80px) */
+        @keyframes ambientWaterfallFall {
+          0% {
+            transform: translate3d(0, -70px, 0) rotate(0deg);
+            opacity: 0;
+          }
+          8% {
+            opacity: var(--p-opacity, 0.7);
+          }
+          75% {
+            opacity: var(--p-opacity, 0.7);
+          }
+          92% {
+            opacity: 0.25;
+          }
+          100% {
+            transform: translate3d(25px, calc(100vh + 80px), 0) rotate(210deg);
+            opacity: 0;
+          }
+        }
+
+        /* Recorrido completo de ascenso inicial: desde abajo (100vh + 70px) hasta salir por arriba (-80px) */
+        @keyframes ambientWaterfallRise {
+          0% {
+            transform: translate3d(0, calc(100vh + 70px), 0) rotate(0deg);
+            opacity: 0;
+          }
+          8% {
+            opacity: var(--p-opacity, 0.7);
+          }
+          75% {
+            opacity: var(--p-opacity, 0.7);
+          }
+          92% {
+            opacity: 0.25;
+          }
+          100% {
+            transform: translate3d(-25px, -80px, 0) rotate(-210deg);
+            opacity: 0;
+          }
+        }
+
+        /* Flotación continua relajante en las orillas (Modo Claro) */
+        @keyframes ambientFlankFall {
           0% {
             transform: translate3d(0, -50px, 0) rotate(0deg);
             opacity: 0;
           }
           10% {
-            opacity: var(--p-opacity, 0.65);
+            opacity: var(--p-opacity, 0.45);
           }
           85% {
-            opacity: var(--p-opacity, 0.65);
+            opacity: var(--p-opacity, 0.45);
           }
           100% {
-            transform: translate3d(20px, 105vh, 0) rotate(180deg);
+            transform: translate3d(18px, 105vh, 0) rotate(180deg);
             opacity: 0;
           }
         }
 
-        /* Elevación pacífica (Zen Rise) */
-        @keyframes ambientRiseZen {
+        @keyframes ambientFlankRise {
           0% {
             transform: translate3d(0, 105vh, 0) rotate(0deg);
             opacity: 0;
           }
           10% {
-            opacity: var(--p-opacity, 0.65);
+            opacity: var(--p-opacity, 0.45);
           }
           85% {
-            opacity: var(--p-opacity, 0.65);
+            opacity: var(--p-opacity, 0.45);
           }
           100% {
-            transform: translate3d(-20px, -50px, 0) rotate(-180deg);
+            transform: translate3d(-18px, -50px, 0) rotate(-180deg);
             opacity: 0;
           }
         }
       `}</style>
 
-      {particles.map(p => (
-        <span
-          key={`${p.id}-${isShowerBurst ? 'burst' : 'flank'}`}
+      {/* Capa 1: Cascada de Bienvenida Inicial (recorre toda la pantalla y sale por el borde) */}
+      {isShowerBurst && (
+        <div
+          className="ambient-burst-layer"
           style={{
             position: 'absolute',
-            left: `${p.left}%`,
-            fontSize: `${p.size}px`,
-            opacity: p.opacity,
-            '--p-opacity': p.opacity,
-            color: themeParticlesConfig.color,
-            animation: isDown 
-              ? `ambientFallZen ${p.duration}s infinite linear` 
-              : `ambientRiseZen ${p.duration}s infinite linear`,
-            animationDelay: `${p.delay}s`,
-            filter: 'drop-shadow(0 2px 8px rgba(0,0,0,0.12))',
-            willChange: 'transform, opacity',
-            userSelect: 'none'
+            inset: 0,
+            transition: 'opacity 1.5s ease',
+            opacity: isShowerBurst ? 1 : 0
           }}
         >
-          {p.icon}
-        </span>
-      ))}
+          {burstParticles.map(p => (
+            <span
+              key={p.id}
+              style={{
+                position: 'absolute',
+                left: `${p.left}%`,
+                fontSize: `${p.size}px`,
+                opacity: p.opacity,
+                '--p-opacity': p.opacity,
+                color: themeParticlesConfig.color,
+                animation: isDown 
+                  ? `ambientWaterfallFall ${p.duration}s ease-in forwards` 
+                  : `ambientWaterfallRise ${p.duration}s ease-in forwards`,
+                animationDelay: `${p.delay}s`,
+                filter: 'drop-shadow(0 2px 8px rgba(0,0,0,0.12))',
+                willChange: 'transform, opacity',
+                userSelect: 'none'
+              }}
+            >
+              {p.icon}
+            </span>
+          ))}
+        </div>
+      )}
+
+      {/* Capa 2: Destellos y Emojis Continuos en las Orillas (Exclusivo Modo Claro) */}
+      {!isDark && (
+        <div
+          className="ambient-flanks-layer"
+          style={{
+            position: 'absolute',
+            inset: 0,
+            transition: 'opacity 1.5s ease'
+          }}
+        >
+          {flankParticles.map(p => (
+            <span
+              key={p.id}
+              style={{
+                position: 'absolute',
+                left: `${p.left}%`,
+                fontSize: `${p.size}px`,
+                opacity: p.opacity,
+                '--p-opacity': p.opacity,
+                color: themeParticlesConfig.color,
+                animation: isDown 
+                  ? `ambientFlankFall ${p.duration}s infinite linear` 
+                  : `ambientFlankRise ${p.duration}s infinite linear`,
+                animationDelay: `${p.delay}s`,
+                filter: 'drop-shadow(0 2px 6px rgba(0,0,0,0.08))',
+                willChange: 'transform, opacity',
+                userSelect: 'none'
+              }}
+            >
+              {p.icon}
+            </span>
+          ))}
+        </div>
+      )}
     </div>
   );
 };
