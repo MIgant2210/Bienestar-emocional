@@ -9,6 +9,7 @@ import Unauthorized403 from './pages/Unauthorized403';
 import ProtectedRoute from './components/ProtectedRoute';
 import ErrorBoundary from './components/ErrorBoundary';
 import StarryBackground from './components/StarryBackground';
+import AmbientDecorations from './components/theme/AmbientDecorations';
 import './styles/global.css';
 
 // Lazy loading para división de código y arranque instantáneo
@@ -185,6 +186,8 @@ function App() {
             <ErrorBoundary>
               {/* Cielo Estrellado Global Permanente: lucecitas bonitas en modo claro, estrellas blancas en modo oscuro */}
               <StarryBackground />
+              {/* Decoraciones Ambientales Dinámicas según Temática Activa */}
+              <AmbientDecorations />
               <NavigationHandler />
             </ErrorBoundary>
           </BrowserRouter>

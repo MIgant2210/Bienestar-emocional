@@ -4,7 +4,7 @@ import {
   Check, Save, Moon, Sun, ShieldAlert, ShieldCheck, KeyRound, 
   LogOut, Laptop, CheckCircle2, AlertCircle, Loader, RefreshCw,
   Sparkles, Bot, Globe, ToggleLeft, ToggleRight, HeartHandshake,
-  Compass, Briefcase, Smile
+  Compass, Briefcase, Smile, Eye, Layers, Calendar, Filter
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { AuthContext } from '../contexts/AuthContext';
@@ -13,14 +13,32 @@ import { ThemeContext } from '../contexts/ThemeContext';
 import api from '../services/api';
 import ConsentModal from '../components/ConsentModal';
 import AvatarCreator from '../components/AvatarCreator';
+import ThemePreviewModal from '../components/theme/ThemePreviewModal';
+import { getActiveSeasonalTheme } from '../themes/seasonalSchedule';
 
 const Settings = () => {
   const navigate = useNavigate();
   const { user, loginUser, logout } = useContext(AuthContext);
   const { confirm: confirmDialog, showAlert } = useDialog();
-  const { theme, toggleTheme, colorPalette, changePalette, PALETTES } = useContext(ThemeContext);
+  const { 
+    theme, 
+    toggleTheme, 
+    colorPalette, 
+    changePalette, 
+    PALETTES,
+    activeTheme,
+    changeTheme,
+    customizationType,
+    THEMES 
+  } = useContext(ThemeContext);
 
   const [activeTab, setActiveTab] = useState('account'); // 'account', 'ai_culture', 'appearance', 'notifications', 'privacy', 'security'
+
+  // Estados para Temáticas Visuales
+  const [customizationSubTab, setCustomizationSubTab] = useState('themes'); // 'themes' | 'palettes'
+  const [themeFilter, setThemeFilter] = useState('all'); // 'all', 'official', 'seasonal', 'celebration', 'cultural'
+  const [previewTheme, setPreviewTheme] = useState(null);
+  const activeSeasonalTheme = getActiveSeasonalTheme();
 
   // Estados de Mi Cuenta
   const [firstName, setFirstName] = useState(user?.first_name || '');
@@ -607,10 +625,10 @@ const Settings = () => {
             <div className="animate-fade" style={{ display: 'grid', gap: '22px' }}>
               <div>
                 <h3 style={{ fontSize: '16px', fontWeight: '900', color: 'var(--text-primary)', marginBottom: '4px' }}>
-                  Personalización Visual de EquilibrIA
+                  Sistema de Temáticas y Personalización Visual de EquilibrIA
                 </h3>
                 <p style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>
-                  Ajusta el modo claro/oscuro y selecciona tu paleta de colores preferida en tiempo real.
+                  Personaliza tu experiencia eligiendo entre temáticas visuales completas (fondos, gradientes y atuendos de Equi) o paletas de colores individuales.
                 </p>
               </div>
 
@@ -618,18 +636,19 @@ const Settings = () => {
               <div style={{
                 padding: '16px 20px',
                 backgroundColor: 'var(--bg-primary)',
-                borderRadius: '12px',
+                borderRadius: '16px',
                 border: '1px solid var(--border)',
                 display: 'flex',
                 justifyContent: 'space-between',
-                alignItems: 'center'
+                alignItems: 'center',
+                boxShadow: 'var(--shadow-sm)'
               }}>
                 <div>
                   <h4 style={{ fontSize: '13.5px', fontWeight: '800', color: 'var(--text-primary)', margin: 0 }}>
                     Tema de la Interfaz: {theme === 'light' ? 'Modo Claro' : 'Modo Oscuro'}
                   </h4>
                   <p style={{ fontSize: '11.5px', color: 'var(--text-secondary)', marginTop: '2px', margin: 0 }}>
-                    Alterna entre modo luminoso u oscuro para cuidar tu visión.
+                    Alterna entre modo luminoso u oscuro para cuidar tu visión y ritmo circadiano.
                   </p>
                 </div>
 
@@ -643,50 +662,366 @@ const Settings = () => {
                 </button>
               </div>
 
-              {/* Selector de Paletas */}
-              <div>
-                <label style={{ fontSize: '11.5px', fontWeight: '800', color: 'var(--text-secondary)', display: 'block', marginBottom: '12px' }}>
-                  PALETAS DE COLORES DISPONIBLES:
-                </label>
+              {/* Selector de Pestaña: Temáticas Completas vs Paletas Tradicionales */}
+              <div style={{
+                display: 'flex',
+                gap: '8px',
+                padding: '6px',
+                backgroundColor: 'var(--bg-primary)',
+                borderRadius: '14px',
+                border: '1px solid var(--border)'
+              }}>
+                <button
+                  onClick={() => setCustomizationSubTab('themes')}
+                  style={{
+                    flex: 1,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '8px',
+                    padding: '10px 16px',
+                    borderRadius: '10px',
+                    fontSize: '13px',
+                    fontWeight: '800',
+                    border: 'none',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s ease',
+                    backgroundColor: customizationSubTab === 'themes' ? 'var(--primary)' : 'transparent',
+                    color: customizationSubTab === 'themes' ? '#ffffff' : 'var(--text-secondary)',
+                    boxShadow: customizationSubTab === 'themes' ? 'var(--tech-glow)' : 'none'
+                  }}
+                >
+                  <Sparkles size={16} />
+                  <span>Temáticas Especiales ({THEMES?.length || 14})</span>
+                </button>
 
-                <div className="grid grid-3" style={{ gap: '12px' }}>
-                  {PALETTES.map(p => {
-                    const isSelected = colorPalette === p.id;
-                    return (
-                      <div
-                        key={p.id}
-                        onClick={() => changePalette(p.id)}
-                        style={{
-                          padding: '16px',
-                          borderRadius: '12px',
-                          backgroundColor: isSelected ? 'var(--primary-light)' : 'var(--bg-primary)',
-                          border: isSelected ? '2px solid var(--primary)' : '1px solid var(--border)',
-                          cursor: 'pointer',
-                          display: 'flex',
-                          flexDirection: 'column',
-                          justifyContent: 'space-between',
-                          gap: '12px',
-                          transition: 'all 0.2s ease',
-                          boxShadow: isSelected ? 'var(--tech-glow)' : 'none'
-                        }}
-                      >
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                          <span style={{ fontSize: '13px', fontWeight: '800', color: 'var(--text-primary)' }}>
-                            {p.icon} {p.name}
+                <button
+                  onClick={() => setCustomizationSubTab('palettes')}
+                  style={{
+                    flex: 1,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '8px',
+                    padding: '10px 16px',
+                    borderRadius: '10px',
+                    fontSize: '13px',
+                    fontWeight: '800',
+                    border: 'none',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s ease',
+                    backgroundColor: customizationSubTab === 'palettes' ? 'var(--primary)' : 'transparent',
+                    color: customizationSubTab === 'palettes' ? '#ffffff' : 'var(--text-secondary)',
+                    boxShadow: customizationSubTab === 'palettes' ? 'var(--tech-glow)' : 'none'
+                  }}
+                >
+                  <Palette size={16} />
+                  <span>Paletas de Colores ({PALETTES?.length || 5})</span>
+                </button>
+              </div>
+
+              {/* ======================================================== */}
+              {/* SUB-PESTAÑA 1: TEMÁTICAS ESPECIALES                      */}
+              {/* ======================================================== */}
+              {customizationSubTab === 'themes' && (
+                <div style={{ display: 'grid', gap: '16px' }}>
+                  {/* Banner de Sugerencia Estacional / Festiva */}
+                  {activeSeasonalTheme && (
+                    <div style={{
+                      padding: '14px 18px',
+                      borderRadius: '16px',
+                      backgroundColor: 'var(--primary-light)',
+                      border: '1.5px solid var(--primary)',
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                      gap: '14px',
+                      flexWrap: 'wrap'
+                    }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                        <span style={{ fontSize: '26px' }}>{activeSeasonalTheme.icon}</span>
+                        <div>
+                          <span style={{ fontSize: '10.5px', fontWeight: '900', color: 'var(--primary)', textTransform: 'uppercase', letterSpacing: '0.4px' }}>
+                            Sugerencia de Temporada Activa
                           </span>
-                          {isSelected && <Check size={16} style={{ color: 'var(--primary)' }} />}
-                        </div>
-
-                        <div style={{ display: 'flex', gap: '8px' }}>
-                          <div style={{ width: '22px', height: '22px', borderRadius: '50%', backgroundColor: p.primary, border: '2px solid var(--border)' }} title="Primario" />
-                          <div style={{ width: '22px', height: '22px', borderRadius: '50%', backgroundColor: p.accent, border: '2px solid var(--border)' }} title="Acento" />
-                          <div style={{ width: '22px', height: '22px', borderRadius: '50%', backgroundColor: p.hover, border: '2px solid var(--border)' }} title="Hover" />
+                          <h4 style={{ fontSize: '13.5px', fontWeight: '800', color: 'var(--text-primary)', margin: '2px 0 0 0' }}>
+                            {activeSeasonalTheme.title}: {activeSeasonalTheme.name}
+                          </h4>
                         </div>
                       </div>
-                    );
-                  })}
+
+                      {activeTheme !== activeSeasonalTheme.id ? (
+                        <button
+                          onClick={() => changeTheme(activeSeasonalTheme.id)}
+                          className="btn btn-primary"
+                          style={{
+                            padding: '8px 16px',
+                            borderRadius: '10px',
+                            fontSize: '12px',
+                            fontWeight: '800',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '6px'
+                          }}
+                        >
+                          <Sparkles size={14} />
+                          <span>Activar {activeSeasonalTheme.name}</span>
+                        </button>
+                      ) : (
+                        <span style={{
+                          fontSize: '11.5px',
+                          fontWeight: '800',
+                          backgroundColor: 'rgba(255, 255, 255, 0.85)',
+                          color: 'var(--primary)',
+                          padding: '6px 14px',
+                          borderRadius: '10px',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '6px'
+                        }}>
+                          <Check size={14} /> ¡Ya la tienes activa!
+                        </span>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Filtro por Categorías */}
+                  <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+                    {[
+                      { id: 'all', label: 'Todas las Temáticas' },
+                      { id: 'official', label: '🌿 Oficiales' },
+                      { id: 'seasonal', label: '🍂 Estaciones' },
+                      { id: 'celebration', label: '🎉 Celebraciones' },
+                      { id: 'cultural', label: '🇬🇹 Identidad & Conciencia' }
+                    ].map(f => (
+                      <button
+                        key={f.id}
+                        onClick={() => setThemeFilter(f.id)}
+                        style={{
+                          padding: '6px 14px',
+                          borderRadius: '20px',
+                          fontSize: '11.5px',
+                          fontWeight: '800',
+                          border: themeFilter === f.id ? '1.5px solid var(--primary)' : '1px solid var(--border)',
+                          backgroundColor: themeFilter === f.id ? 'var(--primary-light)' : 'var(--bg-primary)',
+                          color: themeFilter === f.id ? 'var(--primary)' : 'var(--text-secondary)',
+                          cursor: 'pointer',
+                          transition: 'all 0.15s ease'
+                        }}
+                      >
+                        {f.label}
+                      </button>
+                    ))}
+                  </div>
+
+                  {/* Cuadrícula de 14 Temáticas */}
+                  <div className="grid grid-3" style={{ gap: '16px' }}>
+                    {THEMES
+                      ?.filter(t => {
+                        if (themeFilter === 'all') return true;
+                        if (themeFilter === 'cultural') return t.category === 'cultural' || t.category === 'awareness';
+                        return t.category === themeFilter;
+                      })
+                      .map(t => {
+                        const isCurrentActive = customizationType === 'theme' && activeTheme === t.id;
+
+                        return (
+                          <div
+                            key={t.id}
+                            style={{
+                              padding: '18px',
+                              borderRadius: '18px',
+                              backgroundColor: isCurrentActive ? 'var(--primary-light)' : 'var(--bg-primary)',
+                              border: isCurrentActive ? '2px solid var(--primary)' : '1px solid var(--border)',
+                              boxShadow: isCurrentActive ? 'var(--tech-glow)' : 'var(--shadow-sm)',
+                              display: 'flex',
+                              flexDirection: 'column',
+                              justifyContent: 'space-between',
+                              gap: '14px',
+                              position: 'relative',
+                              transition: 'all 0.25s ease'
+                            }}
+                          >
+                            {/* Cabecera de la tarjeta */}
+                            <div>
+                              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '8px' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                  <span style={{ fontSize: '24px' }}>{t.icon}</span>
+                                  <div>
+                                    <h4 style={{ fontSize: '14px', fontWeight: '900', color: 'var(--text-primary)', margin: 0 }}>
+                                      {t.name}
+                                    </h4>
+                                    <span style={{ fontSize: '10px', fontWeight: '800', color: 'var(--text-muted)', textTransform: 'uppercase' }}>
+                                      {t.category}
+                                    </span>
+                                  </div>
+                                </div>
+
+                                {isCurrentActive && (
+                                  <span style={{
+                                    fontSize: '10.5px',
+                                    fontWeight: '900',
+                                    color: 'var(--primary)',
+                                    backgroundColor: 'rgba(255, 255, 255, 0.9)',
+                                    padding: '3px 8px',
+                                    borderRadius: '8px',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '4px'
+                                  }}>
+                                    <Check size={12} /> Activa
+                                  </span>
+                                )}
+                              </div>
+
+                              <p style={{ fontSize: '11.5px', color: 'var(--text-secondary)', lineHeight: '1.4', margin: '4px 0 8px 0' }}>
+                                {t.tagline}
+                              </p>
+
+                              {/* Chip del atuendo de Equi */}
+                              <div style={{
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '6px',
+                                padding: '3px 8px',
+                                borderRadius: '8px',
+                                backgroundColor: 'var(--bg-secondary)',
+                                border: '1px solid var(--border)',
+                                fontSize: '10.5px',
+                                fontWeight: '700',
+                                color: 'var(--text-secondary)'
+                              }}>
+                                <Sparkles size={11} style={{ color: 'var(--primary)' }} />
+                                <span>{t.mascotLabel}</span>
+                              </div>
+                            </div>
+
+                            {/* Muestrario de Colores y Botones de Acción */}
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                              <div style={{ display: 'flex', gap: '6px' }}>
+                                {t.swatches?.map((c, idx) => (
+                                  <div
+                                    key={idx}
+                                    style={{
+                                      width: '18px',
+                                      height: '18px',
+                                      borderRadius: '50%',
+                                      backgroundColor: c,
+                                      border: '1.5px solid var(--border)'
+                                    }}
+                                    title={c}
+                                  />
+                                ))}
+                              </div>
+
+                              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+                                <button
+                                  type="button"
+                                  onClick={() => setPreviewTheme(t)}
+                                  className="btn btn-secondary"
+                                  style={{
+                                    padding: '7px 10px',
+                                    borderRadius: '10px',
+                                    fontSize: '11px',
+                                    fontWeight: '800',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    gap: '5px'
+                                  }}
+                                >
+                                  <Eye size={13} />
+                                  <span>Vista Previa</span>
+                                </button>
+
+                                <button
+                                  type="button"
+                                  onClick={() => changeTheme(t.id)}
+                                  className={isCurrentActive ? 'btn btn-secondary' : 'btn btn-primary'}
+                                  disabled={isCurrentActive}
+                                  style={{
+                                    padding: '7px 10px',
+                                    borderRadius: '10px',
+                                    fontSize: '11px',
+                                    fontWeight: '800',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    gap: '5px'
+                                  }}
+                                >
+                                  {isCurrentActive ? (
+                                    <><Check size={13} /><span>Aplicada</span></>
+                                  ) : (
+                                    <><Sparkles size={13} /><span>Aplicar</span></>
+                                  )}
+                                </button>
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                  </div>
                 </div>
-              </div>
+              )}
+
+              {/* ======================================================== */}
+              {/* SUB-PESTAÑA 2: PALETAS TRADICIONALES                     */}
+              {/* ======================================================== */}
+              {customizationSubTab === 'palettes' && (
+                <div>
+                  <label style={{ fontSize: '11.5px', fontWeight: '800', color: 'var(--text-secondary)', display: 'block', marginBottom: '12px' }}>
+                    PALETAS DE COLORES DISPONIBLES:
+                  </label>
+
+                  <div className="grid grid-3" style={{ gap: '12px' }}>
+                    {PALETTES.map(p => {
+                      const isSelected = customizationType === 'palette' && colorPalette === p.id;
+                      return (
+                        <div
+                          key={p.id}
+                          onClick={() => changePalette(p.id)}
+                          style={{
+                            padding: '16px',
+                            borderRadius: '12px',
+                            backgroundColor: isSelected ? 'var(--primary-light)' : 'var(--bg-primary)',
+                            border: isSelected ? '2px solid var(--primary)' : '1px solid var(--border)',
+                            cursor: 'pointer',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            justifyContent: 'space-between',
+                            gap: '12px',
+                            transition: 'all 0.2s ease',
+                            boxShadow: isSelected ? 'var(--tech-glow)' : 'none'
+                          }}
+                        >
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <span style={{ fontSize: '13px', fontWeight: '800', color: 'var(--text-primary)' }}>
+                              {p.name}
+                            </span>
+                            {isSelected && <Check size={16} style={{ color: 'var(--primary)' }} />}
+                          </div>
+
+                          <div style={{ display: 'flex', gap: '8px' }}>
+                            <div style={{ width: '22px', height: '22px', borderRadius: '50%', backgroundColor: p.primary, border: '2px solid var(--border)' }} title="Primario" />
+                            <div style={{ width: '22px', height: '22px', borderRadius: '50%', backgroundColor: p.accent, border: '2px solid var(--border)' }} title="Acento" />
+                            <div style={{ width: '22px', height: '22px', borderRadius: '50%', backgroundColor: p.hover, border: '2px solid var(--border)' }} title="Hover" />
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {/* Modal de Vista Previa */}
+              <ThemePreviewModal
+                theme={previewTheme}
+                isOpen={!!previewTheme}
+                onClose={() => setPreviewTheme(null)}
+                onApply={changeTheme}
+                isCurrentActive={activeTheme === previewTheme?.id && customizationType === 'theme'}
+              />
             </div>
           )}
 

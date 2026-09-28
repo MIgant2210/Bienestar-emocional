@@ -1,22 +1,27 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useContext } from 'react';
 import { Sparkles, Heart, Zap, Award, ArrowRight, ArrowLeft, ArrowUp, RotateCw, Eye, Compass, Activity, Wind } from 'lucide-react';
+import { ThemeContext } from '../contexts/ThemeContext';
 
 /**
- * Mascota Oficial de EquilibrIA: Colibrí Morado Inteligente y Demostrador de Poses de Bienestar
+ * Mascota Oficial de EquilibrIA: Colibrí Morado Inteligente / Quetzal y Demostrador de Poses de Bienestar
  * Ilustración SVG en capas con profundidad volumétrica 3D, sombreados suaves,
- * múltiples capas de animación reactiva y demostrador dinámico de posturas y ejercicios.
+ * múltiples capas de animación reactiva, soporte de temáticas visuales y demostrador dinámico.
  */
 const ColibriMascot = ({ 
   mood = 'welcome', // 'welcome' | 'thinking' | 'happy' | 'almost_done' | 'celebrate'
   customMessage = '',
   progressPercent = 0,
   compact = false,
+  themeId = null, // 'equilibria' | 'spring' | 'summer' | 'autumn' | 'winter' | 'halloween' | 'birthday' | 'valentines' | 'environment' | 'graduation' | 'guatemala' | 'christmas' | 'newyear' | 'anniversary'
   // Modos especiales para ejercicios guiados de bienestar:
   phase = null, // 'ready' | 'inhale' | 'hold' | 'exhale' | 'step' | 'celebrate'
   exercisePose = 'neutral', // 'neutral' | 'inhale' | 'hold' | 'exhale' | 'neck_right' | 'neck_left' | 'neck_front' | 'shoulder_roll' | 'shoulder_lift' | 'chest_open' | 'stretch_up' | 'twist_right' | 'twist_left' | 'wrist_roll' | 'eyes_closed' | 'celebrate'
   duration = 4, // Duración del paso en segundos para sincronización CSS
   inStage = false // Renderizar dentro del escenario "Sala de Bienestar"
 }) => {
+  const themeCtx = useContext(ThemeContext);
+  const activeThemeId = themeId || themeCtx?.activeTheme || 'equilibria';
+  const isQuetzal = activeThemeId === 'guatemala';
   const [bounce, setBounce] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
 
@@ -26,6 +31,26 @@ const ColibriMascot = ({
     const t = setTimeout(() => setBounce(false), 600);
     return () => clearTimeout(t);
   }, [mood, phase, exercisePose, progressPercent]);
+
+  // Título e identidad de la mascota según la temática activa
+  const getMascotBadgeTitle = () => {
+    if (isQuetzal) return 'Equi • Edición Quetzal';
+    switch (activeThemeId) {
+      case 'spring': return 'Equi • Corona Floral';
+      case 'summer': return 'Equi • Lentes de Sol';
+      case 'autumn': return 'Equi • Bufanda Otoñal';
+      case 'winter': return 'Equi • Gorrito Invernal';
+      case 'halloween': return 'Equi • Sombrero Mágico';
+      case 'birthday': return 'Equi • Bonete Festivo';
+      case 'valentines': return 'Equi • Corazón de Bienestar';
+      case 'environment': return 'Equi • Brote Natural';
+      case 'graduation': return 'Equi • Birrete de Graduación';
+      case 'christmas': return 'Equi • Gorro Navideño';
+      case 'newyear': return 'Equi • Corbatín de Gala';
+      case 'anniversary': return 'Equi • Corona de Aniversario';
+      default: return 'Equi • Tu Guía Emocional';
+    }
+  };
 
   // Mensaje motivacional contextual según estado y pose
   const getDefaultMessage = () => {
@@ -302,14 +327,57 @@ const ColibriMascot = ({
             <stop offset="0%" stopColor="#475569" />
             <stop offset="100%" stopColor="#0f172a" />
           </linearGradient>
+
+          {/* Gradientes Volumétricos para Edición Quetzal Guatemalteco */}
+          <linearGradient id="quetzalBodyGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor="#6ee7b7" />
+            <stop offset="35%" stopColor="#10b981" />
+            <stop offset="70%" stopColor="#059669" />
+            <stop offset="100%" stopColor="#064e3b" />
+          </linearGradient>
+
+          <linearGradient id="quetzalBellyGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor="#fda4af" />
+            <stop offset="40%" stopColor="#f43f5e" />
+            <stop offset="75%" stopColor="#e11d48" />
+            <stop offset="100%" stopColor="#9f1239" />
+          </linearGradient>
+
+          <linearGradient id="quetzalWingGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor="#34d399" />
+            <stop offset="35%" stopColor="#059669" />
+            <stop offset="75%" stopColor="#047857" />
+            <stop offset="100%" stopColor="#022c22" />
+          </linearGradient>
+
+          <linearGradient id="quetzalTailGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+            <stop offset="0%" stopColor="#34d399" />
+            <stop offset="45%" stopColor="#059669" />
+            <stop offset="100%" stopColor="#10b981" />
+          </linearGradient>
+
+          <linearGradient id="summerLensGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor="#38bdf8" />
+            <stop offset="50%" stopColor="#818cf8" />
+            <stop offset="100%" stopColor="#f43f5e" />
+          </linearGradient>
         </defs>
 
-        {/* COLA DEL COLIBRÍ CON BALANCEO NATURAL */}
-        <g className="colibri-tail" style={{ transformOrigin: '70px 140px' }}>
-          <path d="M 68 135 C 48 162, 28 178, 16 188 C 36 178, 58 162, 72 145 Z" fill="#6b21a8" opacity="0.9" />
-          <path d="M 72 138 C 56 168, 42 186, 32 196 C 48 182, 68 164, 76 145 Z" fill="#a855f7" />
-          <path d="M 76 140 C 68 170, 60 190, 52 202 C 64 184, 75 166, 80 145 Z" fill="#ff7a00" opacity="0.9" />
-        </g>
+        {/* COLA DEL COLIBRÍ (O SERPENTINAS LARGAS DEL QUETZAL) */}
+        {isQuetzal ? (
+          <g className="colibri-tail quetzal-tail" style={{ transformOrigin: '70px 140px' }}>
+            <path d="M 68 140 C 42 175, 18 215, 30 265 C 42 225, 62 185, 72 145 Z" fill="url(#quetzalTailGrad)" opacity="0.95" />
+            <path d="M 74 142 C 54 180, 36 228, 48 278 C 58 234, 76 190, 78 147 Z" fill="#047857" opacity="0.88" />
+            <path d="M 65 136 C 50 155, 38 168, 28 176 C 44 164, 60 152, 70 142 Z" fill="#34d399" />
+            <path d="M 72 138 C 60 162, 50 178, 42 186 C 54 172, 68 156, 76 144 Z" fill="#10b981" />
+          </g>
+        ) : (
+          <g className="colibri-tail" style={{ transformOrigin: '70px 140px' }}>
+            <path d="M 68 135 C 48 162, 28 178, 16 188 C 36 178, 58 162, 72 145 Z" fill="#6b21a8" opacity="0.9" />
+            <path d="M 72 138 C 56 168, 42 186, 32 196 C 48 182, 68 164, 76 145 Z" fill="#a855f7" />
+            <path d="M 76 140 C 68 170, 60 190, 52 202 C 64 184, 75 166, 80 145 Z" fill="#ff7a00" opacity="0.9" />
+          </g>
+        )}
 
         {/* ALA TRASERA (Aleteo o postura de extensión) */}
         <g 
@@ -324,7 +392,7 @@ const ColibriMascot = ({
         >
           <path 
             d="M 95 85 C 108 30, 138 10, 165 5 C 148 32, 122 68, 98 90 Z" 
-            fill="url(#colibriWingGrad)" 
+            fill={isQuetzal ? "url(#quetzalWingGrad)" : "url(#colibriWingGrad)"} 
             opacity="0.75"
           />
         </g>
@@ -334,20 +402,49 @@ const ColibriMascot = ({
           {/* Lomo */}
           <path 
             d="M 80 140 C 65 110, 70 70, 95 55 C 115 45, 140 50, 145 70 C 150 90, 140 125, 105 142 C 95 146, 85 145, 80 140 Z" 
-            fill="url(#colibriBodyGrad)"
+            fill={isQuetzal ? "url(#quetzalBodyGrad)" : "url(#colibriBodyGrad)"}
           />
 
           {/* Pecho Brillante e Iridiscente */}
           <path 
             d="M 105 72 C 125 70, 142 85, 138 108 C 132 130, 110 138, 98 135 C 112 125, 125 110, 122 92 C 120 80, 112 75, 105 72 Z" 
-            fill="url(#colibriBellyGrad)"
+            fill={isQuetzal ? "url(#quetzalBellyGrad)" : "url(#colibriBellyGrad)"}
           />
 
-          {/* Cuello con destello turquesa */}
-          <ellipse cx="126" cy="74" rx="8" ry="12" fill="#38bdf8" opacity="0.65" transform="rotate(-20 126 74)" />
+          {/* Cuello con destello */}
+          <ellipse cx="126" cy="74" rx="8" ry="12" fill={isQuetzal ? "#6ee7b7" : "#38bdf8"} opacity="0.65" transform="rotate(-20 126 74)" />
+
+          {/* Accesorio Otoñal: Bufanda en el cuello */}
+          {activeThemeId === 'autumn' && (
+            <g className="mascot-accessory-autumn" transform="translate(108, 68)">
+              <path d="M 6 4 Q 18 10 26 4 Q 22 14 14 14 Q 6 12 6 4 Z" fill="#ea580c" />
+              <path d="M 10 10 Q 15 18 16 26 L 22 24 Q 18 16 16 10 Z" fill="#c2410c" />
+              <line x1="16" y1="26" x2="16" y2="29" stroke="#f97316" strokeWidth="1.5" />
+              <line x1="19" y1="25" x2="19" y2="28" stroke="#f97316" strokeWidth="1.5" />
+              <line x1="22" y1="24" x2="22" y2="27" stroke="#f97316" strokeWidth="1.5" />
+            </g>
+          )}
+
+          {/* Accesorio Año Nuevo: Corbatín elegante de gala */}
+          {activeThemeId === 'newyear' && (
+            <g className="mascot-accessory-newyear-bowtie" transform="translate(118, 74)">
+              <polygon points="0,0 -8,-4 -8,4" fill="#09090b" stroke="#f59e0b" strokeWidth="0.8" />
+              <polygon points="0,0 8,-4 8,4" fill="#09090b" stroke="#f59e0b" strokeWidth="0.8" />
+              <circle cx="0" cy="0" r="2.2" fill="#f59e0b" />
+            </g>
+          )}
+
+          {/* Accesorio Aniversario: Medalla de honor con cinta */}
+          {activeThemeId === 'anniversary' && (
+            <g className="mascot-accessory-anniversary-medal" transform="translate(118, 76)">
+              <polygon points="-4,-2 0,4 4,-2" fill="#7c3aed" />
+              <circle cx="0" cy="7" r="4" fill="#f59e0b" stroke="#d97706" strokeWidth="0.8" />
+              <circle cx="0" cy="7" r="2" fill="#fef08a" />
+            </g>
+          )}
         </g>
 
-        {/* CABEZA Y PICO CON ROTACIÓN DE POSTURA */}
+        {/* CABEZA Y PICO CON ROTACIÓN DE POSTURA Y ACCESORIOS */}
         <g 
           className="colibri-head-group" 
           style={{ 
@@ -359,8 +456,115 @@ const ColibriMascot = ({
           {/* Pico largo */}
           <path 
             d="M 142 66 L 196 62 Q 198 63 195 65 L 140 71 Z" 
-            fill="url(#colibriBeakGrad)"
+            fill={isQuetzal ? "#0f172a" : "url(#colibriBeakGrad)"}
           />
+
+          {/* Copete plumoso característico del Quetzal */}
+          {isQuetzal && (
+            <g className="quetzal-crest">
+              <path 
+                d="M 116 54 C 114 40, 122 34, 128 42 C 132 30, 142 32, 145 44 C 149 32, 158 38, 156 54 Z" 
+                fill="#10b981" 
+                opacity="0.95" 
+              />
+              <circle cx="128" cy="40" r="2.8" fill="#34d399" />
+              <circle cx="144" cy="40" r="2.8" fill="#34d399" />
+            </g>
+          )}
+
+          {/* Corona Floral de Primavera */}
+          {activeThemeId === 'spring' && (
+            <g className="mascot-accessory-spring" transform="translate(130, 42)">
+              <path d="M -12 6 Q 0 0 14 6" stroke="#10b981" strokeWidth="2.5" fill="none" strokeLinecap="round" />
+              <circle cx="-8" cy="4" r="4.5" fill="#f472b6" />
+              <circle cx="-8" cy="4" r="1.8" fill="#fef08a" />
+              <circle cx="2" cy="0" r="5" fill="#fb7185" />
+              <circle cx="2" cy="0" r="2" fill="#ffffff" />
+              <circle cx="10" cy="4" r="4" fill="#f472b6" />
+              <circle cx="10" cy="4" r="1.5" fill="#fef08a" />
+              <ellipse cx="-13" cy="8" rx="3" ry="1.5" fill="#34d399" transform="rotate(-30 -13 8)" />
+              <ellipse cx="14" cy="7" rx="3" ry="1.5" fill="#34d399" transform="rotate(30 14 7)" />
+            </g>
+          )}
+
+          {/* Gorrito de Invierno */}
+          {activeThemeId === 'winter' && (
+            <g className="mascot-accessory-winter" transform="translate(130, 36)">
+              <path d="M -14 16 C -14 4, 10 4, 10 16 Z" fill="#0284c7" />
+              <rect x="-16" y="13" width="28" height="5" rx="2.5" fill="#38bdf8" />
+              <circle cx="-2" cy="3" r="5.5" fill="#f8fafc" />
+              <circle cx="-2" cy="3" r="4.5" fill="#ffffff" />
+            </g>
+          )}
+
+          {/* Sombrero Mágico de Halloween */}
+          {activeThemeId === 'halloween' && (
+            <g className="mascot-accessory-halloween" transform="translate(128, 30)">
+              <path d="M -15 22 L 0 -4 L 13 22 Z" fill="#18181b" />
+              <ellipse cx="-1" cy="22" rx="18" ry="4" fill="#27272a" />
+              <path d="M -10 18 L -9 20 L 7 20 L 8 18 Z" fill="#9333ea" />
+              <rect x="-3" y="17" width="4" height="4" fill="#eab308" rx="1" />
+            </g>
+          )}
+
+          {/* Bonete de Cumpleaños */}
+          {activeThemeId === 'birthday' && (
+            <g className="mascot-accessory-birthday" transform="translate(128, 28)">
+              <path d="M -12 24 L 0 -4 L 10 24 Z" fill="#ec4899" />
+              <circle cx="-2" cy="15" r="2" fill="#fef08a" />
+              <circle cx="4" cy="19" r="1.8" fill="#38bdf8" />
+              <circle cx="-1" cy="6" r="1.5" fill="#ffffff" />
+              <circle cx="0" cy="-4" r="3.5" fill="#f59e0b" />
+              <ellipse cx="-1" cy="24" rx="12" ry="2.5" fill="#a855f7" />
+            </g>
+          )}
+
+          {/* Birrete de Graduación */}
+          {activeThemeId === 'graduation' && (
+            <g className="mascot-accessory-graduation" transform="translate(130, 38)">
+              <polygon points="0,-4 18,3 0,10 -18,3" fill="#1e293b" />
+              <path d="M -8 4 L -8 11 Q 0 15 8 11 L 8 4 Z" fill="#0f172a" />
+              <circle cx="0" cy="3" r="2" fill="#f59e0b" />
+              <path d="M 0 3 Q 10 5 13 13" stroke="#f59e0b" strokeWidth="1.5" fill="none" />
+              <circle cx="13" cy="14" r="1.5" fill="#eab308" />
+            </g>
+          )}
+
+          {/* Gorro Navideño de Santa */}
+          {activeThemeId === 'christmas' && (
+            <g className="mascot-accessory-christmas" transform="translate(128, 30)">
+              <path d="M -14 20 C -12 6, 4 0, 16 2 C 18 10, 12 16, 8 20 Z" fill="#dc2626" />
+              <rect x="-16" y="17" width="26" height="5.5" rx="3" fill="#f8fafc" />
+              <circle cx="19" cy="5" r="4.5" fill="#ffffff" />
+            </g>
+          )}
+
+          {/* Corona Real de Aniversario */}
+          {activeThemeId === 'anniversary' && (
+            <g className="mascot-accessory-anniversary" transform="translate(128, 36)">
+              <polygon points="-12,14 -14,0 -5,6 0,-3 5,6 14,0 12,14" fill="#f59e0b" stroke="#d97706" strokeWidth="1" />
+              <rect x="-12" y="12" width="24" height="4" rx="1" fill="#d97706" />
+              <circle cx="0" cy="14" r="1.5" fill="#e11d48" />
+              <circle cx="-6" cy="14" r="1.2" fill="#38bdf8" />
+              <circle cx="6" cy="14" r="1.2" fill="#38bdf8" />
+            </g>
+          )}
+
+          {/* Brote Natural del Medio Ambiente */}
+          {activeThemeId === 'environment' && (
+            <g className="mascot-accessory-environment" transform="translate(128, 40)">
+              <path d="M 0 10 Q -8 0 -4 -6 Q 4 -4 0 10 Z" fill="#10b981" />
+              <path d="M 0 10 Q 8 2 6 -4 Q -2 -2 0 10 Z" fill="#34d399" />
+              <path d="M 0 10 L 0 -4" stroke="#047857" strokeWidth="0.8" fill="none" />
+            </g>
+          )}
+
+          {/* Corazón de San Valentín flotando */}
+          {activeThemeId === 'valentines' && (
+            <g className="mascot-accessory-valentines" transform="translate(130, 36)">
+              <path d="M 0 3 C -4 -4, -12 0, 0 10 C 12 0, 4 -4, 0 3 Z" fill="#e11d48" opacity="0.95" transform="scale(0.85)" />
+            </g>
+          )}
 
           {/* Ojo (Abierto o Cerrado en meditación/serenidad) */}
           <g className="colibri-eye" style={{ transformOrigin: '130px 62px' }}>
@@ -373,6 +577,17 @@ const ColibriMascot = ({
               </>
             )}
           </g>
+
+          {/* Lentes de Sol de Verano sobre los ojos */}
+          {activeThemeId === 'summer' && (
+            <g className="mascot-accessory-summer" transform="translate(131, 57)">
+              <rect x="-10" y="0" width="16" height="11" rx="4" fill="#0f172a" />
+              <rect x="-9" y="1" width="14" height="9" rx="3" fill="url(#summerLensGrad)" />
+              <path d="M -10 3 L -18 1" stroke="#0f172a" strokeWidth="2" strokeLinecap="round" />
+              <path d="M 6 4 L 14 3" stroke="#0f172a" strokeWidth="2" strokeLinecap="round" />
+              <path d="M -7 2 L -2 9" stroke="#ffffff" strokeWidth="1.2" opacity="0.7" strokeLinecap="round" />
+            </g>
+          )}
         </g>
 
         {/* ALA DELANTERA (Aleteo, estiramiento o rotación) */}
@@ -388,21 +603,21 @@ const ColibriMascot = ({
         >
           <path 
             d="M 105 82 C 122 20, 158 0, 188 -5 C 170 28, 136 68, 108 92 Z" 
-            fill="url(#colibriWingGrad)" 
+            fill={isQuetzal ? "url(#quetzalWingGrad)" : "url(#colibriWingGrad)"} 
           />
           <path 
             d="M 112 78 C 126 32, 152 16, 175 10 C 160 35, 134 65, 114 85 Z" 
-            fill="#e9d5ff" 
+            fill={isQuetzal ? "#6ee7b7" : "#e9d5ff"} 
             opacity="0.65" 
           />
         </g>
 
         {/* PARTÍCULAS / DESTELLOS FLOTANTES EN ÓRBITA */}
         <g className="colibri-sparkles-group">
-          <circle cx="172" cy="38" r="3" fill="#fde047" opacity="0.9" className="sparkle-1" />
-          <circle cx="42" cy="78" r="2.5" fill="#ff7a00" opacity="0.85" className="sparkle-2" />
-          <circle cx="155" cy="135" r="3.5" fill="#c084fc" opacity="0.9" className="sparkle-3" />
-          <circle cx="70" cy="30" r="2" fill="#38bdf8" opacity="0.8" className="sparkle-4" />
+          <circle cx="172" cy="38" r="3" fill={isQuetzal ? "#34d399" : "#fde047"} opacity="0.9" className="sparkle-1" />
+          <circle cx="42" cy="78" r="2.5" fill={isQuetzal ? "#059669" : "#ff7a00"} opacity="0.85" className="sparkle-2" />
+          <circle cx="155" cy="135" r="3.5" fill={isQuetzal ? "#e11d48" : "#c084fc"} opacity="0.9" className="sparkle-3" />
+          <circle cx="70" cy="30" r="2" fill={isQuetzal ? "#6ee7b7" : "#38bdf8"} opacity="0.8" className="sparkle-4" />
         </g>
       </svg>
     </div>
@@ -556,7 +771,7 @@ const ColibriMascot = ({
           letterSpacing: '0.5px'
         }}>
           <Sparkles size={12} />
-          <span>Equi • Tu Guía Emocional</span>
+          <span>{getMascotBadgeTitle()}</span>
         </div>
 
         <p style={{
