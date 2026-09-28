@@ -3,17 +3,17 @@ import { ThemeContext } from '../contexts/ThemeContext';
 
 /**
  * Catálogo de Constelaciones Celestiales y Signos Zodiacales para Modo Oscuro
- * Ubicadas en las orillas y esquinas extremas (separadas del centro) para no interferir con módulos.
- * Especial distinción para Libra (Balanza del Equilibrio).
+ * Con posiciones optimizadas en los márgenes exteriores (11% superior / 12% inferior)
+ * para que se aprecien en su totalidad sin cortarse ni tapar los módulos del centro.
  */
 const CELESTIAL_CONSTELLATIONS = [
   {
     id: 'libra',
     name: '⚖️ Constelación de Libra • La Balanza del Equilibrio',
-    isSpecial: true, // ¡Resaltada especialmente con fulgor dorado y celestial!
-    position: { top: '3.5%', right: '2.5%' },
+    isSpecial: true, // ¡Resaltada con fulgor dorado especial!
+    position: { top: '11%', right: '2%' },
     width: '230px',
-    height: '180px',
+    height: '175px',
     viewBox: '0 0 260 200',
     nodes: [
       [130, 22],  // Fulcro superior
@@ -46,7 +46,7 @@ const CELESTIAL_CONSTELLATIONS = [
   {
     id: 'colibri',
     name: '✦ Constelación Colibrí (Equi)',
-    position: { top: '3.5%', left: '2.5%' },
+    position: { top: '11%', left: '2%' },
     width: '220px',
     height: '165px',
     viewBox: '0 0 240 180',
@@ -63,7 +63,7 @@ const CELESTIAL_CONSTELLATIONS = [
   {
     id: 'aries',
     name: '♈ Constelación de Aries (El Carnero)',
-    position: { bottom: '3.5%', left: '2.5%' },
+    position: { bottom: '12%', left: '2%' },
     width: '200px',
     height: '130px',
     viewBox: '0 0 220 140',
@@ -79,7 +79,7 @@ const CELESTIAL_CONSTELLATIONS = [
   {
     id: 'tauro',
     name: '♉ Constelación de Tauro (El Toro Celestial)',
-    position: { top: '3.5%', right: '2.5%' },
+    position: { top: '11%', right: '2%' },
     width: '220px',
     height: '170px',
     viewBox: '0 0 240 190',
@@ -97,7 +97,7 @@ const CELESTIAL_CONSTELLATIONS = [
   {
     id: 'geminis',
     name: '♊ Constelación de Géminis (Los Gemelos)',
-    position: { top: '3.5%', left: '2.5%' },
+    position: { top: '11%', left: '2%' },
     width: '200px',
     height: '210px',
     viewBox: '0 0 220 230',
@@ -116,7 +116,7 @@ const CELESTIAL_CONSTELLATIONS = [
   {
     id: 'cancer',
     name: '♋ Constelación de Cáncer',
-    position: { bottom: '3.5%', right: '2.5%' },
+    position: { bottom: '12%', right: '2%' },
     width: '180px',
     height: '180px',
     viewBox: '0 0 190 190',
@@ -131,7 +131,7 @@ const CELESTIAL_CONSTELLATIONS = [
   {
     id: 'leo',
     name: '♌ Constelación de Leo (El León)',
-    position: { top: '3.5%', right: '2.5%' },
+    position: { top: '11%', right: '2%' },
     width: '230px',
     height: '155px',
     viewBox: '0 0 250 170',
@@ -147,7 +147,7 @@ const CELESTIAL_CONSTELLATIONS = [
   {
     id: 'virgo',
     name: '♍ Constelación de Virgo (La Sabiduría)',
-    position: { bottom: '3.5%', left: '2.5%' },
+    position: { bottom: '12%', left: '2%' },
     width: '220px',
     height: '190px',
     viewBox: '0 0 240 210',
@@ -162,7 +162,7 @@ const CELESTIAL_CONSTELLATIONS = [
   {
     id: 'escorpio',
     name: '♏ Constelación de Escorpio (Antares)',
-    position: { top: '3.5%', left: '2%' },
+    position: { top: '11%', left: '2%' },
     width: '200px',
     height: '230px',
     viewBox: '0 0 220 250',
@@ -177,7 +177,7 @@ const CELESTIAL_CONSTELLATIONS = [
   {
     id: 'sagitario',
     name: '♐ Constelación de Sagitario (La Tetera Cósmica)',
-    position: { bottom: '3.5%', right: '2.5%' },
+    position: { bottom: '12%', right: '2%' },
     width: '210px',
     height: '165px',
     viewBox: '0 0 230 180',
@@ -193,7 +193,7 @@ const CELESTIAL_CONSTELLATIONS = [
   {
     id: 'capricornio',
     name: '♑ Constelación de Capricornio',
-    position: { top: '3.5%', right: '2.5%' },
+    position: { top: '11%', right: '2%' },
     width: '220px',
     height: '150px',
     viewBox: '0 0 240 160',
@@ -209,7 +209,7 @@ const CELESTIAL_CONSTELLATIONS = [
   {
     id: 'acuario',
     name: '♒ Constelación de Acuario (El Portador)',
-    position: { bottom: '3.5%', left: '2.5%' },
+    position: { bottom: '12%', left: '2%' },
     width: '220px',
     height: '165px',
     viewBox: '0 0 240 180',
@@ -224,7 +224,7 @@ const CELESTIAL_CONSTELLATIONS = [
   {
     id: 'piscis',
     name: '♓ Constelación de Piscis (La Empatía)',
-    position: { top: '3.5%', left: '2.5%' },
+    position: { top: '11%', left: '2%' },
     width: '210px',
     height: '180px',
     viewBox: '0 0 230 200',
@@ -240,7 +240,7 @@ const CELESTIAL_CONSTELLATIONS = [
   {
     id: 'orion',
     name: '✦ Constelación de Orión (El Guardián)',
-    position: { top: '3.5%', left: '2%' },
+    position: { top: '11%', left: '2%' },
     width: '200px',
     height: '220px',
     viewBox: '0 0 210 230',
@@ -258,7 +258,7 @@ const CELESTIAL_CONSTELLATIONS = [
   {
     id: 'casiopea',
     name: '✦ Constelación de Casiopea (La Corona)',
-    position: { top: '4%', right: '2.5%' },
+    position: { top: '12%', right: '2%' },
     width: '230px',
     height: '130px',
     viewBox: '0 0 250 140',
@@ -273,7 +273,7 @@ const CELESTIAL_CONSTELLATIONS = [
   {
     id: 'crux',
     name: '✦ Constelación Cruz del Sur',
-    position: { bottom: '4%', left: '2.5%' },
+    position: { bottom: '12%', left: '2%' },
     width: '170px',
     height: '195px',
     viewBox: '0 0 180 210',
@@ -288,7 +288,7 @@ const CELESTIAL_CONSTELLATIONS = [
   {
     id: 'fenix',
     name: '✦ Constelación del Fénix (Resiliencia)',
-    position: { bottom: '3.5%', right: '2.5%' },
+    position: { bottom: '12%', right: '2%' },
     width: '230px',
     height: '160px',
     viewBox: '0 0 260 180',
@@ -306,10 +306,10 @@ const CELESTIAL_CONSTELLATIONS = [
 
 /**
  * Cielo Estrellado Global de EquilibrIA con Constelaciones Zodiacales y Celestiales
- * - En Modo Claro: Destellos elegantes y hermosos en las orillas; en la zona central de los módulos,
+ * - En Modo Claro: Destellos elegantes en las orillas; en la zona central de los módulos,
  *   destellitos sutiles que acompañan sin interrumpir la lectura.
  * - En Modo Oscuro: Cielo de estrellas blancas brillantes con halo celestial y
- *   constelaciones zodiacales separadas hacia los extremos para apreciarse sin tapar el centro.
+ *   constelaciones zodiacales aleatorias en las esquinas que se aprecian cómodamente.
  */
 const StarryBackground = ({ count = 135 }) => {
   const themeCtx = useContext(ThemeContext);
@@ -318,11 +318,17 @@ const StarryBackground = ({ count = 135 }) => {
 
   const [constellationIndex, setConstellationIndex] = useState(0);
 
-  // Ciclo periódico de constelaciones en Modo Oscuro (cada 12 segundos)
+  // Ciclo periódico de constelaciones en Modo Oscuro (aleatorias sin repetir la misma consecutivamente)
   useEffect(() => {
     if (!isDark) return;
     const interval = setInterval(() => {
-      setConstellationIndex((prev) => (prev + 1) % CELESTIAL_CONSTELLATIONS.length);
+      setConstellationIndex((prevIndex) => {
+        let nextIndex;
+        do {
+          nextIndex = Math.floor(Math.random() * CELESTIAL_CONSTELLATIONS.length);
+        } while (nextIndex === prevIndex && CELESTIAL_CONSTELLATIONS.length > 1);
+        return nextIndex;
+      });
     }, 12000);
     return () => clearInterval(interval);
   }, [isDark]);
