@@ -1,12 +1,14 @@
 import React, { useState, useEffect, useRef, useContext } from 'react';
+import { createPortal } from 'react-dom';
 import { X, Check, Sparkles, Sun, Moon } from 'lucide-react';
 import ColibriMascot from '../ColibriMascot';
 import { ThemeContext } from '../../contexts/ThemeContext';
 
 /**
  * Modal de Vista Previa Interactiva de Temáticas Visuales
- * 100% Adaptable en Modo Claro y Modo Oscuro con alta definición cromática.
- * Desplaza automáticamente la vista hacia arriba y simula el entorno real de EquilibrIA.
+ * Utiliza createPortal para montarse directamente en document.body,
+ * garantizando que NINGÚN contenedor padre con 'transform' o scroll desplace la ventana.
+ * Bloquea el scroll del fondo mientras está abierto y se posiciona en la parte superior-centro de la pantalla.
  */
 const ThemePreviewModal = ({ theme, isOpen, onClose, onApply, isCurrentActive }) => {
   const themeCtx = useContext(ThemeContext);
@@ -20,12 +22,17 @@ const ThemePreviewModal = ({ theme, isOpen, onClose, onApply, isCurrentActive })
     }
   }, [themeCtx?.theme, isOpen]);
 
-  // Al abrir, desplazarse suavemente al inicio del modal
+  // Bloquear el scroll del fondo mientras el modal esté visible
   useEffect(() => {
     if (isOpen) {
+      const originalOverflow = document.body.style.overflow;
+      document.body.style.overflow = 'hidden';
       setTimeout(() => {
         cardRef.current?.scrollTo({ top: 0, behavior: 'smooth' });
       }, 50);
+      return () => {
+        document.body.style.overflow = originalOverflow;
+      };
     }
   }, [isOpen, theme]);
 
@@ -34,20 +41,26 @@ const ThemePreviewModal = ({ theme, isOpen, onClose, onApply, isCurrentActive })
   const isDark = previewMode === 'dark';
   const currentTokens = theme.tokens?.[previewMode] || theme.tokens?.light;
 
-  return (
+  const modalContent = (
     <div 
       className="theme-preview-overlay"
       style={{
         position: 'fixed',
-        inset: 0,
-        backgroundColor: 'rgba(0, 0, 0, 0.75)',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        width: '100vw',
+        height: '100vh',
+        backgroundColor: 'rgba(0, 0, 0, 0.72)',
         backdropFilter: 'blur(10px)',
         WebkitBackdropFilter: 'blur(10px)',
-        zIndex: 10000,
+        zIndex: 99999,
         display: 'flex',
-        alignItems: 'center',
+        alignItems: 'flex-start',
         justifyContent: 'center',
-        padding: '16px'
+        padding: '30px 16px 24px',
+        overflowY: 'auto'
       }}
       onClick={onClose}
     >
@@ -57,7 +70,7 @@ const ThemePreviewModal = ({ theme, isOpen, onClose, onApply, isCurrentActive })
         style={{
           width: '100%',
           maxWidth: '680px',
-          maxHeight: '90vh',
+          maxHeight: 'calc(100vh - 60px)',
           overflowY: 'auto',
           backgroundColor: isDark ? '#0f172a' : '#ffffff',
           color: isDark ? '#f8fafc' : '#0f172a',
@@ -66,11 +79,12 @@ const ThemePreviewModal = ({ theme, isOpen, onClose, onApply, isCurrentActive })
           boxShadow: isDark 
             ? '0 25px 65px -12px rgba(0, 0, 0, 0.8), 0 0 35px rgba(99, 102, 241, 0.18)' 
             : '0 25px 65px -12px rgba(0, 0, 0, 0.25)',
-          padding: '28px',
+          padding: '24px 28px',
           position: 'relative',
           display: 'flex',
           flexDirection: 'column',
-          gap: '20px',
+          gap: '18px',
+          margin: '0 auto',
           transition: 'background-color 0.3s ease, border-color 0.3s ease, color 0.3s ease'
         }}
         onClick={(e) => e.stopPropagation()}
@@ -187,11 +201,11 @@ const ThemePreviewModal = ({ theme, isOpen, onClose, onApply, isCurrentActive })
           style={{
             background: currentTokens.pageBg,
             borderRadius: '20px',
-            padding: '24px',
+            padding: '20px',
             border: `1.5px solid ${currentTokens.cardBorder || 'rgba(0,0,0,0.1)'}`,
             display: 'grid',
             gridTemplateColumns: '1fr',
-            gap: '18px',
+            gap: '16px',
             boxShadow: 'inset 0 2px 10px rgba(0,0,0,0.06)'
           }}
         >
@@ -199,7 +213,7 @@ const ThemePreviewModal = ({ theme, isOpen, onClose, onApply, isCurrentActive })
           <div style={{
             backgroundColor: isDark ? 'rgba(24, 28, 48, 0.94)' : 'rgba(255, 255, 255, 0.94)',
             borderRadius: '16px',
-            padding: '16px 20px',
+            padding: '14px 18px',
             border: `1px solid ${currentTokens.cardBorder}`,
             display: 'flex',
             justifyContent: 'space-between',
@@ -208,9 +222,9 @@ const ThemePreviewModal = ({ theme, isOpen, onClose, onApply, isCurrentActive })
           }}>
             <div>
               <span style={{
-                fontSize: '10.5px',
+                fontSize: '10px',
                 fontWeight: '900',
-                padding: '3px 10px',
+                padding: '3px 8px',
                 borderRadius: '8px',
                 backgroundColor: currentTokens.badgeBg,
                 color: currentTokens.badgeText,
@@ -220,15 +234,15 @@ const ThemePreviewModal = ({ theme, isOpen, onClose, onApply, isCurrentActive })
                 {theme.category?.toUpperCase() || 'TEMÁTICA'}
               </span>
               <h4 style={{
-                fontSize: '14.5px',
+                fontSize: '14px',
                 fontWeight: '800',
                 color: isDark ? '#f8fafc' : '#1e293b',
-                margin: '6px 0 2px 0'
+                margin: '4px 0 2px 0'
               }}>
                 Espacio de Bienestar Integral
               </h4>
               <p style={{
-                fontSize: '12px',
+                fontSize: '11.5px',
                 color: isDark ? '#94a3b8' : '#64748b',
                 margin: 0
               }}>
@@ -241,8 +255,8 @@ const ThemePreviewModal = ({ theme, isOpen, onClose, onApply, isCurrentActive })
               color: '#ffffff',
               border: 'none',
               borderRadius: '10px',
-              padding: '8px 18px',
-              fontSize: '12px',
+              padding: '7px 16px',
+              fontSize: '11.5px',
               fontWeight: '800',
               cursor: 'pointer',
               boxShadow: currentTokens.techGlow,
@@ -250,7 +264,7 @@ const ThemePreviewModal = ({ theme, isOpen, onClose, onApply, isCurrentActive })
               alignItems: 'center',
               gap: '6px'
             }}>
-              <Sparkles size={14} /> Explorar
+              <Sparkles size={13} /> Explorar
             </button>
           </div>
 
@@ -259,7 +273,7 @@ const ThemePreviewModal = ({ theme, isOpen, onClose, onApply, isCurrentActive })
             display: 'flex',
             flexDirection: 'column',
             alignItems: 'center',
-            padding: '10px 0'
+            padding: '6px 0'
           }}>
             <ColibriMascot 
               themeId={theme.id}
@@ -278,7 +292,7 @@ const ThemePreviewModal = ({ theme, isOpen, onClose, onApply, isCurrentActive })
             display: 'flex',
             gap: '12px',
             alignItems: 'center',
-            padding: '12px 16px',
+            padding: '10px 14px',
             borderRadius: '14px',
             backgroundColor: isDark ? '#1e293b' : '#f8fafc',
             border: `1px solid ${isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.06)'}`,
@@ -288,8 +302,8 @@ const ThemePreviewModal = ({ theme, isOpen, onClose, onApply, isCurrentActive })
               <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                 <div 
                   style={{
-                    width: '28px',
-                    height: '28px',
+                    width: '26px',
+                    height: '26px',
                     borderRadius: '8px',
                     backgroundColor: color,
                     border: `1.5px solid ${isDark ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.1)'}`,
@@ -310,16 +324,16 @@ const ThemePreviewModal = ({ theme, isOpen, onClose, onApply, isCurrentActive })
           display: 'flex',
           justifyContent: 'flex-end',
           gap: '10px',
-          paddingTop: '14px',
+          paddingTop: '12px',
           borderTop: `1px solid ${isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.08)'}`
         }}>
           <button
             onClick={onClose}
             className="btn btn-secondary"
             style={{
-              padding: '10px 20px',
+              padding: '9px 18px',
               borderRadius: '12px',
-              fontSize: '13px',
+              fontSize: '12.5px',
               fontWeight: '800',
               backgroundColor: isDark ? '#1e293b' : '#f1f5f9',
               color: isDark ? '#f8fafc' : '#0f172a',
@@ -336,9 +350,9 @@ const ThemePreviewModal = ({ theme, isOpen, onClose, onApply, isCurrentActive })
             }}
             className="btn btn-primary"
             style={{
-              padding: '10px 24px',
+              padding: '9px 22px',
               borderRadius: '12px',
-              fontSize: '13px',
+              fontSize: '12.5px',
               fontWeight: '800',
               display: 'flex',
               alignItems: 'center',
@@ -347,13 +361,15 @@ const ThemePreviewModal = ({ theme, isOpen, onClose, onApply, isCurrentActive })
               boxShadow: currentTokens.techGlow
             }}
           >
-            <Sparkles size={16} />
+            <Sparkles size={15} />
             <span>{isCurrentActive ? 'Temática Actual Aplicada' : 'Aplicar esta Temática'}</span>
           </button>
         </div>
       </div>
     </div>
   );
+
+  return createPortal(modalContent, document.body);
 };
 
 export default ThemePreviewModal;

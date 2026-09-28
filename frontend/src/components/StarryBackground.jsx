@@ -1,7 +1,16 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useContext } from 'react';
+import { ThemeContext } from '../contexts/ThemeContext';
 
+/**
+ * Cielo Estrellado Global de EquilibrIA
+ * En Modo Claro: Destellos elegantes con los colores armónicos de la temática activa.
+ * En Modo Oscuro: Cielo de estrellas blancas brillantes con halo celestial.
+ */
 const StarryBackground = ({ count = 130 }) => {
-  const systemColors = [
+  const themeCtx = useContext(ThemeContext);
+  const activeSwatches = themeCtx?.activeThemeData?.swatches;
+
+  const defaultColors = [
     '#6366f1', // Indigo Primary
     '#8b5cf6', // Violet Accent
     '#ec4899', // Rose Pink
@@ -9,6 +18,8 @@ const StarryBackground = ({ count = 130 }) => {
     '#f59e0b', // Golden Amber
     '#3b82f6'  // Sky Blue
   ];
+
+  const palette = (activeSwatches && activeSwatches.length > 0) ? activeSwatches : defaultColors;
 
   // Generar destellos y estrellas distribuidas de forma armónica por toda la pantalla
   const stars = useMemo(() => {
@@ -19,7 +30,7 @@ const StarryBackground = ({ count = 130 }) => {
       // Variedad de tamaños: estrellas sutiles (1.5 - 2.8px) y destellos en cruz (3.8 - 5px)
       const size = Math.random() * 2.2 + 1.6;
       const isSparkle = i % 4 === 0; // 1 de cada 4 es un destello en cruz
-      const color = systemColors[i % systemColors.length];
+      const color = palette[i % palette.length];
 
       return {
         id: i,
@@ -33,7 +44,7 @@ const StarryBackground = ({ count = 130 }) => {
         color
       };
     });
-  }, [count]);
+  }, [count, palette]);
 
   return (
     <div className="starry-sky-container" aria-hidden="true">
@@ -58,4 +69,3 @@ const StarryBackground = ({ count = 130 }) => {
 };
 
 export default StarryBackground;
-
