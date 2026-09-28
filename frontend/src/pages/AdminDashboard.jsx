@@ -50,6 +50,7 @@ const TAB_TO_URL = {
 };
 
 const AdminDashboard = ({ initialTab = 'analytics' }) => {
+  const { user, logout } = useContext(AuthContext);
   const { 
     theme, 
     toggleTheme, 
