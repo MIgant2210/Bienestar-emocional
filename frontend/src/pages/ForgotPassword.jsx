@@ -3,7 +3,6 @@ import { Link } from 'react-router-dom';
 import { ThemeContext } from '../contexts/ThemeContext';
 import { Mail, ArrowRight, Loader, CheckCircle2, AlertCircle, Sun, Moon, KeyRound, ArrowLeft, Send } from 'lucide-react';
 import api from '../services/api';
-import StarryBackground from '../components/StarryBackground';
 
 const ForgotPassword = () => {
   const { theme, toggleTheme } = useContext(ThemeContext);
@@ -54,9 +53,6 @@ const ForgotPassword = () => {
       overflow: 'hidden'
     }} className="animate-fade">
       
-      {/* Cielo Estrellado Oficial */}
-      <StarryBackground isLogin={true} />
-
       {/* Botón Flotante para Modo Oscuro/Claro */}
       <button 
         onClick={toggleTheme}

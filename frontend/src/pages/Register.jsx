@@ -8,7 +8,6 @@ import {
   Sparkles, Check, AlertCircle, Send
 } from 'lucide-react';
 import api from '../services/api';
-import StarryBackground from '../components/StarryBackground';
 import PrivacyTermsModal from '../components/PrivacyTermsModal';
 
 const NAME_REGEX = /^[a-zA-ZáéíóúÁÉÍÓÚñÑüÜ' -]{2,50}$/;
@@ -183,9 +182,6 @@ const Register = ({ onNavigate }) => {
       overflow: 'hidden'
     }} className="animate-fade">
       
-      {/* Cielo Estrellado con Destellos */}
-      <StarryBackground isLogin={true} />
-
       {/* Botón Volver al Login */}
       <div style={{ position: 'absolute', top: '24px', left: '24px', zIndex: 10 }}>
         <button 

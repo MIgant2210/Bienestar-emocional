@@ -10,4 +10,5 @@ requests>=2.31.0
 edge-tts>=7.0.0
 python-dotenv==1.0.1
 psycopg2-binary
+psycopg[binary]>=3.1.0
 gunicorn==22.0.0

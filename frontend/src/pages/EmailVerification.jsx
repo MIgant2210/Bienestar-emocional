@@ -3,7 +3,6 @@ import { useParams, useSearchParams, useNavigate } from 'react-router-dom';
 import { ThemeContext } from '../contexts/ThemeContext';
 import { CheckCircle2, XCircle, Loader, ArrowRight, Sun, Moon, ShieldCheck, MailCheck } from 'lucide-react';
 import api from '../services/api';
-import StarryBackground from '../components/StarryBackground';
 
 const EmailVerification = () => {
   const { token: pathToken } = useParams();
@@ -58,8 +57,6 @@ const EmailVerification = () => {
       background: 'var(--page-bg)',
       overflow: 'hidden'
     }} className="animate-fade">
-      <StarryBackground isLogin={true} />
-
       {/* Botón de tema claro / oscuro */}
       <div style={{ position: 'absolute', top: '24px', right: '24px', zIndex: 10 }}>
         <button onClick={toggleTheme} className="theme-toggle" style={{

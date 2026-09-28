@@ -55,19 +55,19 @@
   display: block !important;
 }
 
-/* Modo Claro: Destellos elegantes con colores del sistema */
+/* Modo Claro: Destellos elegantes como lucecitas bonitas de colores del sistema */
 .star-node {
   position: absolute;
   background-color: var(--star-color, var(--primary));
   border-radius: 50%;
   box-shadow: 0 0 6px var(--star-color, var(--primary)), 0 0 14px var(--star-color, var(--primary));
-  animation: starTwinklePulse 3s infinite ease-in-out;
+  animation: starTwinklePulse 3.5s infinite ease-in-out;
 }
 
 /* Estrellas Tipo Destello en Cruz con Colores del Sistema */
 .star-node.star-sparkle {
-  border-radius: 2px;
-  background: radial-gradient(circle, #ffffff 30%, var(--star-color, var(--primary)) 100%);
+  border-radius: 1px;
+  background: radial-gradient(circle, #ffffff 40%, var(--star-color, var(--primary)) 100%);
   box-shadow: 0 0 8px var(--star-color, var(--primary)), 0 0 16px var(--star-color, var(--primary));
 }
 
@@ -83,44 +83,44 @@
 }
 
 .star-node.star-sparkle::before {
-  width: 14px;
+  width: 12px;
   height: 2px;
 }
 
 .star-node.star-sparkle::after {
   width: 2px;
-  height: 14px;
+  height: 12px;
 }
 
-/* Modo Oscuro: Destellos Blancos y Neón Violeta */
+/* Modo Oscuro: Estrellas Blancas Brillantes con Aura Celestial */
 [data-theme='dark'] .star-node {
-  background-color: #ffffff;
-  box-shadow: 0 0 10px #ffffff, 0 0 20px rgba(165, 180, 252, 0.9);
+  background-color: #ffffff !important;
+  box-shadow: 0 0 6px #ffffff, 0 0 14px rgba(255, 255, 255, 0.85), 0 0 22px rgba(165, 180, 252, 0.6) !important;
 }
 
 [data-theme='dark'] .star-node.star-sparkle {
-  background: radial-gradient(circle, #ffffff 60%, rgba(199, 210, 254, 1) 100%);
-  box-shadow: 0 0 12px #ffffff, 0 0 24px rgba(129, 140, 248, 1);
+  background: radial-gradient(circle, #ffffff 65%, rgba(224, 231, 255, 0.95) 100%) !important;
+  box-shadow: 0 0 10px #ffffff, 0 0 20px rgba(255, 255, 255, 0.9), 0 0 28px rgba(129, 140, 248, 0.7) !important;
 }
 
 [data-theme='dark'] .star-node.star-sparkle::before,
 [data-theme='dark'] .star-node.star-sparkle::after {
-  background-color: #ffffff;
-  box-shadow: 0 0 8px #ffffff;
+  background-color: #ffffff !important;
+  box-shadow: 0 0 8px #ffffff, 0 0 14px rgba(255, 255, 255, 0.8) !important;
 }
 
 @keyframes starTwinklePulse {
   0% {
-    opacity: 0.3;
-    transform: scale(0.7) translateY(0px);
+    opacity: 0.25;
+    transform: scale(0.75);
   }
   50% {
     opacity: var(--base-opacity, 0.85);
-    transform: scale(1.4) translateY(-3px);
+    transform: scale(1.3);
   }
   100% {
-    opacity: 0.3;
-    transform: scale(0.7) translateY(-6px);
+    opacity: 0.25;
+    transform: scale(0.75);
   }
 }
 

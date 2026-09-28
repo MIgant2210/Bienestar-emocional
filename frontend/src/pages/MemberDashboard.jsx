@@ -21,7 +21,6 @@ import GamificationWidget from '../components/GamificationWidget';
 import NotificationCenter from '../components/NotificationCenter';
 import TestResponseViewer from '../components/TestResponseViewer';
 import ColibriMascot from '../components/ColibriMascot';
-import StarryBackground from '../components/StarryBackground';
 import BreathingExerciseModal from '../components/wellness/BreathingExerciseModal';
 import EquiAssistantWidget from '../components/assistant/EquiAssistantWidget';
 import EquiTourModal from '../components/EquiTourModal';
@@ -771,10 +770,6 @@ const MemberDashboard = ({ initialTab }) => {
 
     return (
       <div className="animate-fade eval-fullscreen-wrapper">
-        
-        {/* Cielo Estrellado Oficial de EquilibrIA */}
-        <StarryBackground isLogin={false} />
-
         {/* Recompensa XP Animada estilo Duolingo */}
         {showXpReward && (
           <div style={{

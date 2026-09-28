@@ -3,7 +3,6 @@ import { useNavigate, Link } from 'react-router-dom';
 import { AuthContext } from '../contexts/AuthContext';
 import { ThemeContext } from '../contexts/ThemeContext';
 import { Sun, Moon, Lock, Mail, Loader, BrainCircuit, Sparkles, ShieldCheck, HeartHandshake, ArrowRight, Eye, EyeOff, AlertCircle, KeyRound, Building2, CheckCircle2, Check, ArrowLeft } from 'lucide-react';
-import StarryBackground from '../components/StarryBackground';
 import PrivacyTermsModal from '../components/PrivacyTermsModal';
 
 const Login = ({ onNavigate }) => {
@@ -240,9 +239,6 @@ const Login = ({ onNavigate }) => {
         padding: '20px 16px'
       }}
     >
-      {/* Cielo Estrellado Oficial de EquilibrIA */}
-      <StarryBackground isLogin={true} />
-
       {/* Orbe luminoso dinámico reactivo al cursor */}
       <div 
         style={{

@@ -21,7 +21,6 @@ import GamificationWidget from '../components/GamificationWidget';
 import NotificationCenter from '../components/NotificationCenter';
 import TestResponseViewer from '../components/TestResponseViewer';
 import ColibriMascot from '../components/ColibriMascot';
-import StarryBackground from '../components/StarryBackground';
 import MyProgress from './MyProgress';
 import MyWellbeing from './MyWellbeing';
 import InstitutionalReportView from '../components/reports/InstitutionalReportView';
@@ -1684,10 +1683,6 @@ const AdminDashboard = ({ initialTab = 'analytics' }) => {
 
     return (
       <div className="animate-fade eval-fullscreen-wrapper">
-        
-        {/* Cielo Estrellado Oficial de EquilibrIA */}
-        <StarryBackground isLogin={false} />
-
         {/* Modal de Confirmación de Finalización de Test de Prueba */}
         {showAdminConfirmModal && (
           <div style={{

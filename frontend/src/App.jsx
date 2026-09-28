@@ -8,6 +8,7 @@ import Register from './pages/Register';
 import Unauthorized403 from './pages/Unauthorized403';
 import ProtectedRoute from './components/ProtectedRoute';
 import ErrorBoundary from './components/ErrorBoundary';
+import StarryBackground from './components/StarryBackground';
 import './styles/global.css';
 
 // Lazy loading para división de código y arranque instantáneo
@@ -182,6 +183,8 @@ function App() {
         <DialogProvider>
           <BrowserRouter>
             <ErrorBoundary>
+              {/* Cielo Estrellado Global Permanente: lucecitas bonitas en modo claro, estrellas blancas en modo oscuro */}
+              <StarryBackground />
               <NavigationHandler />
             </ErrorBoundary>
           </BrowserRouter>

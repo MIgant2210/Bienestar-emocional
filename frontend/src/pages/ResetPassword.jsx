@@ -3,7 +3,6 @@ import { useParams, useSearchParams, useNavigate, Link } from 'react-router-dom'
 import { ThemeContext } from '../contexts/ThemeContext';
 import { Lock, CheckCircle2, AlertTriangle, Eye, EyeOff, Loader, ArrowRight, Sun, Moon, ShieldCheck, KeyRound, ArrowLeft, Check, X } from 'lucide-react';
 import api from '../services/api';
-import StarryBackground from '../components/StarryBackground';
 
 const ResetPassword = () => {
   const { token: pathToken } = useParams();
@@ -112,9 +111,6 @@ const ResetPassword = () => {
       overflow: 'hidden'
     }} className="animate-fade">
       
-      {/* Cielo Estrellado Oficial */}
-      <StarryBackground isLogin={true} />
-
       {/* Botón Flotante para Modo Oscuro/Claro */}
       <button 
         onClick={toggleTheme}
