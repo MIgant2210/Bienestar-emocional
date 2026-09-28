@@ -50,8 +50,19 @@ const TAB_TO_URL = {
 };
 
 const AdminDashboard = ({ initialTab = 'analytics' }) => {
-  const { user, logout } = useContext(AuthContext);
-  const { theme, toggleTheme, colorPalette, changePalette, PALETTES } = useContext(ThemeContext);
+  const { 
+    theme, 
+    toggleTheme, 
+    colorPalette, 
+    changePalette, 
+    PALETTES,
+    activeTheme,
+    changeTheme,
+    activeThemeData,
+    customizationType,
+    setCustomizationType,
+    THEMES
+  } = useContext(ThemeContext);
   const navigate = useNavigate();
 
   // Dialog & System Alert Hook
@@ -162,7 +173,9 @@ const AdminDashboard = ({ initialTab = 'analytics' }) => {
 
   // Paletas & Edición de Usuario
   const [showPaletteMenu, setShowPaletteMenu] = useState(false);
+  const [paletteMenuTab, setPaletteMenuTab] = useState('themes');
   const [mobilePaletteOpen, setMobilePaletteOpen] = useState(false);
+  const [mobilePaletteTab, setMobilePaletteTab] = useState('themes');
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const paletteMenuRef = useRef(null);
 
@@ -2269,43 +2282,169 @@ const AdminDashboard = ({ initialTab = 'analytics' }) => {
               </button>
 
               {showPaletteMenu && (
-                <div className="notification-popover" style={{ width: '220px', right: 0 }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px', borderBottom: '1px solid var(--border)', paddingBottom: '6px' }}>
-                    <h4 style={{ fontSize: '12px', fontWeight: '900', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                      <Palette size={14} style={{ color: 'var(--primary)' }} /> Paleta de Colores
-                    </h4>
+                <div className="notification-popover" style={{ width: '290px', right: 0, padding: '12px', zIndex: 10000 }}>
+                  {/* Selector de Pestañas: Temáticas vs Colores */}
+                  <div style={{ display: 'flex', gap: '6px', marginBottom: '10px', borderBottom: '1px solid var(--border)', paddingBottom: '8px' }}>
+                    <button
+                      type="button"
+                      onClick={() => setPaletteMenuTab('themes')}
+                      style={{
+                        flex: 1,
+                        padding: '6px 8px',
+                        borderRadius: '8px',
+                        border: 'none',
+                        backgroundColor: paletteMenuTab === 'themes' ? 'var(--primary)' : 'var(--bg-secondary)',
+                        color: paletteMenuTab === 'themes' ? '#ffffff' : 'var(--text-secondary)',
+                        fontSize: '11px',
+                        fontWeight: '800',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '5px',
+                        transition: 'all 0.2s ease'
+                      }}
+                    >
+                      <span>🎭</span> Temáticas
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setPaletteMenuTab('colors')}
+                      style={{
+                        flex: 1,
+                        padding: '6px 8px',
+                        borderRadius: '8px',
+                        border: 'none',
+                        backgroundColor: paletteMenuTab === 'colors' ? 'var(--primary)' : 'var(--bg-secondary)',
+                        color: paletteMenuTab === 'colors' ? '#ffffff' : 'var(--text-secondary)',
+                        fontSize: '11px',
+                        fontWeight: '800',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '5px',
+                        transition: 'all 0.2s ease'
+                      }}
+                    >
+                      <Palette size={13} /> Colores
+                    </button>
                   </div>
-                  <div style={{ display: 'grid', gap: '6px' }}>
-                    {PALETTES.map((p) => (
+
+                  {paletteMenuTab === 'themes' ? (
+                    <div style={{ display: 'grid', gap: '5px', maxHeight: '310px', overflowY: 'auto', paddingRight: '4px' }}>
+                      {THEMES.map((t) => {
+                        const isSelected = activeTheme === t.id && customizationType === 'theme';
+                        return (
+                          <button
+                            key={t.id}
+                            type="button"
+                            onClick={() => { changeTheme(t.id); setShowPaletteMenu(false); }}
+                            style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'space-between',
+                              padding: '7px 10px',
+                              borderRadius: '8px',
+                              border: isSelected ? '2px solid var(--primary)' : '1px solid var(--border)',
+                              backgroundColor: isSelected ? 'var(--primary-light)' : 'var(--bg-primary)',
+                              cursor: 'pointer',
+                              fontSize: '11.5px',
+                              fontWeight: isSelected ? '800' : '600',
+                              color: 'var(--text-primary)',
+                              textAlign: 'left',
+                              transition: 'all 0.15s ease'
+                            }}
+                          >
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                              <span style={{ fontSize: '15px' }}>{t.icon}</span>
+                              <span style={{ fontSize: '11.5px' }}>{t.name}</span>
+                            </div>
+                            <div style={{ display: 'flex', gap: '3px' }}>
+                              {t.swatches?.slice(0, 3).map((sw, idx) => (
+                                <div key={idx} style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: sw }} />
+                              ))}
+                            </div>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    <div style={{ display: 'grid', gap: '6px', maxHeight: '310px', overflowY: 'auto', paddingRight: '4px' }}>
+                      {/* Opción destacada: Color por defecto de la temática activa */}
                       <button
-                        key={p.id}
                         type="button"
-                        onClick={() => { changePalette(p.id); setShowPaletteMenu(false); }}
+                        onClick={() => { setCustomizationType('theme'); setShowPaletteMenu(false); }}
                         style={{
                           display: 'flex',
                           alignItems: 'center',
                           justifyContent: 'space-between',
                           padding: '8px 10px',
                           borderRadius: '8px',
-                          border: colorPalette === p.id ? '2px solid var(--primary)' : '1px solid var(--border)',
-                          backgroundColor: colorPalette === p.id ? 'var(--primary-light)' : 'var(--bg-primary)',
+                          border: customizationType === 'theme' ? '2px solid var(--primary)' : '1px dashed var(--border)',
+                          backgroundColor: customizationType === 'theme' ? 'var(--primary-light)' : 'var(--bg-secondary)',
                           cursor: 'pointer',
                           fontSize: '11.5px',
-                          fontWeight: '700',
-                          color: 'var(--text-primary)'
+                          fontWeight: '800',
+                          color: 'var(--text-primary)',
+                          transition: 'all 0.15s ease'
                         }}
                       >
                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                          <span>{p.icon}</span>
-                          <span>{p.name}</span>
+                          <span style={{ fontSize: '14px' }}>✨</span>
+                          <div>
+                            <div>Color de Temática</div>
+                            <div style={{ fontSize: '9.5px', color: 'var(--text-secondary)', fontWeight: '500' }}>
+                              {activeThemeData?.name || 'Por defecto'}
+                            </div>
+                          </div>
                         </div>
                         <div style={{ display: 'flex', gap: '3px' }}>
-                          <div style={{ width: '10px', height: '10px', borderRadius: '50%', backgroundColor: p.primary }} />
-                          <div style={{ width: '10px', height: '10px', borderRadius: '50%', backgroundColor: p.accent }} />
+                          {activeThemeData?.swatches?.slice(0, 3).map((sw, idx) => (
+                            <div key={idx} style={{ width: '10px', height: '10px', borderRadius: '50%', backgroundColor: sw }} />
+                          ))}
                         </div>
                       </button>
-                    ))}
-                  </div>
+
+                      <div style={{ fontSize: '10px', fontWeight: '700', color: 'var(--text-secondary)', marginTop: '4px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                        Paletas Tradicionales
+                      </div>
+
+                      {PALETTES.map((p) => {
+                        const isSelected = customizationType === 'palette' && colorPalette === p.id;
+                        return (
+                          <button
+                            key={p.id}
+                            type="button"
+                            onClick={() => { changePalette(p.id); setShowPaletteMenu(false); }}
+                            style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'space-between',
+                              padding: '8px 10px',
+                              borderRadius: '8px',
+                              border: isSelected ? '2px solid var(--primary)' : '1px solid var(--border)',
+                              backgroundColor: isSelected ? 'var(--primary-light)' : 'var(--bg-primary)',
+                              cursor: 'pointer',
+                              fontSize: '11.5px',
+                              fontWeight: isSelected ? '800' : '600',
+                              color: 'var(--text-primary)',
+                              transition: 'all 0.15s ease'
+                            }}
+                          >
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                              <span>{p.icon || '🎨'}</span>
+                              <span>{p.name}</span>
+                            </div>
+                            <div style={{ display: 'flex', gap: '3px' }}>
+                              <div style={{ width: '10px', height: '10px', borderRadius: '50%', backgroundColor: p.primary }} />
+                              <div style={{ width: '10px', height: '10px', borderRadius: '50%', backgroundColor: p.accent }} />
+                            </div>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
                 </div>
               )}
             </div>
@@ -2445,39 +2584,141 @@ const AdminDashboard = ({ initialTab = 'analytics' }) => {
               </button>
             </div>
 
-            {/* Submenú de Paletas en el Drawer */}
+            {/* Submenú de Temáticas y Paletas en el Drawer Móvil */}
             {mobilePaletteOpen && (
               <div style={{ backgroundColor: 'var(--bg-tertiary)', padding: '10px', borderRadius: '12px', marginBottom: '16px', border: '1px solid var(--border)' }}>
-                <span style={{ fontSize: '11px', fontWeight: '800', color: 'var(--text-muted)', display: 'block', marginBottom: '6px' }}>PALETA DE COLORES</span>
-                <div style={{ display: 'grid', gap: '6px' }}>
-                  {PALETTES.map((p) => (
+                {/* Selector de Pestañas Móvil */}
+                <div style={{ display: 'flex', gap: '6px', marginBottom: '10px' }}>
+                  <button
+                    type="button"
+                    onClick={() => setMobilePaletteTab('themes')}
+                    style={{
+                      flex: 1,
+                      padding: '6px 8px',
+                      borderRadius: '8px',
+                      border: 'none',
+                      backgroundColor: mobilePaletteTab === 'themes' ? 'var(--primary)' : 'var(--bg-secondary)',
+                      color: mobilePaletteTab === 'themes' ? '#ffffff' : 'var(--text-secondary)',
+                      fontSize: '11px',
+                      fontWeight: '800',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    🎭 Temáticas
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setMobilePaletteTab('colors')}
+                    style={{
+                      flex: 1,
+                      padding: '6px 8px',
+                      borderRadius: '8px',
+                      border: 'none',
+                      backgroundColor: mobilePaletteTab === 'colors' ? 'var(--primary)' : 'var(--bg-secondary)',
+                      color: mobilePaletteTab === 'colors' ? '#ffffff' : 'var(--text-secondary)',
+                      fontSize: '11px',
+                      fontWeight: '800',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    🎨 Colores
+                  </button>
+                </div>
+
+                {mobilePaletteTab === 'themes' ? (
+                  <div style={{ display: 'grid', gap: '6px', maxHeight: '250px', overflowY: 'auto' }}>
+                    {THEMES.map((t) => {
+                      const isSelected = activeTheme === t.id && customizationType === 'theme';
+                      return (
+                        <button
+                          key={t.id}
+                          type="button"
+                          onClick={() => { changeTheme(t.id); setMobilePaletteOpen(false); }}
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'space-between',
+                            padding: '8px 12px',
+                            borderRadius: '10px',
+                            border: isSelected ? '2px solid var(--primary)' : '1px solid var(--border)',
+                            backgroundColor: isSelected ? 'var(--primary-light)' : 'var(--bg-secondary)',
+                            fontSize: '12px',
+                            fontWeight: '700',
+                            color: 'var(--text-primary)',
+                            cursor: 'pointer',
+                            width: '100%'
+                          }}
+                        >
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <span>{t.icon}</span>
+                            <span>{t.name}</span>
+                          </div>
+                          <div style={{ display: 'flex', gap: '4px' }}>
+                            {t.swatches?.slice(0, 3).map((sw, idx) => (
+                              <div key={idx} style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: sw }} />
+                            ))}
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <div style={{ display: 'grid', gap: '6px', maxHeight: '250px', overflowY: 'auto' }}>
                     <button
-                      key={p.id}
                       type="button"
-                      onClick={() => { changePalette(p.id); setMobilePaletteOpen(false); }}
+                      onClick={() => { setCustomizationType('theme'); setMobilePaletteOpen(false); }}
                       style={{
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'space-between',
                         padding: '8px 12px',
                         borderRadius: '10px',
-                        border: colorPalette === p.id ? '2px solid var(--primary)' : '1px solid var(--border)',
-                        backgroundColor: colorPalette === p.id ? 'var(--primary-light)' : 'var(--bg-secondary)',
+                        border: customizationType === 'theme' ? '2px solid var(--primary)' : '1px dashed var(--border)',
+                        backgroundColor: customizationType === 'theme' ? 'var(--primary-light)' : 'var(--bg-secondary)',
                         fontSize: '12px',
-                        fontWeight: '700',
+                        fontWeight: '800',
                         color: 'var(--text-primary)',
                         cursor: 'pointer',
                         width: '100%'
                       }}
                     >
-                      <span style={{ fontWeight: '700' }}>{p.name}</span>
-                      <div style={{ display: 'flex', gap: '4px' }}>
-                        <div style={{ width: '10px', height: '10px', borderRadius: '50%', backgroundColor: p.primary }} />
-                        <div style={{ width: '10px', height: '10px', borderRadius: '50%', backgroundColor: p.accent }} />
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <span>✨</span>
+                        <span>Color de Temática ({activeThemeData?.name})</span>
                       </div>
                     </button>
-                  ))}
-                </div>
+                    {PALETTES.map((p) => {
+                      const isSelected = customizationType === 'palette' && colorPalette === p.id;
+                      return (
+                        <button
+                          key={p.id}
+                          type="button"
+                          onClick={() => { changePalette(p.id); setMobilePaletteOpen(false); }}
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'space-between',
+                            padding: '8px 12px',
+                            borderRadius: '10px',
+                            border: isSelected ? '2px solid var(--primary)' : '1px solid var(--border)',
+                            backgroundColor: isSelected ? 'var(--primary-light)' : 'var(--bg-secondary)',
+                            fontSize: '12px',
+                            fontWeight: '700',
+                            color: 'var(--text-primary)',
+                            cursor: 'pointer',
+                            width: '100%'
+                          }}
+                        >
+                          <span style={{ fontWeight: '700' }}>{p.name}</span>
+                          <div style={{ display: 'flex', gap: '4px' }}>
+                            <div style={{ width: '10px', height: '10px', borderRadius: '50%', backgroundColor: p.primary }} />
+                            <div style={{ width: '10px', height: '10px', borderRadius: '50%', backgroundColor: p.accent }} />
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
             )}
 

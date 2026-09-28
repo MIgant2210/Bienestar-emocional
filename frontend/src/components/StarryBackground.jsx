@@ -2,7 +2,7 @@ import React, { useMemo, useContext, useState, useEffect } from 'react';
 import { ThemeContext } from '../contexts/ThemeContext';
 
 /**
- * Catálogo de Constelaciones Celestiales y Signos Zodiacales para Modo Oscuro
+ * Catálogo de Constelaciones Celestiales, Zodiacales y Míticas para Modo Oscuro
  * Con posiciones optimizadas en los márgenes exteriores (11% superior / 12% inferior)
  * para que se aprecien en su totalidad sin cortarse ni tapar los módulos del centro.
  */
@@ -44,6 +44,58 @@ const CELESTIAL_CONSTELLATIONS = [
     ]
   },
   {
+    id: 'osamayor',
+    name: '✦ Constelación de la Osa Mayor (El Gran Carro)',
+    position: { top: '11%', left: '2%' },
+    width: '235px',
+    height: '160px',
+    viewBox: '0 0 250 160',
+    nodes: [
+      [25, 45],   // Alkaid
+      [65, 55],   // Mizar
+      [105, 75],  // Alioth
+      [150, 80],  // Megrez
+      [155, 130], // Phecda
+      [225, 135], // Merak
+      [220, 75]   // Dubhe
+    ],
+    lines: [
+      [[25, 45], [65, 55]],
+      [[65, 55], [105, 75]],
+      [[105, 75], [150, 80]],
+      [[150, 80], [155, 130]],
+      [[155, 130], [225, 135]],
+      [[225, 135], [220, 75]],
+      [[220, 75], [150, 80]]
+    ]
+  },
+  {
+    id: 'osamenor',
+    name: '✦ Constelación de la Osa Menor (Polaris)',
+    position: { top: '11%', right: '2%' },
+    width: '225px',
+    height: '160px',
+    viewBox: '0 0 240 160',
+    nodes: [
+      [30, 35],   // Polaris (Estrella Polar)
+      [75, 50],   // Yildun
+      [115, 75],  // Urodelus
+      [145, 80],  // Ahfa
+      [150, 130], // Pherkad
+      [215, 125], // Kochab
+      [210, 75]   // Anwar
+    ],
+    lines: [
+      [[30, 35], [75, 50]],
+      [[75, 50], [115, 75]],
+      [[115, 75], [145, 80]],
+      [[145, 80], [150, 130]],
+      [[150, 130], [215, 125]],
+      [[215, 125], [210, 75]],
+      [[210, 75], [145, 80]]
+    ]
+  },
+  {
     id: 'colibri',
     name: '✦ Constelación Colibrí (Equi)',
     position: { top: '11%', left: '2%' },
@@ -58,6 +110,51 @@ const CELESTIAL_CONSTELLATIONS = [
       [[28, 70], [72, 65]], [[72, 65], [84, 54]], [[72, 65], [98, 85]],
       [[98, 85], [136, 65]], [[136, 65], [128, 20]], [[128, 20], [180, 14]],
       [[98, 85], [120, 115]], [[120, 115], [178, 144]], [[178, 144], [215, 156]]
+    ]
+  },
+  {
+    id: 'pegaso',
+    name: '✦ Constelación de Pegaso (El Corcel Alado)',
+    position: { bottom: '12%', left: '2%' },
+    width: '230px',
+    height: '175px',
+    viewBox: '0 0 240 180',
+    nodes: [
+      [75, 45],   // Alpheratz
+      [165, 40],  // Scheat
+      [165, 125], // Markab
+      [75, 130],  // Algenib
+      [215, 85],  // Homam
+      [225, 155]  // Enif
+    ],
+    lines: [
+      [[75, 45], [165, 40]],
+      [[165, 40], [165, 125]],
+      [[165, 125], [75, 130]],
+      [[75, 130], [75, 45]],
+      [[165, 125], [215, 85]],
+      [[215, 85], [225, 155]]
+    ]
+  },
+  {
+    id: 'cisne',
+    name: '✦ Constelación del Cisne (Cruz del Norte)',
+    position: { top: '11%', left: '2%' },
+    width: '210px',
+    height: '190px',
+    viewBox: '0 0 220 200',
+    nodes: [
+      [110, 25],  // Deneb
+      [110, 95],  // Sadr
+      [110, 180], // Albireo
+      [45, 85],   // Gienah
+      [175, 85]   // Delta Cygni
+    ],
+    lines: [
+      [[110, 25], [110, 95]],
+      [[110, 95], [110, 180]],
+      [[45, 85], [110, 95]],
+      [[110, 95], [175, 85]]
     ]
   },
   {
@@ -304,47 +401,81 @@ const CELESTIAL_CONSTELLATIONS = [
   }
 ];
 
+// Barajar una lista completa de índices para que cada ronda sea 100% aleatoria
+const createShuffledConstellationDeck = (length) => {
+  const indices = Array.from({ length }, (_, i) => i);
+  for (let i = indices.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [indices[i], indices[j]] = [indices[j], indices[i]];
+  }
+  // Colocar Libra dentro de las primeras 3 posiciones para que se disfrute pronto
+  const libraIdx = CELESTIAL_CONSTELLATIONS.findIndex(c => c.id === 'libra');
+  if (libraIdx !== -1) {
+    const curPos = indices.indexOf(libraIdx);
+    if (curPos > 2) {
+      indices.splice(curPos, 1);
+      indices.splice(1, 0, libraIdx);
+    }
+  }
+  return indices;
+};
+
 /**
- * Cielo Estrellado Global de EquilibrIA con Constelaciones Zodiacales y Celestiales
+ * Cielo Estrellado Global de EquilibrIA con Constelaciones Zodiacales y Famosas
  * - En Modo Claro: Destellos elegantes en las orillas; en la zona central de los módulos,
  *   destellitos sutiles que acompañan sin interrumpir la lectura.
  * - En Modo Oscuro: Cielo de estrellas blancas brillantes con halo celestial y
- *   constelaciones zodiacales aleatorias en las esquinas que se aprecian cómodamente.
+ *   constelaciones aleatorias en las esquinas que respetan un "tiempo en blanco" de estrellas
+ *   puras entre rondas para no sobrecargar la vista.
  */
 const StarryBackground = ({ count = 135 }) => {
   const themeCtx = useContext(ThemeContext);
   const activeSwatches = themeCtx?.activeThemeData?.swatches;
   const isDark = themeCtx?.theme === 'dark';
 
-  const [constellationIndex, setConstellationIndex] = useState(0);
-  const [constellationActive, setConstellationActive] = useState(false);
+  const [activeConstellation, setActiveConstellation] = useState(null);
+  const [constellationKey, setConstellationKey] = useState(0);
 
-  // Ciclo periódico de constelaciones en Modo Oscuro (aleatorias sin repetir la misma consecutivamente)
-  // Comienza una vez que la lluvia de bienvenida completa su recorrido (~8.5s)
+  // Ciclo periódico de constelaciones aleatorias con "tiempo en blanco" de 24 segundos entre rondas
   useEffect(() => {
     if (!isDark) {
-      setConstellationActive(false);
+      setActiveConstellation(null);
       return;
     }
 
-    const delayTimer = setTimeout(() => {
-      setConstellationActive(true);
-      setConstellationIndex(Math.floor(Math.random() * CELESTIAL_CONSTELLATIONS.length));
-    }, 8500);
+    let isMounted = true;
+    let deck = createShuffledConstellationDeck(CELESTIAL_CONSTELLATIONS.length);
+    let deckStep = 0;
+    let timerId = null;
 
-    const interval = setInterval(() => {
-      setConstellationIndex((prevIndex) => {
-        let nextIndex;
-        do {
-          nextIndex = Math.floor(Math.random() * CELESTIAL_CONSTELLATIONS.length);
-        } while (nextIndex === prevIndex && CELESTIAL_CONSTELLATIONS.length > 1);
-        return nextIndex;
-      });
-    }, 12500);
+    const playNext = () => {
+      if (!isMounted) return;
+
+      // Si se completaron todas las constelaciones de la baraja:
+      if (deckStep >= deck.length) {
+        // TIEMPO EN BLANCO: Se apagan las constelaciones durante 24 segundos para dejar descansar la vista
+        setActiveConstellation(null);
+        deck = createShuffledConstellationDeck(CELESTIAL_CONSTELLATIONS.length);
+        deckStep = 0;
+        timerId = setTimeout(playNext, 24000); // 24 segundos de cielo nocturno puro y sereno
+        return;
+      }
+
+      const constIdx = deck[deckStep];
+      setActiveConstellation(CELESTIAL_CONSTELLATIONS[constIdx]);
+      setConstellationKey((prev) => prev + 1);
+      deckStep++;
+
+      // Cada constelación se aprecia durante 12 segundos (aparición, brillo y desvanecimiento)
+      timerId = setTimeout(playNext, 12000);
+    };
+
+    // Al entrar a Modo Oscuro, esperar a que la cascada inicial termine su recorrido (~8.5s)
+    timerId = setTimeout(playNext, 8500);
 
     return () => {
-      clearTimeout(delayTimer);
-      clearInterval(interval);
+      isMounted = false;
+      if (timerId) clearTimeout(timerId);
     };
   }, [isDark]);
 
@@ -398,8 +529,7 @@ const StarryBackground = ({ count = 135 }) => {
     });
   }, [count, palette]);
 
-  const currentConstellation = CELESTIAL_CONSTELLATIONS[constellationIndex];
-  const isLibra = currentConstellation?.isSpecial;
+  const isLibra = activeConstellation?.isSpecial;
 
   return (
     <div className="starry-sky-container" aria-hidden="true">
@@ -508,15 +638,15 @@ const StarryBackground = ({ count = 135 }) => {
       ))}
 
       {/* Capa de Constelaciones Zodiacales & Celestiales en Modo Oscuro */}
-      {isDark && constellationActive && currentConstellation && (
+      {isDark && activeConstellation && (
         <div
-          key={`constellation-${currentConstellation.id}-${constellationIndex}`}
+          key={`constellation-${activeConstellation.id}-${constellationKey}`}
           className="constellation-wrapper"
           style={{
             position: 'absolute',
-            ...currentConstellation.position,
-            width: currentConstellation.width,
-            height: currentConstellation.height,
+            ...activeConstellation.position,
+            width: activeConstellation.width,
+            height: activeConstellation.height,
             pointerEvents: 'none',
             zIndex: 2,
             animation: 'constellationAppearance 12s ease-in-out infinite',
@@ -528,7 +658,7 @@ const StarryBackground = ({ count = 135 }) => {
           <svg
             width="100%"
             height="100%"
-            viewBox={currentConstellation.viewBox}
+            viewBox={activeConstellation.viewBox}
             style={{ 
               overflow: 'visible', 
               filter: isLibra 
@@ -537,7 +667,7 @@ const StarryBackground = ({ count = 135 }) => {
             }}
           >
             {/* Líneas tenues que conectan las estrellas */}
-            {currentConstellation.lines.map(([p1, p2], idx) => (
+            {activeConstellation.lines.map(([p1, p2], idx) => (
               <line
                 key={`line-${idx}`}
                 x1={p1[0]}
@@ -556,7 +686,7 @@ const StarryBackground = ({ count = 135 }) => {
             ))}
 
             {/* Estrellas nodo brillantes */}
-            {currentConstellation.nodes.map(([x, y], idx) => {
+            {activeConstellation.nodes.map(([x, y], idx) => {
               const isFulcrum = isLibra && idx === 0;
               return (
                 <g key={`node-${idx}`} transform={`translate(${x}, ${y})`}>
@@ -613,7 +743,7 @@ const StarryBackground = ({ count = 135 }) => {
                   : '0 0 8px rgba(165, 180, 252, 0.8)'
               }}
             >
-              {currentConstellation.name}
+              {activeConstellation.name}
             </span>
           </div>
         </div>
