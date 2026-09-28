@@ -2,12 +2,12 @@ import React, { useContext, useMemo, useState, useEffect } from 'react';
 import { ThemeContext } from '../../contexts/ThemeContext';
 
 /**
- * Decoraciones Ambientales y Lluvia Temática de EquilibrIA
- * - En Modo Claro: Lluvia inicial abundante (4.5s) y luego flotación continua y serena de destellos/elementos temáticos.
- * - En Modo Oscuro: Lluvia inicial temática (4.5s) al entrar o cambiar de tema/modo, que luego se desvanece suavemente
- *   para dejar el cielo de estrellas blancas puras y constelaciones.
- * - Distribución perimetral: Las partículas se concentran en las orillas y márgenes laterales (izq/der)
- *   para no estorbar los módulos centrales ni la lectura.
+ * Lluvia Temática de Bienvenida de EquilibrIA
+ * - Al entrar a la plataforma, recargar o cambiar de tema/modo:
+ *   Despliega una hermosa lluvia de bienvenida con los elementos de la temática por toda la pantalla
+ *   (incluyendo el centro) durante 4.5 segundos.
+ * - Después de los 4.5 segundos, la lluvia se retira suavemente (desvaneciéndose al 0% de opacidad)
+ *   TANTO en Modo Claro como en Modo Oscuro, dejando la vista de los módulos y opciones 100% limpia.
  */
 const AmbientDecorations = () => {
   const themeCtx = useContext(ThemeContext);
@@ -21,7 +21,7 @@ const AmbientDecorations = () => {
     setIsShowerBurst(true);
     const timer = setTimeout(() => {
       setIsShowerBurst(false);
-    }, 4500); // 4.5 segundos de lluvia suave
+    }, 4500); // 4.5 segundos de lluvia inicial de bienvenida
     return () => clearTimeout(timer);
   }, [activeTheme, isDark]);
 
@@ -31,8 +31,7 @@ const AmbientDecorations = () => {
       case 'equilibria':
         return {
           type: 'sparkles',
-          burstCount: 36,
-          calmCount: 20,
+          count: 36,
           items: ['✨', '✦', '✧', '⋆', '•'],
           direction: 'up',
           color: 'rgba(129, 140, 248, 0.9)'
@@ -40,8 +39,7 @@ const AmbientDecorations = () => {
       case 'winter':
         return {
           type: 'snow',
-          burstCount: 38,
-          calmCount: 22,
+          count: 38,
           items: ['❄️', '❅', '❆', '✨', '🤍', '·'],
           direction: 'down',
           color: 'rgba(186, 230, 253, 0.9)'
@@ -49,8 +47,7 @@ const AmbientDecorations = () => {
       case 'spring':
         return {
           type: 'petals',
-          burstCount: 38,
-          calmCount: 22,
+          count: 38,
           items: ['🌸', '💮', '🌷', '✨', '🍃', '🌺'],
           direction: 'down',
           color: 'rgba(244, 114, 182, 0.9)'
@@ -58,8 +55,7 @@ const AmbientDecorations = () => {
       case 'autumn':
         return {
           type: 'leaves',
-          burstCount: 36,
-          calmCount: 20,
+          count: 36,
           items: ['🍂', '🍁', '🌰', '✨', '🌾', '🧡'],
           direction: 'down',
           color: 'rgba(249, 115, 22, 0.9)'
@@ -67,8 +63,7 @@ const AmbientDecorations = () => {
       case 'summer':
         return {
           type: 'sunbeams',
-          burstCount: 36,
-          calmCount: 20,
+          count: 36,
           items: ['☀️', '✨', '🌴', '🌊', '💛', '🏖️'],
           direction: 'up',
           color: 'rgba(250, 204, 21, 0.85)'
@@ -76,8 +71,7 @@ const AmbientDecorations = () => {
       case 'halloween':
         return {
           type: 'magic',
-          burstCount: 36,
-          calmCount: 20,
+          count: 36,
           items: ['🎃', '🦇', '✨', '🔮', '🌙', '🕸️'],
           direction: 'up',
           color: 'rgba(251, 146, 60, 0.9)'
@@ -85,8 +79,7 @@ const AmbientDecorations = () => {
       case 'birthday':
         return {
           type: 'confetti',
-          burstCount: 38,
-          calmCount: 22,
+          count: 38,
           items: ['🎉', '🎈', '⭐', '🎊', '✨', '🍰'],
           direction: 'down',
           color: 'rgba(236, 72, 153, 0.9)'
@@ -94,8 +87,7 @@ const AmbientDecorations = () => {
       case 'valentines':
         return {
           type: 'hearts',
-          burstCount: 36,
-          calmCount: 20,
+          count: 36,
           items: ['💗', '💖', '💕', '✨', '🌸', '💘'],
           direction: 'up',
           color: 'rgba(244, 63, 94, 0.9)'
@@ -103,8 +95,7 @@ const AmbientDecorations = () => {
       case 'environment':
         return {
           type: 'nature',
-          burstCount: 36,
-          calmCount: 20,
+          count: 36,
           items: ['🌱', '🌿', '🍃', '🍀', '✨', '🪴'],
           direction: 'up',
           color: 'rgba(52, 211, 153, 0.9)'
@@ -112,8 +103,7 @@ const AmbientDecorations = () => {
       case 'graduation':
         return {
           type: 'triumph',
-          burstCount: 36,
-          calmCount: 20,
+          count: 36,
           items: ['🎓', '📜', '⭐', '✨', '🏆', '🥇'],
           direction: 'down',
           color: 'rgba(250, 204, 21, 0.9)'
@@ -121,8 +111,7 @@ const AmbientDecorations = () => {
       case 'guatemala':
         return {
           type: 'patria',
-          burstCount: 36,
-          calmCount: 20,
+          count: 36,
           items: ['🇬🇹', '🕊️', '🌿', '✨', '🪶', '🏔️'],
           direction: 'up',
           color: 'rgba(56, 189, 248, 0.9)'
@@ -130,8 +119,7 @@ const AmbientDecorations = () => {
       case 'christmas':
         return {
           type: 'christmas',
-          burstCount: 38,
-          calmCount: 22,
+          count: 38,
           items: ['🎄', '🔔', '⭐', '❄️', '✨', '🎁'],
           direction: 'down',
           color: 'rgba(239, 68, 68, 0.9)'
@@ -139,8 +127,7 @@ const AmbientDecorations = () => {
       case 'newyear':
         return {
           type: 'sparkles',
-          burstCount: 38,
-          calmCount: 22,
+          count: 38,
           items: ['✨', '🥂', '🎆', '⭐', '🍾', '🎇'],
           direction: 'up',
           color: 'rgba(253, 224, 71, 0.95)'
@@ -148,8 +135,7 @@ const AmbientDecorations = () => {
       case 'anniversary':
         return {
           type: 'gala',
-          burstCount: 36,
-          calmCount: 20,
+          count: 36,
           items: ['👑', '💎', '⭐', '✨', '💜', '⚜️'],
           direction: 'up',
           color: 'rgba(192, 132, 252, 0.95)'
@@ -157,8 +143,7 @@ const AmbientDecorations = () => {
       default:
         return {
           type: 'sparkles',
-          burstCount: 36,
-          calmCount: 20,
+          count: 36,
           items: ['✨', '✦', '✧', '⋆', '•'],
           direction: 'up',
           color: 'rgba(129, 140, 248, 0.9)'
@@ -166,38 +151,34 @@ const AmbientDecorations = () => {
     }
   }, [activeTheme]);
 
-  const count = isShowerBurst 
-    ? (themeParticlesConfig?.burstCount || 36) 
-    : (themeParticlesConfig?.calmCount || 20);
+  const count = themeParticlesConfig?.count || 36;
 
-  // Generar partículas ubicadas en las orillas (laterales 1-17% y 83-99%) para NO estorbar los módulos del centro
+  // Generar partículas de bienvenida distribuidas armónicamente por toda la pantalla (incluyendo el centro)
   const particles = useMemo(() => {
     if (!themeParticlesConfig) return [];
     return Array.from({ length: count }, (_, i) => {
-      // 50% en el lateral izquierdo, 50% en el lateral derecho
-      const isLeftFlank = i % 2 === 0;
-      const flankPosition = isLeftFlank
-        ? Math.round(((i * 3.7) % 15) + 1.5) // Entre 1.5% y 16.5% de ancho (orilla izquierda)
-        : Math.round(((i * 3.7) % 15) + 83.5); // Entre 83.5% y 98.5% de ancho (orilla derecha)
+      // Repartidas uniformemente en todo el ancho (3% al 97%)
+      const leftPosition = Math.round(((i * 7.7) + (i % 5) * 6.3) % 94) + 3;
 
       return {
         id: i,
-        left: flankPosition,
-        delay: isShowerBurst ? (i * 0.12).toFixed(2) : (i * 0.8).toFixed(2),
-        duration: (17 + (i % 6) * 1.8).toFixed(1),
-        size: (11 + (i % 4) * 3.2),
+        left: leftPosition,
+        delay: (i * 0.11).toFixed(2),
+        duration: (14 + (i % 5) * 1.8).toFixed(1),
+        size: (12 + (i % 4) * 3.2),
         icon: themeParticlesConfig.items[i % themeParticlesConfig.items.length],
-        opacity: isShowerBurst ? (0.65 + (i % 3) * 0.12).toFixed(2) : (0.42 + (i % 4) * 0.08).toFixed(2)
+        opacity: (0.65 + (i % 3) * 0.12).toFixed(2)
       };
     });
-  }, [themeParticlesConfig, count, isShowerBurst]);
+  }, [themeParticlesConfig, count]);
 
   if (!themeParticlesConfig || particles.length === 0) {
     return null;
   }
 
-  // En modo oscuro y sin lluvia de bienvenida, se oculta suavemente
-  const isVisible = !(isDark && !isShowerBurst);
+  // La lluvia inicial está presente durante los primeros 4.5s y luego se desvanece por completo
+  // tanto en modo claro como en modo oscuro
+  const isVisible = isShowerBurst;
 
   const isDown = themeParticlesConfig.direction === 'down';
 
@@ -220,17 +201,17 @@ const AmbientDecorations = () => {
       }}
     >
       <style>{`
-        /* Caída lenta y serena en las orillas (Zen Float) */
+        /* Caída inicial festiva y serena (Zen Float) */
         @keyframes ambientFallZen {
           0% {
             transform: translate3d(0, -50px, 0) rotate(0deg);
             opacity: 0;
           }
           10% {
-            opacity: var(--p-opacity, 0.6);
+            opacity: var(--p-opacity, 0.65);
           }
           85% {
-            opacity: var(--p-opacity, 0.6);
+            opacity: var(--p-opacity, 0.65);
           }
           100% {
             transform: translate3d(20px, 105vh, 0) rotate(180deg);
@@ -238,17 +219,17 @@ const AmbientDecorations = () => {
           }
         }
 
-        /* Elevación lenta y pacífica en las orillas (Zen Rise) */
+        /* Elevación inicial pacífica (Zen Rise) */
         @keyframes ambientRiseZen {
           0% {
             transform: translate3d(0, 105vh, 0) rotate(0deg);
             opacity: 0;
           }
           10% {
-            opacity: var(--p-opacity, 0.6);
+            opacity: var(--p-opacity, 0.65);
           }
           85% {
-            opacity: var(--p-opacity, 0.6);
+            opacity: var(--p-opacity, 0.65);
           }
           100% {
             transform: translate3d(-20px, -50px, 0) rotate(-180deg);

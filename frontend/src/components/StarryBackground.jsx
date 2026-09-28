@@ -3,20 +3,20 @@ import { ThemeContext } from '../contexts/ThemeContext';
 
 /**
  * Catálogo de Constelaciones Celestiales y Signos Zodiacales para Modo Oscuro
- * Con especial distinción para Libra (Balanza del Equilibrio) y ubicaciones perimetrales
- * para no interferir con tarjetas ni formularios.
+ * Ubicadas en las orillas y esquinas extremas (separadas del centro) para no interferir con módulos.
+ * Especial distinción para Libra (Balanza del Equilibrio).
  */
 const CELESTIAL_CONSTELLATIONS = [
   {
     id: 'libra',
     name: '⚖️ Constelación de Libra • La Balanza del Equilibrio',
     isSpecial: true, // ¡Resaltada especialmente con fulgor dorado y celestial!
-    position: { top: '8%', right: '7%' },
-    width: '260px',
-    height: '200px',
+    position: { top: '3.5%', right: '2.5%' },
+    width: '230px',
+    height: '180px',
     viewBox: '0 0 260 200',
     nodes: [
-      [130, 22],  // Fulcro superior (Pivote central de armonía)
+      [130, 22],  // Fulcro superior
       [130, 80],  // Eje central de apoyo
       [55, 60],   // Brazo izquierdo (Zubenelgenubi)
       [205, 60],  // Brazo derecho (Zubeneschamali)
@@ -46,9 +46,9 @@ const CELESTIAL_CONSTELLATIONS = [
   {
     id: 'colibri',
     name: '✦ Constelación Colibrí (Equi)',
-    position: { top: '8%', left: '6%' },
-    width: '240px',
-    height: '180px',
+    position: { top: '3.5%', left: '2.5%' },
+    width: '220px',
+    height: '165px',
     viewBox: '0 0 240 180',
     nodes: [
       [28, 70], [72, 65], [84, 54], [98, 85], [128, 20],
@@ -63,15 +63,12 @@ const CELESTIAL_CONSTELLATIONS = [
   {
     id: 'aries',
     name: '♈ Constelación de Aries (El Carnero)',
-    position: { bottom: '11%', left: '6%' },
-    width: '220px',
-    height: '140px',
+    position: { bottom: '3.5%', left: '2.5%' },
+    width: '200px',
+    height: '130px',
     viewBox: '0 0 220 140',
     nodes: [
-      [180, 40], // Hamal
-      [120, 60], // Sheratan
-      [70, 90],  // Mesarthim
-      [35, 115]  // 41 Arietis
+      [180, 40], [120, 60], [70, 90], [35, 115]
     ],
     lines: [
       [[180, 40], [120, 60]],
@@ -82,17 +79,12 @@ const CELESTIAL_CONSTELLATIONS = [
   {
     id: 'tauro',
     name: '♉ Constelación de Tauro (El Toro Celestial)',
-    position: { top: '9%', right: '7%' },
-    width: '240px',
-    height: '190px',
+    position: { top: '3.5%', right: '2.5%' },
+    width: '220px',
+    height: '170px',
     viewBox: '0 0 240 190',
     nodes: [
-      [195, 35],  // Elnath
-      [215, 125], // Tianguan
-      [125, 95],  // Aldebarán (Ojo brillante)
-      [105, 120], // Hyades 1
-      [75, 145],  // Hyades 2
-      [45, 65]    // Pléyades
+      [195, 35], [215, 125], [125, 95], [105, 120], [75, 145], [45, 65]
     ],
     lines: [
       [[195, 35], [125, 95]],
@@ -105,17 +97,12 @@ const CELESTIAL_CONSTELLATIONS = [
   {
     id: 'geminis',
     name: '♊ Constelación de Géminis (Los Gemelos)',
-    position: { top: '8%', left: '6%' },
-    width: '220px',
-    height: '230px',
+    position: { top: '3.5%', left: '2.5%' },
+    width: '200px',
+    height: '210px',
     viewBox: '0 0 220 230',
     nodes: [
-      [65, 30],   // Cástor
-      [145, 35],  // Pólux
-      [60, 105],  // Mebsuta
-      [140, 110], // Wasat
-      [50, 195],  // Tejat
-      [150, 190]  // Alhena
+      [65, 30], [145, 35], [60, 105], [140, 110], [50, 195], [150, 190]
     ],
     lines: [
       [[65, 30], [145, 35]],
@@ -129,9 +116,9 @@ const CELESTIAL_CONSTELLATIONS = [
   {
     id: 'cancer',
     name: '♋ Constelación de Cáncer',
-    position: { bottom: '11%', right: '7%' },
-    width: '190px',
-    height: '190px',
+    position: { bottom: '3.5%', right: '2.5%' },
+    width: '180px',
+    height: '180px',
     viewBox: '0 0 190 190',
     nodes: [
       [95, 25], [95, 75], [100, 115], [45, 160], [145, 160]
@@ -144,9 +131,9 @@ const CELESTIAL_CONSTELLATIONS = [
   {
     id: 'leo',
     name: '♌ Constelación de Leo (El León)',
-    position: { top: '9%', right: '6%' },
-    width: '250px',
-    height: '170px',
+    position: { top: '3.5%', right: '2.5%' },
+    width: '230px',
+    height: '155px',
     viewBox: '0 0 250 170',
     nodes: [
       [45, 45], [75, 40], [105, 70], [65, 135], [175, 80], [235, 105], [175, 140]
@@ -160,9 +147,9 @@ const CELESTIAL_CONSTELLATIONS = [
   {
     id: 'virgo',
     name: '♍ Constelación de Virgo (La Sabiduría)',
-    position: { bottom: '10%', left: '6%' },
-    width: '240px',
-    height: '210px',
+    position: { bottom: '3.5%', left: '2.5%' },
+    width: '220px',
+    height: '190px',
     viewBox: '0 0 240 210',
     nodes: [
       [45, 65], [90, 95], [160, 50], [160, 125], [115, 180]
@@ -175,9 +162,9 @@ const CELESTIAL_CONSTELLATIONS = [
   {
     id: 'escorpio',
     name: '♏ Constelación de Escorpio (Antares)',
-    position: { top: '8%', left: '5%' },
-    width: '220px',
-    height: '250px',
+    position: { top: '3.5%', left: '2%' },
+    width: '200px',
+    height: '230px',
     viewBox: '0 0 220 250',
     nodes: [
       [45, 35], [45, 65], [85, 95], [105, 140], [130, 185], [175, 210], [165, 235]
@@ -190,9 +177,9 @@ const CELESTIAL_CONSTELLATIONS = [
   {
     id: 'sagitario',
     name: '♐ Constelación de Sagitario (La Tetera Cósmica)',
-    position: { bottom: '11%', right: '7%' },
-    width: '230px',
-    height: '180px',
+    position: { bottom: '3.5%', right: '2.5%' },
+    width: '210px',
+    height: '165px',
     viewBox: '0 0 230 180',
     nodes: [
       [40, 95], [85, 135], [115, 95], [115, 45], [175, 65], [185, 125]
@@ -206,9 +193,9 @@ const CELESTIAL_CONSTELLATIONS = [
   {
     id: 'capricornio',
     name: '♑ Constelación de Capricornio',
-    position: { top: '10%', right: '7%' },
-    width: '240px',
-    height: '160px',
+    position: { top: '3.5%', right: '2.5%' },
+    width: '220px',
+    height: '150px',
     viewBox: '0 0 240 160',
     nodes: [
       [35, 45], [55, 65], [125, 135], [185, 75], [215, 55]
@@ -222,9 +209,9 @@ const CELESTIAL_CONSTELLATIONS = [
   {
     id: 'acuario',
     name: '♒ Constelación de Acuario (El Portador)',
-    position: { bottom: '10%', left: '6%' },
-    width: '240px',
-    height: '180px',
+    position: { bottom: '3.5%', left: '2.5%' },
+    width: '220px',
+    height: '165px',
     viewBox: '0 0 240 180',
     nodes: [
       [85, 40], [135, 45], [175, 65], [195, 55], [150, 110], [125, 140], [95, 165]
@@ -237,9 +224,9 @@ const CELESTIAL_CONSTELLATIONS = [
   {
     id: 'piscis',
     name: '♓ Constelación de Piscis (La Empatía)',
-    position: { top: '9%', left: '6%' },
-    width: '230px',
-    height: '200px',
+    position: { top: '3.5%', left: '2.5%' },
+    width: '210px',
+    height: '180px',
     viewBox: '0 0 230 200',
     nodes: [
       [55, 165], [40, 115], [35, 65], [110, 155], [165, 145], [195, 125]
@@ -253,9 +240,9 @@ const CELESTIAL_CONSTELLATIONS = [
   {
     id: 'orion',
     name: '✦ Constelación de Orión (El Guardián)',
-    position: { top: '9%', left: '5%' },
-    width: '210px',
-    height: '230px',
+    position: { top: '3.5%', left: '2%' },
+    width: '200px',
+    height: '220px',
     viewBox: '0 0 210 230',
     nodes: [
       [105, 18], [45, 46], [160, 42], [82, 115], [105, 110],
@@ -271,9 +258,9 @@ const CELESTIAL_CONSTELLATIONS = [
   {
     id: 'casiopea',
     name: '✦ Constelación de Casiopea (La Corona)',
-    position: { top: '11%', right: '7%' },
-    width: '250px',
-    height: '140px',
+    position: { top: '4%', right: '2.5%' },
+    width: '230px',
+    height: '130px',
     viewBox: '0 0 250 140',
     nodes: [
       [25, 110], [75, 45], [130, 85], [185, 35], [232, 85]
@@ -286,9 +273,9 @@ const CELESTIAL_CONSTELLATIONS = [
   {
     id: 'crux',
     name: '✦ Constelación Cruz del Sur',
-    position: { bottom: '11%', left: '6%' },
-    width: '180px',
-    height: '210px',
+    position: { bottom: '4%', left: '2.5%' },
+    width: '170px',
+    height: '195px',
     viewBox: '0 0 180 210',
     nodes: [
       [90, 24], [90, 184], [32, 104], [148, 96], [122, 130]
@@ -301,9 +288,9 @@ const CELESTIAL_CONSTELLATIONS = [
   {
     id: 'fenix',
     name: '✦ Constelación del Fénix (Resiliencia)',
-    position: { bottom: '10%', right: '6%' },
-    width: '260px',
-    height: '180px',
+    position: { bottom: '3.5%', right: '2.5%' },
+    width: '230px',
+    height: '160px',
     viewBox: '0 0 260 180',
     nodes: [
       [130, 22], [130, 74], [82, 54], [18, 34],
@@ -319,10 +306,10 @@ const CELESTIAL_CONSTELLATIONS = [
 
 /**
  * Cielo Estrellado Global de EquilibrIA con Constelaciones Zodiacales y Celestiales
- * - En Modo Claro: Destellos elegantes en las orillas; en la zona central de los módulos las
- *   estrellas son micro-puntos ultra-suaves para NO estorbar la lectura.
+ * - En Modo Claro: Destellos elegantes y hermosos en las orillas; en la zona central de los módulos,
+ *   destellitos sutiles que acompañan sin interrumpir la lectura.
  * - En Modo Oscuro: Cielo de estrellas blancas brillantes con halo celestial y
- *   constelaciones zodiacales/místicas que se iluminan periódicamente con Libra destacada.
+ *   constelaciones zodiacales separadas hacia los extremos para apreciarse sin tapar el centro.
  */
 const StarryBackground = ({ count = 135 }) => {
   const themeCtx = useContext(ThemeContext);
@@ -357,28 +344,29 @@ const StarryBackground = ({ count = 135 }) => {
       const top = Math.random() * 98 + 1;
       const left = Math.random() * 98 + 1;
 
-      // Zona central donde se encuentran los módulos y opciones (16% a 84% de ancho)
-      const isInsideModules = left >= 16 && left <= 84;
+      // Zona central donde se encuentran los módulos y opciones (13% a 87% de ancho)
+      const isInsideModules = left >= 13 && left <= 87;
 
-      // En el centro: estrellas diminutas (1.0 - 1.8px) sin destellos en cruz para no tapar texto
+      // En el centro: destellitos sutiles y amigables (1.4 - 2.4px)
       // En las orillas: destellos vibrantes tipo cruz y estrellas con brillo pleno
       const size = isInsideModules 
-        ? Math.random() * 0.8 + 1.1 
+        ? Math.random() * 1.0 + 1.4 
         : Math.random() * 2.2 + 1.6;
 
-      const isSparkle = !isInsideModules && (i % 3 === 0);
+      // En el centro un destellito cada 6 estrellas; en las orillas cada 3
+      const isSparkle = isInsideModules ? (i % 6 === 0) : (i % 3 === 0);
       const color = palette[i % palette.length];
 
-      // Opacidad sumamente suave dentro de los módulos para no interferir con la lectura
+      // Opacidad sutil en el centro (0.16 a 0.28) y viva en orillas (0.50 a 0.95)
       const opacity = isInsideModules 
-        ? (Math.random() * 0.10 + 0.08).toFixed(2) 
+        ? (Math.random() * 0.12 + 0.16).toFixed(2) 
         : (Math.random() * 0.45 + 0.50).toFixed(2);
 
       return {
         id: i,
         top: `${top.toFixed(1)}%`,
         left: `${left.toFixed(1)}%`,
-        size: isSparkle ? Math.max(size + 1.8, 4.4) : size,
+        size: isSparkle ? (isInsideModules ? size + 1.2 : Math.max(size + 1.8, 4.4)) : size,
         duration: `${(Math.random() * 2.5 + 2.5).toFixed(1)}s`,
         delay: `${(Math.random() * 4).toFixed(1)}s`,
         opacity,
@@ -458,19 +446,29 @@ const StarryBackground = ({ count = 135 }) => {
           }
         }
 
-        /* Estrellas dentro de los módulos: ultra sutiles para no estorbar lectura */
+        /* Destellitos sutiles dentro de los módulos: elegantes, descansados y sin estorbar */
         .star-node.star-module-subtle {
-          box-shadow: 0 0 2px var(--star-color, var(--primary)) !important;
-          opacity: var(--base-opacity, 0.12) !important;
+          box-shadow: 0 0 3px var(--star-color, var(--primary)), 0 0 7px var(--star-color, var(--primary)) !important;
+        }
+
+        .star-node.star-sparkle.star-module-subtle::before,
+        .star-node.star-sparkle.star-module-subtle::after {
+          width: 7px !important;
+          height: 1.5px !important;
+          box-shadow: 0 0 3px var(--star-color, var(--primary)) !important;
+        }
+
+        .star-node.star-sparkle.star-module-subtle::after {
+          width: 1.5px !important;
+          height: 7px !important;
         }
 
         [data-theme='dark'] .star-node.star-module-subtle {
-          box-shadow: 0 0 3px rgba(255, 255, 255, 0.5) !important;
-          opacity: var(--base-opacity, 0.22) !important;
+          box-shadow: 0 0 3px rgba(255, 255, 255, 0.6) !important;
         }
       `}</style>
 
-      {/* Capa de Estrellas Base (Ultra sutiles en el centro de módulos, vivas en orillas) */}
+      {/* Capa de Estrellas Base (Destellitos sutiles en el centro de módulos, vivas en orillas) */}
       {stars.map((star) => (
         <div
           key={star.id}
