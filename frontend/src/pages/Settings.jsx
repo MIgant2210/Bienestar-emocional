@@ -14,6 +14,7 @@ import api from '../services/api';
 import ConsentModal from '../components/ConsentModal';
 import AvatarCreator from '../components/AvatarCreator';
 import ThemePreviewModal from '../components/theme/ThemePreviewModal';
+import ColibriMascot from '../components/ColibriMascot';
 import { getActiveSeasonalTheme } from '../themes/seasonalSchedule';
 
 const Settings = () => {
@@ -28,6 +29,7 @@ const Settings = () => {
     PALETTES,
     activeTheme,
     changeTheme,
+    activeThemeData,
     customizationType,
     THEMES 
   } = useContext(ThemeContext);
@@ -39,6 +41,16 @@ const Settings = () => {
   const [themeFilter, setThemeFilter] = useState('all'); // 'all', 'official', 'seasonal', 'celebration', 'cultural'
   const [previewTheme, setPreviewTheme] = useState(null);
   const activeSeasonalTheme = getActiveSeasonalTheme();
+
+  const handleOpenPreview = (t) => {
+    setPreviewTheme(t);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const handleApplyTheme = (themeId) => {
+    changeTheme(themeId);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
 
   // Estados de Mi Cuenta
   const [firstName, setFirstName] = useState(user?.first_name || '');
@@ -724,7 +736,83 @@ const Settings = () => {
               {/* SUB-PESTAÑA 1: TEMÁTICAS ESPECIALES                      */}
               {/* ======================================================== */}
               {customizationSubTab === 'themes' && (
-                <div style={{ display: 'grid', gap: '16px' }}>
+                <div style={{ display: 'grid', gap: '20px' }}>
+                  {/* PANEL DESTACADO: VISTA PREVIA EN VIVO DE LA TEMÁTICA ACTIVA */}
+                  <div style={{
+                    padding: '22px 24px',
+                    borderRadius: '20px',
+                    background: 'var(--bg-secondary)',
+                    border: '2px solid var(--primary)',
+                    boxShadow: 'var(--tech-glow)',
+                    display: 'grid',
+                    gridTemplateColumns: 'minmax(0, 1.25fr) minmax(220px, 0.75fr)',
+                    gap: '24px',
+                    alignItems: 'center'
+                  }}>
+                    <div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
+                        <span style={{
+                          fontSize: '10.5px',
+                          fontWeight: '900',
+                          padding: '3px 10px',
+                          borderRadius: '8px',
+                          backgroundColor: 'var(--primary-light)',
+                          color: 'var(--primary)',
+                          textTransform: 'uppercase',
+                          letterSpacing: '0.4px'
+                        }}>
+                          TEMÁTICA ACTIVA AHORA
+                        </span>
+                        <span style={{ fontSize: '11px', color: 'var(--text-muted)', fontWeight: '700', textTransform: 'uppercase' }}>
+                          {activeThemeData?.category}
+                        </span>
+                      </div>
+
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                        <span style={{ fontSize: '36px', lineHeight: 1 }}>{activeThemeData?.icon}</span>
+                        <div>
+                          <h3 style={{ fontSize: '18px', fontWeight: '900', color: 'var(--text-primary)', margin: 0 }}>
+                            {activeThemeData?.name}
+                          </h3>
+                          <p style={{ fontSize: '12.5px', color: 'var(--text-secondary)', margin: '2px 0 0 0' }}>
+                            {activeThemeData?.tagline}
+                          </p>
+                        </div>
+                      </div>
+
+                      <p style={{ fontSize: '12.5px', color: 'var(--text-secondary)', margin: '12px 0', lineHeight: '1.5' }}>
+                        {activeThemeData?.description}
+                      </p>
+
+                      <div style={{ display: 'flex', gap: '10px', alignItems: 'center', marginTop: '14px', flexWrap: 'wrap' }}>
+                        <span style={{ fontSize: '11px', fontWeight: '800', color: 'var(--text-secondary)' }}>PALETA DE COLOR:</span>
+                        {activeThemeData?.swatches?.map((c, idx) => (
+                          <div
+                            key={idx}
+                            style={{
+                              width: '22px',
+                              height: '22px',
+                              borderRadius: '50%',
+                              backgroundColor: c,
+                              border: '2px solid var(--border)',
+                              boxShadow: '0 2px 6px rgba(0,0,0,0.1)'
+                            }}
+                            title={c}
+                          />
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Mascota Equi interactiva con su atuendo de la temática */}
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+                      <ColibriMascot 
+                        themeId={activeTheme} 
+                        compact={false}
+                        customMessage={`Acompañándote con la temática ${activeThemeData?.name || 'EquilibrIA'}.`}
+                      />
+                    </div>
+                  </div>
+
                   {/* Banner de Sugerencia Estacional / Festiva */}
                   {activeSeasonalTheme && (
                     <div style={{
@@ -752,7 +840,7 @@ const Settings = () => {
 
                       {activeTheme !== activeSeasonalTheme.id ? (
                         <button
-                          onClick={() => changeTheme(activeSeasonalTheme.id)}
+                          onClick={() => handleApplyTheme(activeSeasonalTheme.id)}
                           className="btn btn-primary"
                           style={{
                             padding: '8px 16px',
@@ -917,7 +1005,7 @@ const Settings = () => {
                               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
                                 <button
                                   type="button"
-                                  onClick={() => setPreviewTheme(t)}
+                                  onClick={() => handleOpenPreview(t)}
                                   className="btn btn-secondary"
                                   style={{
                                     padding: '7px 10px',
@@ -936,7 +1024,7 @@ const Settings = () => {
 
                                 <button
                                   type="button"
-                                  onClick={() => changeTheme(t.id)}
+                                  onClick={() => handleApplyTheme(t.id)}
                                   className={isCurrentActive ? 'btn btn-secondary' : 'btn btn-primary'}
                                   disabled={isCurrentActive}
                                   style={{
@@ -980,7 +1068,10 @@ const Settings = () => {
                       return (
                         <div
                           key={p.id}
-                          onClick={() => changePalette(p.id)}
+                          onClick={() => {
+                            changePalette(p.id);
+                            window.scrollTo({ top: 0, behavior: 'smooth' });
+                          }}
                           style={{
                             padding: '16px',
                             borderRadius: '12px',
@@ -1019,7 +1110,7 @@ const Settings = () => {
                 theme={previewTheme}
                 isOpen={!!previewTheme}
                 onClose={() => setPreviewTheme(null)}
-                onApply={changeTheme}
+                onApply={handleApplyTheme}
                 isCurrentActive={activeTheme === previewTheme?.id && customizationType === 'theme'}
               />
             </div>

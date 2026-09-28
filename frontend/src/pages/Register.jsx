@@ -177,8 +177,8 @@ const Register = ({ onNavigate }) => {
       minHeight: '100vh',
       padding: '40px 20px',
       position: 'relative',
-      backgroundColor: 'var(--bg-primary)',
-      background: 'var(--page-bg)',
+      backgroundColor: 'transparent',
+      background: 'transparent',
       overflow: 'hidden'
     }} className="animate-fade">
       

@@ -230,8 +230,8 @@ const Login = ({ onNavigate }) => {
         position: 'relative',
         overflow: 'hidden',
         perspective: '1200px',
-        backgroundColor: 'var(--bg-primary)',
-        background: 'var(--page-bg)',
+        backgroundColor: 'transparent',
+        background: 'transparent',
         minHeight: '100vh',
         display: 'flex',
         alignItems: 'center',
@@ -239,26 +239,7 @@ const Login = ({ onNavigate }) => {
         padding: '20px 16px'
       }}
     >
-      {/* Orbe luminoso dinámico reactivo al cursor */}
-      <div 
-        style={{
-          position: 'absolute',
-          top: mousePos.y - 150,
-          left: mousePos.x - 150,
-          width: '300px',
-          height: '300px',
-          borderRadius: '50%',
-          background: 'radial-gradient(circle, rgba(var(--primary-rgb), 0.12) 0%, rgba(var(--accent-rgb), 0.04) 50%, transparent 100%)',
-          pointerEvents: 'none',
-          filter: 'blur(30px)',
-          zIndex: 1,
-          transition: 'transform 0.1s ease-out'
-        }}
-      />
-      <div className="auth-orb auth-orb-1" />
-      <div className="auth-orb auth-orb-2" />
-
-      <div className="auth-content" style={{ zIndex: 2, position: 'relative', width: '100%', maxWidth: '1020px' }}>
+      <div className="auth-content" style={{ zIndex: 3, position: 'relative', width: '100%', maxWidth: '1020px' }}>
         
         {/* PANEL IZQUIERDO HERO INSTITUCIONAL */}
         <div className="auth-hero" style={{ minHeight: 'auto', padding: '32px' }}>
@@ -307,7 +288,7 @@ const Login = ({ onNavigate }) => {
             margin: '0 auto',
             padding: '30px 28px',
             maxHeight: 'none',
-            overflow: 'visible'
+            overflow: 'hidden'
           }}
         >
           {/* Logo y Encabezado de la Tarjeta */}
