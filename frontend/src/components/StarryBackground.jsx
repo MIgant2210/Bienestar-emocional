@@ -9,7 +9,7 @@ import { ThemeContext } from '../contexts/ThemeContext';
 const CELESTIAL_CONSTELLATIONS = [
   {
     id: 'libra',
-    name: '⚖️ Constelación de Libra • La Balanza del Equilibrio',
+    name: 'Constelación de Libra • La Balanza del Equilibrio',
     isSpecial: true, // ¡Resaltada con fulgor dorado especial!
     position: { top: '11%', right: '2%' },
     width: '230px',
@@ -45,7 +45,7 @@ const CELESTIAL_CONSTELLATIONS = [
   },
   {
     id: 'osamayor',
-    name: '✦ Constelación de la Osa Mayor (El Gran Carro)',
+    name: 'Constelación de la Osa Mayor (El Gran Carro)',
     position: { top: '11%', left: '2%' },
     width: '235px',
     height: '160px',
@@ -71,7 +71,7 @@ const CELESTIAL_CONSTELLATIONS = [
   },
   {
     id: 'osamenor',
-    name: '✦ Constelación de la Osa Menor (Polaris)',
+    name: 'Constelación de la Osa Menor (Polaris)',
     position: { top: '11%', right: '2%' },
     width: '225px',
     height: '160px',
@@ -97,7 +97,7 @@ const CELESTIAL_CONSTELLATIONS = [
   },
   {
     id: 'colibri',
-    name: '✦ Constelación Colibrí (Equi)',
+    name: 'Constelación Colibrí (Equi)',
     position: { top: '11%', left: '2%' },
     width: '220px',
     height: '165px',
@@ -114,7 +114,7 @@ const CELESTIAL_CONSTELLATIONS = [
   },
   {
     id: 'pegaso',
-    name: '✦ Constelación de Pegaso (El Corcel Alado)',
+    name: 'Constelación de Pegaso (El Corcel Alado)',
     position: { bottom: '12%', left: '2%' },
     width: '230px',
     height: '175px',
@@ -138,7 +138,7 @@ const CELESTIAL_CONSTELLATIONS = [
   },
   {
     id: 'cisne',
-    name: '✦ Constelación del Cisne (Cruz del Norte)',
+    name: 'Constelación del Cisne (Cruz del Norte)',
     position: { top: '11%', left: '2%' },
     width: '210px',
     height: '190px',
@@ -159,7 +159,7 @@ const CELESTIAL_CONSTELLATIONS = [
   },
   {
     id: 'aries',
-    name: '♈ Constelación de Aries (El Carnero)',
+    name: 'Constelación de Aries (El Carnero)',
     position: { bottom: '12%', left: '2%' },
     width: '200px',
     height: '130px',
@@ -175,7 +175,7 @@ const CELESTIAL_CONSTELLATIONS = [
   },
   {
     id: 'tauro',
-    name: '♉ Constelación de Tauro (El Toro Celestial)',
+    name: 'Constelación de Tauro (El Toro Celestial)',
     position: { top: '11%', right: '2%' },
     width: '220px',
     height: '170px',
@@ -193,7 +193,7 @@ const CELESTIAL_CONSTELLATIONS = [
   },
   {
     id: 'geminis',
-    name: '♊ Constelación de Géminis (Los Gemelos)',
+    name: 'Constelación de Géminis (Los Gemelos)',
     position: { top: '11%', left: '2%' },
     width: '200px',
     height: '210px',
@@ -212,7 +212,7 @@ const CELESTIAL_CONSTELLATIONS = [
   },
   {
     id: 'cancer',
-    name: '♋ Constelación de Cáncer',
+    name: 'Constelación de Cáncer',
     position: { bottom: '12%', right: '2%' },
     width: '180px',
     height: '180px',
@@ -227,7 +227,7 @@ const CELESTIAL_CONSTELLATIONS = [
   },
   {
     id: 'leo',
-    name: '♌ Constelación de Leo (El León)',
+    name: 'Constelación de Leo (El León)',
     position: { top: '11%', right: '2%' },
     width: '230px',
     height: '155px',
@@ -243,7 +243,7 @@ const CELESTIAL_CONSTELLATIONS = [
   },
   {
     id: 'virgo',
-    name: '♍ Constelación de Virgo (La Sabiduría)',
+    name: 'Constelación de Virgo (La Sabiduría)',
     position: { bottom: '12%', left: '2%' },
     width: '220px',
     height: '190px',
@@ -258,7 +258,7 @@ const CELESTIAL_CONSTELLATIONS = [
   },
   {
     id: 'escorpio',
-    name: '♏ Constelación de Escorpio (Antares)',
+    name: 'Constelación de Escorpio (Antares)',
     position: { top: '11%', left: '2%' },
     width: '200px',
     height: '230px',
@@ -273,7 +273,7 @@ const CELESTIAL_CONSTELLATIONS = [
   },
   {
     id: 'sagitario',
-    name: '♐ Constelación de Sagitario (La Tetera Cósmica)',
+    name: 'Constelación de Sagitario (La Tetera Cósmica)',
     position: { bottom: '12%', right: '2%' },
     width: '210px',
     height: '165px',
@@ -289,7 +289,7 @@ const CELESTIAL_CONSTELLATIONS = [
   },
   {
     id: 'capricornio',
-    name: '♑ Constelación de Capricornio',
+    name: 'Constelación de Capricornio',
     position: { top: '11%', right: '2%' },
     width: '220px',
     height: '150px',
@@ -305,7 +305,7 @@ const CELESTIAL_CONSTELLATIONS = [
   },
   {
     id: 'acuario',
-    name: '♒ Constelación de Acuario (El Portador)',
+    name: 'Constelación de Acuario (El Portador)',
     position: { bottom: '12%', left: '2%' },
     width: '220px',
     height: '165px',
@@ -320,7 +320,7 @@ const CELESTIAL_CONSTELLATIONS = [
   },
   {
     id: 'piscis',
-    name: '♓ Constelación de Piscis (La Empatía)',
+    name: 'Constelación de Piscis (La Empatía)',
     position: { top: '11%', left: '2%' },
     width: '210px',
     height: '180px',
@@ -336,7 +336,7 @@ const CELESTIAL_CONSTELLATIONS = [
   },
   {
     id: 'orion',
-    name: '✦ Constelación de Orión (El Guardián)',
+    name: 'Constelación de Orión (El Guardián)',
     position: { top: '11%', left: '2%' },
     width: '200px',
     height: '220px',
@@ -354,7 +354,7 @@ const CELESTIAL_CONSTELLATIONS = [
   },
   {
     id: 'casiopea',
-    name: '✦ Constelación de Casiopea (La Corona)',
+    name: 'Constelación de Casiopea (La Corona)',
     position: { top: '12%', right: '2%' },
     width: '230px',
     height: '130px',
@@ -369,7 +369,7 @@ const CELESTIAL_CONSTELLATIONS = [
   },
   {
     id: 'crux',
-    name: '✦ Constelación Cruz del Sur',
+    name: 'Constelación Cruz del Sur',
     position: { bottom: '12%', left: '2%' },
     width: '170px',
     height: '195px',
@@ -384,7 +384,7 @@ const CELESTIAL_CONSTELLATIONS = [
   },
   {
     id: 'fenix',
-    name: '✦ Constelación del Fénix (Resiliencia)',
+    name: 'Constelación del Fénix (Resiliencia)',
     position: { bottom: '12%', right: '2%' },
     width: '230px',
     height: '160px',
@@ -420,22 +420,27 @@ const createShuffledConstellationDeck = (length) => {
   return indices;
 };
 
-// Desglosar el nombre de la constelación en título y subtítulo místico para que
-// nunca se desborde ni se salga de los márgenes de la pantalla
+// Desglosar el nombre de la constelación en título y subtítulo limpio sin ningún emoji
 const parseConstellationLabel = (fullName) => {
   if (!fullName) return { title: '', subtitle: '' };
 
-  if (fullName.includes(' • ')) {
-    const parts = fullName.split(' • ');
+  // Eliminar cualquier emoji o símbolo residual
+  const cleanName = fullName
+    .replace(/[\u{1F300}-\u{1F9FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}\u{1FA00}-\u{1FAFF}\u{FE00}-\u{FE0F}]/gu, '')
+    .replace(/^[✦✧⋆*•\s]+/, '')
+    .trim();
+
+  if (cleanName.includes(' • ')) {
+    const parts = cleanName.split(' • ');
     return { title: parts[0].trim(), subtitle: parts[1].trim() };
   }
 
-  const parenMatch = fullName.match(/^(.*?)\s*\((.*?)\)$/);
+  const parenMatch = cleanName.match(/^(.*?)\s*\((.*?)\)$/);
   if (parenMatch) {
     return { title: parenMatch[1].trim(), subtitle: parenMatch[2].trim() };
   }
 
-  return { title: fullName, subtitle: '' };
+  return { title: cleanName, subtitle: '' };
 };
 
 /**
@@ -881,7 +886,7 @@ const StarryBackground = ({ count = 135 }) => {
                   style={{
                     fontSize: '9px',
                     fontWeight: '600',
-                    letterSpacing: '0.4px',
+                    letterSpacing: '0.6px',
                     color: isLibra ? '#fde047' : '#cbd5e1',
                     textTransform: 'uppercase',
                     opacity: 0.92,
@@ -890,7 +895,7 @@ const StarryBackground = ({ count = 135 }) => {
                     lineHeight: '1.1'
                   }}
                 >
-                  ✦ {subtitle} ✦
+                  {subtitle}
                 </span>
               )}
             </div>
