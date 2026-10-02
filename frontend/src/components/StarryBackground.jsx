@@ -420,6 +420,24 @@ const createShuffledConstellationDeck = (length) => {
   return indices;
 };
 
+// Desglosar el nombre de la constelación en título y subtítulo místico para que
+// nunca se desborde ni se salga de los márgenes de la pantalla
+const parseConstellationLabel = (fullName) => {
+  if (!fullName) return { title: '', subtitle: '' };
+
+  if (fullName.includes(' • ')) {
+    const parts = fullName.split(' • ');
+    return { title: parts[0].trim(), subtitle: parts[1].trim() };
+  }
+
+  const parenMatch = fullName.match(/^(.*?)\s*\((.*?)\)$/);
+  if (parenMatch) {
+    return { title: parenMatch[1].trim(), subtitle: parenMatch[2].trim() };
+  }
+
+  return { title: fullName, subtitle: '' };
+};
+
 /**
  * Cielo Estrellado Global de EquilibrIA con Constelaciones Zodiacales y Famosas
  * - En Modo Claro: Destellos elegantes en las orillas; en la zona central de los módulos,
@@ -627,10 +645,19 @@ const StarryBackground = ({ count = 135 }) => {
           box-sizing: border-box;
         }
 
+        .constellation-wrapper.pos-right {
+          right: max(2.5%, 16px) !important;
+        }
+        .constellation-wrapper.pos-left {
+          left: max(2.5%, 16px) !important;
+        }
+
         .constellation-badge {
           pointer-events: none !important;
           user-select: none !important;
           flex-shrink: 0 !important;
+          max-width: 100% !important;
+          box-sizing: border-box !important;
         }
 
         /* Laptops y monitores compactos (1024px a 1366px) */
@@ -653,6 +680,9 @@ const StarryBackground = ({ count = 135 }) => {
           .constellation-badge-text {
             font-size: 10px !important;
           }
+          .constellation-badge-sub {
+            font-size: 8.5px !important;
+          }
         }
 
         /* Móviles y pantallas angostas (<= 767px): Jamás interrumpir ni tapar la UI */
@@ -667,13 +697,22 @@ const StarryBackground = ({ count = 135 }) => {
           .constellation-wrapper.pos-bottom {
             bottom: 25px !important;
           }
+          .constellation-wrapper.pos-right {
+            right: 12px !important;
+          }
+          .constellation-wrapper.pos-left {
+            left: 12px !important;
+          }
           .constellation-badge {
             padding: 2.5px 8px !important;
-            border-radius: 12px !important;
+            border-radius: 10px !important;
           }
           .constellation-badge-text {
             font-size: 9px !important;
-            letter-spacing: 0.5px !important;
+            letter-spacing: 0.4px !important;
+          }
+          .constellation-badge-sub {
+            font-size: 7.5px !important;
           }
           /* Destellitos interiores en móvil aún más tenues para lectura óptima */
           .star-node.star-module-subtle {
@@ -707,6 +746,7 @@ const StarryBackground = ({ count = 135 }) => {
         const transformOrigin = isTop 
           ? (isRight ? 'top right' : 'top left') 
           : (isRight ? 'bottom right' : 'bottom left');
+        const { title, subtitle } = parseConstellationLabel(activeConstellation.name);
 
         return (
           <div
@@ -792,14 +832,14 @@ const StarryBackground = ({ count = 135 }) => {
               })}
             </svg>
 
-            {/* Etiqueta mística con el nombre de la constelación */}
+            {/* Etiqueta mística con el nombre de la constelación ajustado sin desbordarse */}
             <div
               className="constellation-badge"
               style={{
-                marginTop: '4px',
-                padding: isLibra ? '4px 14px' : '3px 12px',
-                borderRadius: '16px',
-                background: isLibra ? 'rgba(30, 27, 75, 0.90)' : 'rgba(15, 23, 42, 0.85)',
+                marginTop: '6px',
+                padding: isLibra ? '4px 12px' : '3px 10px',
+                borderRadius: '14px',
+                background: isLibra ? 'rgba(30, 27, 75, 0.92)' : 'rgba(15, 23, 42, 0.88)',
                 backdropFilter: 'blur(10px)',
                 border: isLibra ? '1px solid rgba(250, 204, 21, 0.75)' : '1px solid rgba(165, 180, 252, 0.45)',
                 boxShadow: isLibra 
@@ -807,30 +847,52 @@ const StarryBackground = ({ count = 135 }) => {
                   : '0 0 14px rgba(99, 102, 241, 0.35), 0 4px 12px rgba(0, 0, 0, 0.4)',
                 pointerEvents: 'none',
                 userSelect: 'none',
-                display: 'inline-flex',
+                display: 'flex',
+                flexDirection: 'column',
                 alignItems: 'center',
                 justifyContent: 'center',
+                maxWidth: '100%',
+                boxSizing: 'border-box',
+                textAlign: 'center',
                 flexShrink: 0,
-                zIndex: 4,
-                whiteSpace: 'nowrap'
+                zIndex: 4
               }}
             >
               <span
                 className="constellation-badge-text"
                 style={{
-                  fontSize: isLibra ? '11.5px' : '11px',
-                  fontWeight: isLibra ? '800' : '700',
-                  letterSpacing: '1px',
+                  fontSize: isLibra ? '11px' : '10.5px',
+                  fontWeight: '800',
+                  letterSpacing: '0.6px',
                   color: isLibra ? '#fef08a' : '#f8fafc',
                   textTransform: 'uppercase',
                   textShadow: isLibra 
                     ? '0 0 10px rgba(250, 204, 21, 0.9)' 
                     : '0 0 8px rgba(165, 180, 252, 0.9)',
-                  whiteSpace: 'nowrap'
+                  whiteSpace: 'normal',
+                  lineHeight: '1.2'
                 }}
               >
-                {activeConstellation.name}
+                {title}
               </span>
+              {subtitle && (
+                <span
+                  className="constellation-badge-sub"
+                  style={{
+                    fontSize: '9px',
+                    fontWeight: '600',
+                    letterSpacing: '0.4px',
+                    color: isLibra ? '#fde047' : '#cbd5e1',
+                    textTransform: 'uppercase',
+                    opacity: 0.92,
+                    marginTop: '2px',
+                    whiteSpace: 'normal',
+                    lineHeight: '1.1'
+                  }}
+                >
+                  ✦ {subtitle} ✦
+                </span>
+              )}
             </div>
           </div>
         );
