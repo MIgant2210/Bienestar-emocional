@@ -57,7 +57,8 @@ def run_all_tests():
             "email": email_valid,
             "password": "PasswordSeguro2026!",
             "password_confirm": "PasswordSeguro2026!",
-            "invitation_code": inv_code,
+            "invitation_code": inv_code,,
+            "birth_date": "1995-05-15"
             "terms_accepted": True
         }
         r1 = requests.post(f"{BASE_URL}/register", json=payload_valid)

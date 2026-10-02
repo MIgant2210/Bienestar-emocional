@@ -133,6 +133,8 @@ def ensure_auth_oauth_schema(db):
                 statements.append("ALTER TABLE users ADD COLUMN provider_id VARCHAR(120)")
             if 'avatar_url' not in existing_columns:
                 statements.append("ALTER TABLE users ADD COLUMN avatar_url VARCHAR(500)")
+            if 'birth_date' not in existing_columns:
+                statements.append("ALTER TABLE users ADD COLUMN birth_date DATE")
 
             # Permitir password_hash nullable para cuentas de terceros (OAuth)
             for col in inspector.get_columns('users'):

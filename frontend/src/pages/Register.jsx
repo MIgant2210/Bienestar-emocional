@@ -9,6 +9,7 @@ import {
 } from 'lucide-react';
 import api from '../services/api';
 import PrivacyTermsModal from '../components/PrivacyTermsModal';
+import CustomDatePicker from '../components/common/CustomDatePicker';
 
 const NAME_REGEX = /^[a-zA-ZáéíóúÁÉÍÓÚñÑüÜ' -]{2,50}$/;
 const EMAIL_REGEX = /^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$/;
@@ -22,6 +23,7 @@ const Register = ({ onNavigate }) => {
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [email, setEmail] = useState('');
+  const [birthDate, setBirthDate] = useState('');
   const [password, setPassword] = useState('');
   const [passwordConfirm, setPasswordConfirm] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -118,6 +120,11 @@ const Register = ({ onNavigate }) => {
       return;
     }
 
+    if (!birthDate) {
+      setErrorMsg('Por favor selecciona tu fecha de nacimiento en el calendario.');
+      return;
+    }
+
     if (!isPasswordStrong) {
       setErrorMsg('La contraseña no cumple con los requisitos de seguridad (mínimo 8 caracteres, mayúscula, minúscula, número y símbolo).');
       return;
@@ -145,6 +152,7 @@ const Register = ({ onNavigate }) => {
         first_name: trimmedFirst,
         last_name: trimmedLast,
         email: trimmedEmail,
+        birth_date: birthDate,
         password: password,
         password_confirm: passwordConfirm,
         invitation_code: trimmedCode,
@@ -397,6 +405,20 @@ const Register = ({ onNavigate }) => {
                     style={{ height: '42px', fontSize: '13.5px' }}
                   />
                 </div>
+              </div>
+
+              {/* Fecha de Nacimiento con Calendario Personalizado */}
+              <div className="form-group" style={{ marginBottom: '14px' }}>
+                <label style={{ fontSize: '12.5px', fontWeight: '700', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <span>Fecha de Nacimiento <span style={{ color: 'var(--danger, #ef4444)' }}>*</span></span>
+                  <span style={{ fontSize: '11px', color: 'var(--text-muted)', fontWeight: 'normal' }}>Para celebrar tu cumpleaños 🎂</span>
+                </label>
+                <CustomDatePicker
+                  value={birthDate}
+                  onChange={setBirthDate}
+                  placeholder="Selecciona tu fecha de nacimiento"
+                  hasError={Boolean(errorMsg && !birthDate)}
+                />
               </div>
 
               {/* Correo Electrónico */}

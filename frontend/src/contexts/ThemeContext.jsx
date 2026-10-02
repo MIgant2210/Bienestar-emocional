@@ -1,5 +1,6 @@
-import React, { createContext, useState, useEffect, useMemo } from 'react';
+import React, { createContext, useState, useEffect, useMemo, useCallback } from 'react';
 import { THEMES, getThemeById } from '../themes/themeConfig';
+import { resolveAutomatedTheme, THEME_CALENDAR_SCHEDULE } from '../utils/themeSchedule';
 
 export const PALETTES = [
   { id: 'indigo', name: 'Indigo Neón', primary: '#6366f1', hover: '#4f46e5', accent: '#8b5cf6', light: 'rgba(99, 102, 241, 0.15)' },
@@ -17,20 +18,89 @@ export const ThemeProvider = ({ children }) => {
     return localStorage.getItem('theme') || 'light';
   });
 
+  // Modo de asignación de temáticas: 'auto' (calendario/cumpleaños) o 'manual'
+  const [themeMode, setThemeMode] = useState(() => {
+    return localStorage.getItem('themeMode') || 'auto';
+  });
+
   // Tipo de personalización: 'theme' (Temáticas completas) o 'palette' (Paletas tradicionales)
   const [customizationType, setCustomizationType] = useState(() => {
     return localStorage.getItem('customizationType') || 'theme';
   });
 
+  // Usuario en sesión para cálculo de cumpleaños y fechas especiales
+  const [currentUser, setCurrentUser] = useState(() => {
+    try {
+      const saved = localStorage.getItem('user') || sessionStorage.getItem('user');
+      return saved ? JSON.parse(saved) : null;
+    } catch {
+      return null;
+    }
+  });
+
+  // Escuchar cambios de sesión/perfil para mantener el cumpleaños actualizado
+  useEffect(() => {
+    const handleSyncUser = () => {
+      try {
+        const saved = localStorage.getItem('user') || sessionStorage.getItem('user');
+        const parsed = saved ? JSON.parse(saved) : null;
+        setCurrentUser(prev => {
+          if (JSON.stringify(prev) !== JSON.stringify(parsed)) {
+            return parsed;
+          }
+          return prev;
+        });
+      } catch {
+        setCurrentUser(null);
+      }
+    };
+
+    window.addEventListener('storage', handleSyncUser);
+    const interval = setInterval(handleSyncUser, 2000);
+    return () => {
+      window.removeEventListener('storage', handleSyncUser);
+      clearInterval(interval);
+    };
+  }, []);
+
+  // Temática automática calculada según el calendario actual y el cumpleaños del usuario
+  const autoResolvedTheme = useMemo(() => {
+    return resolveAutomatedTheme(currentUser, new Date());
+  }, [currentUser]);
+
   // Temática visual seleccionada (14 disponibles)
   const [activeTheme, setActiveTheme] = useState(() => {
-    return localStorage.getItem('activeTheme') || 'equilibria';
+    const saved = localStorage.getItem('activeTheme');
+    const savedMode = localStorage.getItem('themeMode') || 'auto';
+    if (savedMode === 'auto') {
+      const initialAuto = resolveAutomatedTheme(currentUser, new Date());
+      return initialAuto.themeId;
+    }
+    return saved || 'equilibria';
   });
 
   // Paleta de color seleccionada (5 tradicionales)
   const [colorPalette, setColorPalette] = useState(() => {
     return localStorage.getItem('colorPalette') || 'indigo';
   });
+
+  // Sincronización automática de temática según calendario y cumpleaños
+  useEffect(() => {
+    localStorage.setItem('themeMode', themeMode);
+
+    // Si hoy es el cumpleaños del usuario, ¡activar tematica de cumpleaños con maxima prioridad!
+    if (autoResolvedTheme.isBirthday) {
+      setActiveTheme('birthday');
+      setCustomizationType('theme');
+      return;
+    }
+
+    // Si el modo es automático, actualizar cuando cambie el día o calendario
+    if (themeMode === 'auto') {
+      setActiveTheme(autoResolvedTheme.themeId);
+      setCustomizationType('theme');
+    }
+  }, [themeMode, autoResolvedTheme]);
 
   // Objeto completo de la temática activa
   const activeThemeData = useMemo(() => {
@@ -97,15 +167,32 @@ export const ThemeProvider = ({ children }) => {
     setTheme((prevTheme) => (prevTheme === 'light' ? 'dark' : 'light'));
   };
 
-  const changeTheme = (themeId) => {
+  const changeTheme = (themeId, isManual = true) => {
     setActiveTheme(themeId);
     setCustomizationType('theme');
+    if (isManual) {
+      setThemeMode('manual');
+      localStorage.setItem('themeMode', 'manual');
+    }
   };
 
   const changePalette = (paletteId) => {
     setColorPalette(paletteId);
     setCustomizationType('palette');
+    setThemeMode('manual');
+    localStorage.setItem('themeMode', 'manual');
   };
+
+  const enableAutoTheme = () => {
+    setThemeMode('auto');
+    localStorage.setItem('themeMode', 'auto');
+    setActiveTheme(autoResolvedTheme.themeId);
+    setCustomizationType('theme');
+  };
+
+  const syncUser = useCallback((userObj) => {
+    setCurrentUser(userObj);
+  }, []);
 
   return (
     <ThemeContext.Provider value={{ 
@@ -118,6 +205,12 @@ export const ThemeProvider = ({ children }) => {
       changePalette, 
       customizationType, 
       setCustomizationType,
+      themeMode,
+      setThemeMode,
+      enableAutoTheme,
+      autoResolvedTheme,
+      syncUser,
+      THEME_CALENDAR_SCHEDULE,
       PALETTES,
       THEMES
     }}>

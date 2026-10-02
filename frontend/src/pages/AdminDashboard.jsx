@@ -62,6 +62,9 @@ const AdminDashboard = ({ initialTab = 'analytics' }) => {
     activeThemeData,
     customizationType,
     setCustomizationType,
+    themeMode,
+    enableAutoTheme,
+    autoResolvedTheme,
     THEMES
   } = useContext(ThemeContext);
   const navigate = useNavigate();
@@ -2334,6 +2337,42 @@ const AdminDashboard = ({ initialTab = 'analytics' }) => {
 
                   {paletteMenuTab === 'themes' ? (
                     <div style={{ display: 'grid', gap: '5px', maxHeight: '310px', overflowY: 'auto', paddingRight: '4px' }}>
+                      {/* Opción Automática según Calendario y Cumpleaños */}
+                      <button
+                        type="button"
+                        onClick={() => { enableAutoTheme(); setShowPaletteMenu(false); }}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'space-between',
+                          padding: '7px 10px',
+                          borderRadius: '8px',
+                          border: themeMode === 'auto' ? '2px solid var(--primary)' : '1px dashed var(--border)',
+                          backgroundColor: themeMode === 'auto' ? 'var(--primary-light)' : 'var(--bg-secondary)',
+                          cursor: 'pointer',
+                          marginBottom: '3px',
+                          textAlign: 'left',
+                          transition: 'all 0.15s ease'
+                        }}
+                      >
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <span style={{ fontSize: '15px' }}>✨</span>
+                          <div>
+                            <div style={{ fontSize: '11px', fontWeight: '800', color: 'var(--text-primary)' }}>
+                              Automático por Calendario
+                            </div>
+                            <div style={{ fontSize: '9.5px', color: 'var(--primary)', fontWeight: '700' }}>
+                              Hoy: {autoResolvedTheme?.icon} {autoResolvedTheme?.reason}
+                            </div>
+                          </div>
+                        </div>
+                        {themeMode === 'auto' && (
+                          <span style={{ fontSize: '9px', fontWeight: '800', padding: '1px 5px', borderRadius: '4px', backgroundColor: 'var(--primary)', color: '#fff' }}>
+                            ACTIVO
+                          </span>
+                        )}
+                      </button>
+
                       {THEMES.map((t) => {
                         const isSelected = activeTheme === t.id && customizationType === 'theme';
                         return (
@@ -2628,6 +2667,40 @@ const AdminDashboard = ({ initialTab = 'analytics' }) => {
 
                 {mobilePaletteTab === 'themes' ? (
                   <div style={{ display: 'grid', gap: '6px', maxHeight: '250px', overflowY: 'auto' }}>
+                    {/* Opción Automática según Calendario y Cumpleaños */}
+                    <button
+                      type="button"
+                      onClick={() => { enableAutoTheme(); setMobilePaletteOpen(false); }}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        padding: '8px 12px',
+                        borderRadius: '10px',
+                        border: themeMode === 'auto' ? '2px solid var(--primary)' : '1px dashed var(--border)',
+                        backgroundColor: themeMode === 'auto' ? 'var(--primary-light)' : 'var(--bg-secondary)',
+                        fontSize: '12px',
+                        cursor: 'pointer',
+                        width: '100%',
+                        textAlign: 'left'
+                      }}
+                    >
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <span style={{ fontSize: '16px' }}>✨</span>
+                        <div>
+                          <div style={{ fontWeight: '800', color: 'var(--text-primary)' }}>Automático por Calendario</div>
+                          <div style={{ fontSize: '10px', color: 'var(--primary)', fontWeight: '700' }}>
+                            Hoy: {autoResolvedTheme?.icon} {autoResolvedTheme?.reason}
+                          </div>
+                        </div>
+                      </div>
+                      {themeMode === 'auto' && (
+                        <span style={{ fontSize: '10px', fontWeight: '800', padding: '2px 6px', borderRadius: '4px', backgroundColor: 'var(--primary)', color: '#fff' }}>
+                          ACTIVO
+                        </span>
+                      )}
+                    </button>
+
                     {THEMES.map((t) => {
                       const isSelected = activeTheme === t.id && customizationType === 'theme';
                       return (

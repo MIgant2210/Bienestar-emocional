@@ -106,9 +106,27 @@ def register():
     password = data.get('password') or ''
     password_confirm = data.get('password_confirm') or ''
     invitation_code = (data.get('invitation_code') or '').strip().upper()
+    birth_date = (data.get('birth_date') or '').strip()
     terms_accepted = data.get('terms_accepted', False)
 
-    # 3. Validación de Nombre y Apellido
+    # 3. Validación de Fecha de Nacimiento
+    if not birth_date:
+        return jsonify({'message': 'La fecha de nacimiento es obligatoria para tu perfil.'}), 400
+
+    try:
+        parsed_birth_date = datetime.datetime.strptime(birth_date, '%Y-%m-%d').date()
+    except (ValueError, TypeError):
+        return jsonify({'message': 'El formato de la fecha de nacimiento debe ser YYYY-MM-DD.'}), 400
+
+    today = datetime.date.today()
+    if parsed_birth_date >= today:
+        return jsonify({'message': 'La fecha de nacimiento debe ser una fecha anterior al día de hoy.'}), 400
+
+    age = today.year - parsed_birth_date.year - ((today.month, today.day) < (parsed_birth_date.month, parsed_birth_date.day))
+    if age < 5 or age > 120:
+        return jsonify({'message': 'Por favor ingresa una fecha de nacimiento válida (edad entre 5 y 120 años).'}), 400
+
+    # 4. Validación de Nombre y Apellido
     if not first_name or not last_name:
         return jsonify({'message': 'El nombre y apellido son obligatorios.'}), 400
 
@@ -176,6 +194,7 @@ def register():
         role='miembro',  # SIEMPRE miembro / colaborador en registro público
         department=resolved_dept,
         institution_id=resolved_institution.id,
+        birth_date=parsed_birth_date,
         status='PENDIENTE',  # Requiere aprobación del administrador
         email_verified=False
     )
@@ -631,6 +650,13 @@ def google_complete_registration():
     terms_accepted = bool(data.get('terms_accepted', False))
     remember_me = bool(data.get('remember_me', True))
     department_input = (data.get('department') or 'General').strip()
+    birth_date_str = (data.get('birth_date') or '').strip()
+    parsed_bd = None
+    if birth_date_str:
+        try:
+            parsed_bd = datetime.datetime.strptime(birth_date_str, '%Y-%m-%d').date()
+        except Exception:
+            pass
 
     if not email:
         return jsonify({'message': 'El correo electrónico es requerido.'}), 400
@@ -663,6 +689,8 @@ def google_complete_registration():
             user.auth_provider = 'google'
         if avatar_url and not user.avatar_url:
             user.avatar_url = avatar_url
+        if parsed_bd and not user.birth_date:
+            user.birth_date = parsed_bd
     else:
         user = User(
             email=email,
@@ -676,6 +704,7 @@ def google_complete_registration():
             email_verified_at=datetime.datetime.utcnow(),
             auth_provider='google',
             provider_id=provider_id,
+            birth_date=parsed_bd,
             avatar_url=avatar_url
         )
         db.session.add(user)
@@ -745,6 +774,16 @@ def update_profile(current_user):
     if not NAME_REGEX.match(first_name) or not NAME_REGEX.match(last_name):
         return jsonify({'message': 'El nombre y apellido deben tener entre 2 y 50 caracteres válidos.'}), 400
         
+    birth_date_str = (data.get('birth_date') or '').strip()
+    if birth_date_str:
+        try:
+            parsed_bd = datetime.datetime.strptime(birth_date_str, '%Y-%m-%d').date()
+            today = datetime.date.today()
+            if parsed_bd < today and 5 <= (today.year - parsed_bd.year) <= 120:
+                current_user.birth_date = parsed_bd
+        except (ValueError, TypeError):
+            pass
+
     current_user.first_name = first_name
     current_user.last_name = last_name
     
@@ -763,6 +802,50 @@ def update_profile(current_user):
     except Exception as e:
         db.session.rollback()
         return jsonify({'message': 'Error al actualizar el perfil.'}), 500
+
+@auth_bp.route('/birth-date', methods=['PUT', 'POST'])
+@token_required
+def update_birth_date(current_user):
+    """
+    Permite registrar o actualizar la fecha de nacimiento del usuario autenticado.
+    Obligatorio para los usuarios existentes que inicien sesión y aún no la tengan.
+    """
+    data = request.get_json(silent=True) or {}
+    birth_date_str = (data.get('birth_date') or '').strip()
+
+    if not birth_date_str:
+        return jsonify({'message': 'La fecha de nacimiento es requerida.'}), 400
+
+    try:
+        parsed_date = datetime.datetime.strptime(birth_date_str, '%Y-%m-%d').date()
+    except (ValueError, TypeError):
+        return jsonify({'message': 'Formato de fecha inválido. Se espera YYYY-MM-DD.'}), 400
+
+    today = datetime.date.today()
+    if parsed_date >= today:
+        return jsonify({'message': 'La fecha de nacimiento debe ser una fecha anterior a hoy.'}), 400
+
+    age = today.year - parsed_date.year - ((today.month, today.day) < (parsed_date.month, parsed_date.day))
+    if age < 5 or age > 120:
+        return jsonify({'message': 'Por favor ingresa una fecha de nacimiento válida (edad entre 5 y 120 años).'}), 400
+
+    current_user.birth_date = parsed_date
+    try:
+        db.session.commit()
+        AuditService.log_action(
+            user_id=current_user.id,
+            action="FECHA_NACIMIENTO_REGISTRADA",
+            details=f"Fecha de nacimiento registrada: {parsed_date.strftime('%Y-%m-%d')}",
+            ip_address=request.remote_addr
+        )
+        return jsonify({
+            'message': 'Fecha de nacimiento registrada exitosamente.',
+            'user': current_user.to_dict()
+        }), 200
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'message': 'Error interno al guardar la fecha de nacimiento.'}), 500
+
 
 @auth_bp.route('/change-password', methods=['POST'])
 @token_required

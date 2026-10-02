@@ -10,6 +10,7 @@ import ProtectedRoute from './components/ProtectedRoute';
 import ErrorBoundary from './components/ErrorBoundary';
 import StarryBackground from './components/StarryBackground';
 import AmbientDecorations from './components/theme/AmbientDecorations';
+import BirthDateRequiredModal from './components/auth/BirthDateRequiredModal';
 import './styles/global.css';
 
 // Lazy loading para división de código y arranque instantáneo
@@ -188,6 +189,8 @@ function App() {
               <StarryBackground />
               {/* Decoraciones Ambientales Dinámicas según Temática Activa */}
               <AmbientDecorations />
+              {/* Modal Obligatorio de Registro de Fecha de Nacimiento para usuarios existentes */}
+              <BirthDateRequiredModal />
               <NavigationHandler />
             </ErrorBoundary>
           </BrowserRouter>

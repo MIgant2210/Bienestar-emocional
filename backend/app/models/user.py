@@ -42,6 +42,9 @@ class User(db.Model):
     longest_streak = db.Column(db.Integer, default=0, nullable=False)
     last_activity_date = db.Column(db.Date, nullable=True)
     
+    # Campo de Fecha de Nacimiento (Cumpleaños y personalización de temáticas)
+    birth_date = db.Column(db.Date, nullable=True)
+    
     # Relaciones
     department_rel = db.relationship('Department', foreign_keys=[department_id], lazy=True)
     reflections = db.relationship(
@@ -110,5 +113,6 @@ class User(db.Model):
             'current_streak': self.current_streak or 0,
             'longest_streak': self.longest_streak or 0,
             'last_activity_date': self.last_activity_date.strftime('%Y-%m-%d') if self.last_activity_date else None,
+            'birth_date': self.birth_date.strftime('%Y-%m-%d') if self.birth_date else None,
             'created_at': self.created_at.isoformat() if self.created_at else None
         }

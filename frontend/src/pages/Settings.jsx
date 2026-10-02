@@ -15,6 +15,7 @@ import ConsentModal from '../components/ConsentModal';
 import AvatarCreator from '../components/AvatarCreator';
 import ThemePreviewModal from '../components/theme/ThemePreviewModal';
 import ColibriMascot from '../components/ColibriMascot';
+import CustomDatePicker from '../components/common/CustomDatePicker';
 import { getActiveSeasonalTheme } from '../themes/seasonalSchedule';
 
 const Settings = () => {
@@ -31,7 +32,10 @@ const Settings = () => {
     changeTheme,
     activeThemeData,
     customizationType,
-    THEMES 
+    themeMode,
+    enableAutoTheme,
+    autoResolvedTheme,
+    THEMES
   } = useContext(ThemeContext);
 
   const [activeTab, setActiveTab] = useState('account'); // 'account', 'ai_culture', 'appearance', 'notifications', 'privacy', 'security'
@@ -40,7 +44,7 @@ const Settings = () => {
   const [customizationSubTab, setCustomizationSubTab] = useState('themes'); // 'themes' | 'palettes'
   const [themeFilter, setThemeFilter] = useState('all'); // 'all', 'official', 'seasonal', 'celebration', 'cultural'
   const [previewTheme, setPreviewTheme] = useState(null);
-  const activeSeasonalTheme = getActiveSeasonalTheme();
+  const activeSeasonalTheme = getActiveSeasonalTheme(user);
 
   const handleOpenPreview = (t) => {
     setPreviewTheme(t);
@@ -55,6 +59,7 @@ const Settings = () => {
   // Estados de Mi Cuenta
   const [firstName, setFirstName] = useState(user?.first_name || '');
   const [lastName, setLastName] = useState(user?.last_name || '');
+  const [birthDate, setBirthDate] = useState(user?.birth_date || '');
   const [accountLoading, setAccountLoading] = useState(false);
   const [accountMsg, setAccountMsg] = useState({ type: '', text: '' });
 
@@ -94,6 +99,7 @@ const Settings = () => {
     if (user) {
       setFirstName(user.first_name || '');
       setLastName(user.last_name || '');
+      setBirthDate(user.birth_date || '');
     }
   }, [user]);
 
@@ -151,11 +157,13 @@ const Settings = () => {
     try {
       const res = await api.put('/auth/profile', {
         first_name: firstName,
-        last_name: lastName
+        last_name: lastName,
+        birth_date: birthDate
       });
       // Actualizar localStorage y contexto
-      const updatedUser = { ...user, first_name: firstName, last_name: lastName };
+      const updatedUser = res.data?.user || { ...user, first_name: firstName, last_name: lastName, birth_date: birthDate };
       localStorage.setItem('user', JSON.stringify(updatedUser));
+      loginUser(updatedUser);
       setAccountMsg({ type: 'success', text: 'Datos de perfil actualizados exitosamente.' });
     } catch (err) {
       setAccountMsg({ type: 'danger', text: err.response?.data?.message || 'Error al guardar perfil.' });
@@ -407,6 +415,21 @@ const Settings = () => {
                     disabled
                     style={{ backgroundColor: 'var(--bg-primary)', opacity: 0.7, cursor: 'not-allowed' }}
                   />
+                </div>
+
+                <div className="form-group">
+                  <label style={{ fontSize: '11px', fontWeight: '800', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
+                    <span>FECHA DE NACIMIENTO (CUMPLEAÑOS):</span>
+                    <span style={{ fontSize: '10.5px', color: 'var(--primary)', fontWeight: 'bold' }}>🎂 Temática de Cumpleaños</span>
+                  </label>
+                  <CustomDatePicker
+                    value={birthDate}
+                    onChange={setBirthDate}
+                    placeholder="Selecciona tu fecha de nacimiento"
+                  />
+                  <span style={{ fontSize: '11px', color: 'var(--text-muted)', display: 'block', marginTop: '4px' }}>
+                    Se utiliza para activar automáticamente tu temática de cumpleaños y reconocer tus momentos especiales.
+                  </span>
                 </div>
 
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
@@ -872,6 +895,96 @@ const Settings = () => {
                       )}
                     </div>
                   )}
+
+                                    {/* Control Central de Modo Automático según Calendario */}
+                  <div style={{
+                    padding: '16px 20px',
+                    borderRadius: '16px',
+                    border: themeMode === 'auto' ? '2px solid var(--primary)' : '1px solid var(--border)',
+                    backgroundColor: themeMode === 'auto' ? 'var(--primary-light)' : 'var(--bg-primary)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    flexWrap: 'wrap',
+                    gap: '14px',
+                    boxShadow: themeMode === 'auto' ? 'var(--tech-glow)' : 'var(--shadow-sm)'
+                  }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+                      <div style={{
+                        width: '46px',
+                        height: '46px',
+                        borderRadius: '12px',
+                        backgroundColor: 'var(--bg-secondary)',
+                        border: '1px solid var(--border)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        fontSize: '22px',
+                        boxShadow: '0 2px 8px rgba(0,0,0,0.06)'
+                      }}>
+                        {autoResolvedTheme?.icon || '🗓️'}
+                      </div>
+                      <div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <h4 style={{ fontSize: '14px', fontWeight: '800', color: 'var(--text-primary)', margin: 0 }}>
+                            Sincronización Automática por Calendario
+                          </h4>
+                          {themeMode === 'auto' && (
+                            <span style={{
+                              fontSize: '10px',
+                              fontWeight: '800',
+                              padding: '2px 8px',
+                              borderRadius: '20px',
+                              backgroundColor: 'var(--primary)',
+                              color: '#ffffff'
+                            }}>
+                              ACTIVO
+                            </span>
+                          )}
+                        </div>
+                        <p style={{ fontSize: '12px', color: 'var(--text-secondary)', margin: '4px 0 0 0' }}>
+                          Hoy corresponde: <strong>{autoResolvedTheme?.reason}</strong> ({autoResolvedTheme?.detail})
+                        </p>
+                      </div>
+                    </div>
+
+                    <div style={{ display: 'flex', gap: '8px' }}>
+                      {themeMode !== 'auto' ? (
+                        <button
+                          type="button"
+                          onClick={() => enableAutoTheme()}
+                          className="btn btn-primary"
+                          style={{
+                            padding: '8px 16px',
+                            borderRadius: '10px',
+                            fontSize: '12px',
+                            fontWeight: '800',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '6px'
+                          }}
+                        >
+                          <Sparkles size={14} />
+                          <span>Activar Modo Automático</span>
+                        </button>
+                      ) : (
+                        <span style={{
+                          fontSize: '11.5px',
+                          fontWeight: '800',
+                          backgroundColor: 'var(--bg-secondary)',
+                          color: 'var(--primary)',
+                          padding: '6px 14px',
+                          borderRadius: '10px',
+                          border: '1px solid var(--border)',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '6px'
+                        }}>
+                          <Check size={14} /> Sincronizado
+                        </span>
+                      )}
+                    </div>
+                  </div>
 
                   {/* Filtro por Categorías */}
                   <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
