@@ -436,7 +436,7 @@ const StarryBackground = ({ count = 135 }) => {
   const [activeConstellation, setActiveConstellation] = useState(null);
   const [constellationKey, setConstellationKey] = useState(0);
 
-  // Ciclo periódico de constelaciones aleatorias con "tiempo en blanco" de 24 segundos entre rondas
+  // Ciclo periódico de constelaciones aleatorias con descanso prolongado de 10 minutos entre rondas
   useEffect(() => {
     if (!isDark) {
       setActiveConstellation(null);
@@ -453,11 +453,12 @@ const StarryBackground = ({ count = 135 }) => {
 
       // Si se completaron todas las constelaciones de la baraja:
       if (deckStep >= deck.length) {
-        // TIEMPO EN BLANCO: Se apagan las constelaciones durante 24 segundos para dejar descansar la vista
+        // DESCANSO PROLONGADO DE 10 MINUTOS:
+        // Pasan todas las constelaciones y dejan de salir por 10 minutos de cielo puro y sereno
         setActiveConstellation(null);
         deck = createShuffledConstellationDeck(CELESTIAL_CONSTELLATIONS.length);
         deckStep = 0;
-        timerId = setTimeout(playNext, 24000); // 24 segundos de cielo nocturno puro y sereno
+        timerId = setTimeout(playNext, 10 * 60 * 1000); // 10 minutos (600,000 ms)
         return;
       }
 
@@ -623,55 +624,56 @@ const StarryBackground = ({ count = 135 }) => {
           transition: transform 0.4s ease, opacity 0.4s ease;
           pointer-events: none !important;
           user-select: none !important;
-          max-width: 90vw;
           box-sizing: border-box;
+        }
+
+        .constellation-badge {
+          pointer-events: none !important;
+          user-select: none !important;
+          flex-shrink: 0 !important;
         }
 
         /* Laptops y monitores compactos (1024px a 1366px) */
         @media (max-width: 1366px) {
           .constellation-wrapper {
             transform: scale(0.85) !important;
-            opacity: 0.85;
+            opacity: 0.90;
           }
         }
 
         /* Tablets e iPads (768px a 1023px) */
         @media (max-width: 1023px) {
           .constellation-wrapper {
-            transform: scale(0.70) !important;
-            opacity: 0.65;
+            transform: scale(0.72) !important;
+            opacity: 0.85;
           }
           .constellation-badge {
-            padding: 2.5px 8px !important;
-            max-width: 200px !important;
+            padding: 3px 10px !important;
           }
           .constellation-badge-text {
-            font-size: 9px !important;
+            font-size: 10px !important;
           }
         }
 
         /* Móviles y pantallas angostas (<= 767px): Jamás interrumpir ni tapar la UI */
         @media (max-width: 767px) {
           .constellation-wrapper {
-            transform: scale(0.52) !important;
-            opacity: 0.42 !important;
-            max-width: 155px !important;
-            max-height: 115px !important;
+            transform: scale(0.60) !important;
+            opacity: 0.80 !important;
           }
           .constellation-wrapper.pos-top {
-            top: 65px !important;
+            top: 70px !important;
           }
           .constellation-wrapper.pos-bottom {
-            bottom: 22px !important;
+            bottom: 25px !important;
           }
           .constellation-badge {
-            padding: 2px 7px !important;
-            max-width: 145px !important;
-            border-radius: 8px !important;
+            padding: 2.5px 8px !important;
+            border-radius: 12px !important;
           }
           .constellation-badge-text {
-            font-size: 8px !important;
-            letter-spacing: 0.6px !important;
+            font-size: 9px !important;
+            letter-spacing: 0.5px !important;
           }
           /* Destellitos interiores en móvil aún más tenues para lectura óptima */
           .star-node.star-module-subtle {
@@ -714,24 +716,25 @@ const StarryBackground = ({ count = 135 }) => {
               position: 'absolute',
               ...activeConstellation.position,
               width: activeConstellation.width,
-              height: activeConstellation.height,
               pointerEvents: 'none',
               userSelect: 'none',
               transformOrigin,
-              zIndex: 2,
+              zIndex: 3,
               animation: 'constellationAppearance 12s ease-in-out infinite',
               display: 'flex',
               flexDirection: 'column',
-              alignItems: 'center'
+              alignItems: 'center',
+              gap: '6px'
             }}
           >
             <svg
               width="100%"
-              height="100%"
+              height={activeConstellation.height}
               viewBox={activeConstellation.viewBox}
               preserveAspectRatio="xMidYMid meet"
               style={{ 
                 overflow: 'visible', 
+                flexShrink: 0,
                 filter: isLibra 
                   ? 'drop-shadow(0 0 10px rgba(250, 204, 21, 0.85))' 
                   : 'drop-shadow(0 0 8px rgba(165, 180, 252, 0.7))',
@@ -794,33 +797,35 @@ const StarryBackground = ({ count = 135 }) => {
               className="constellation-badge"
               style={{
                 marginTop: '4px',
-                padding: isLibra ? '4px 14px' : '3px 10px',
-                borderRadius: '12px',
-                background: isLibra ? 'rgba(30, 27, 75, 0.75)' : 'rgba(15, 23, 42, 0.55)',
-                backdropFilter: 'blur(8px)',
-                border: isLibra ? '1px solid rgba(250, 204, 21, 0.6)' : '1px solid rgba(165, 180, 252, 0.25)',
+                padding: isLibra ? '4px 14px' : '3px 12px',
+                borderRadius: '16px',
+                background: isLibra ? 'rgba(30, 27, 75, 0.90)' : 'rgba(15, 23, 42, 0.85)',
+                backdropFilter: 'blur(10px)',
+                border: isLibra ? '1px solid rgba(250, 204, 21, 0.75)' : '1px solid rgba(165, 180, 252, 0.45)',
                 boxShadow: isLibra 
-                  ? '0 0 18px rgba(250, 204, 21, 0.4), 0 0 8px rgba(99, 102, 241, 0.3)' 
-                  : '0 0 12px rgba(99, 102, 241, 0.25)',
+                  ? '0 0 20px rgba(250, 204, 21, 0.45), 0 4px 12px rgba(0, 0, 0, 0.5)' 
+                  : '0 0 14px rgba(99, 102, 241, 0.35), 0 4px 12px rgba(0, 0, 0, 0.4)',
                 pointerEvents: 'none',
                 userSelect: 'none',
-                maxWidth: '90%',
-                overflow: 'hidden',
-                textOverflow: 'ellipsis',
+                display: 'inline-flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                flexShrink: 0,
+                zIndex: 4,
                 whiteSpace: 'nowrap'
               }}
             >
               <span
                 className="constellation-badge-text"
                 style={{
-                  fontSize: isLibra ? '11px' : '10.5px',
-                  fontWeight: isLibra ? '700' : '600',
-                  letterSpacing: '1.2px',
-                  color: isLibra ? '#fef08a' : '#e0e7ff',
+                  fontSize: isLibra ? '11.5px' : '11px',
+                  fontWeight: isLibra ? '800' : '700',
+                  letterSpacing: '1px',
+                  color: isLibra ? '#fef08a' : '#f8fafc',
                   textTransform: 'uppercase',
                   textShadow: isLibra 
                     ? '0 0 10px rgba(250, 204, 21, 0.9)' 
-                    : '0 0 8px rgba(165, 180, 252, 0.8)',
+                    : '0 0 8px rgba(165, 180, 252, 0.9)',
                   whiteSpace: 'nowrap'
                 }}
               >
